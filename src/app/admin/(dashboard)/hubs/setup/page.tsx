@@ -5,7 +5,7 @@ import {
   Check, ChevronRight, Upload, Plus, Trash2, 
   Building2, Coffee, Scissors, PlusCircle, ShoppingBag, Briefcase, 
   ChevronDown, ChevronUp, Copy, QrCode, Download, ExternalLink, User,
-  Sparkles, ArrowLeft, ArrowRight, Loader2, Smartphone, Tablet,
+  Sparkles, ArrowLeft, ArrowRight, Loader2,
   Lock, Zap, Wifi
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
@@ -144,7 +144,6 @@ export default function HubSetupWizard() {
   const [createdHub, setCreatedHub] = useState<any>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>("reviews");
   const [copiedLink, setCopiedLink] = useState(false);
-  const [previewDevice, setPreviewDevice] = useState<"iphone" | "tablet">("iphone");
 
   // Wi-Fi Configuration Screen State (Screenshots 2, 3, 4)
   const [editingWifiAuth, setEditingWifiAuth] = useState(false);
@@ -803,9 +802,9 @@ export default function HubSetupWizard() {
     );
   };
 
-  // STEP 4: PREVIEW (IPHONE 17 PRO PHONE MODEL & TABLET VIEWPORT)
+  // STEP 4: PREVIEW (PROPER CLEAN RESPONSIVE MOBILE VIEW)
   const renderStep4 = () => (
-    <div className="space-y-4 max-w-2xl mx-auto text-center">
+    <div className="space-y-4 max-w-xl mx-auto text-center">
       <div>
         <h2 className="text-xl sm:text-2xl font-bold text-tapsh-black mb-1">
           Review Mobile Hub Appearance
@@ -815,123 +814,41 @@ export default function HubSetupWizard() {
         </p>
       </div>
 
-      {/* Device Viewport Selector Toggle */}
-      <div className="flex justify-center">
-        <div className="inline-flex items-center p-1 bg-white border border-tapsh-charcoal/20 rounded-2xl shadow-xs gap-1">
-          <button
-            type="button"
-            onClick={() => setPreviewDevice("iphone")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              previewDevice === "iphone"
-                ? "bg-tapsh-black text-white shadow-xs"
-                : "text-tapsh-charcoal hover:text-tapsh-black"
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>iPhone 17 Pro (Mobile)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreviewDevice("tablet")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              previewDevice === "tablet"
-                ? "bg-tapsh-black text-white shadow-xs"
-                : "text-tapsh-charcoal hover:text-tapsh-black"
-            }`}
-          >
-            <Tablet className="w-3.5 h-3.5" />
-            <span>Tablet / iPad</span>
-          </button>
+      {/* Clean Proper Mobile Screen Container */}
+      <div className="flex justify-center p-0 sm:p-2">
+        <div className="w-full max-w-[360px] sm:max-w-[390px] h-[640px] sm:h-[720px] bg-white rounded-[2.2rem] border-2 sm:border-4 border-tapsh-charcoal/20 shadow-2xl overflow-hidden relative flex flex-col hub-preview-isolated">
+          
+          {/* Subtle Mobile Top Speaker Bar */}
+          <div className="h-4 bg-white flex items-center justify-center shrink-0 border-b border-black/5">
+            <div className="w-12 h-1 bg-black/20 rounded-full"></div>
+          </div>
+
+          {/* Hub View Content */}
+          <div className="flex-1 w-full h-full overflow-hidden">
+            <HubView data={{
+              businessName: data.businessName || "Business Name",
+              description: data.description || "Welcome to our space. Select an option below.",
+              greetingMessage: data.greetingMessage,
+              coverUrl: data.coverImage,
+              links: data.links.length > 0 ? data.links : [
+                { id: 1, category: "reviews", title: "Rate Us on Google", url: "#", icon: "google" },
+                { id: 2, category: "contact", title: "WhatsApp Direct", url: "#", icon: "whatsapp" },
+                { id: 3, category: "website", title: "Official Website", url: "#", icon: "globe" }
+              ]
+            }} />
+          </div>
+
+          {/* Minimalist Home Indicator Pill */}
+          <div className="h-4 bg-[#FAF8F5] flex items-center justify-center shrink-0 border-t border-black/5">
+            <div className="w-24 h-1 bg-black/25 rounded-full"></div>
+          </div>
+
         </div>
-      </div>
-
-      {/* Phone / Tablet Mockup Container */}
-      <div className="flex justify-center bg-[#FAF8F5] rounded-3xl border border-tapsh-charcoal/15 p-2 sm:p-6 overflow-hidden">
-        {previewDevice === "iphone" ? (
-          /* IPHONE 17 PRO MODEL */
-          <div className="relative w-full max-w-[360px] sm:max-w-[393px] h-[720px] sm:h-[820px] transition-all">
-            
-            {/* Realistic Physical Side Buttons on Titanium Chassis */}
-            <div className="hidden sm:block absolute -left-[14px] top-24 w-[3px] h-7 bg-[#2E2E33] rounded-l-md shadow-xs"></div>
-            <div className="hidden sm:block absolute -left-[14px] top-36 w-[3px] h-12 bg-[#2E2E33] rounded-l-md shadow-xs"></div>
-            <div className="hidden sm:block absolute -left-[14px] top-52 w-[3px] h-12 bg-[#2E2E33] rounded-l-md shadow-xs"></div>
-            <div className="hidden sm:block absolute -right-[14px] top-36 w-[3px] h-16 bg-[#2E2E33] rounded-r-md shadow-xs"></div>
-
-            {/* Titanium Outer Rim */}
-            <div className="w-full h-full p-2.5 sm:p-3 bg-[#1C1C1F] rounded-[3.6rem] border-[3px] border-[#2E2E35] shadow-2xl relative ring-1 ring-black/40 overflow-hidden">
-              
-              {/* Inner Screen Bezel */}
-              <div className="w-full h-full bg-white rounded-[3rem] overflow-hidden relative shadow-inner flex flex-col">
-                
-                {/* Dynamic Island (iPhone 17 Pro Signature) */}
-                <div className="absolute top-2.5 inset-x-0 z-30 flex justify-center pointer-events-none">
-                  <div className="w-28 h-7 bg-black rounded-full flex items-center justify-between px-3 shadow-md">
-                    {/* Front Camera Lens Reflection */}
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#181820] border border-[#2b2b36] flex items-center justify-center">
-                      <div className="w-1 h-1 rounded-full bg-[#3e456b]/90"></div>
-                    </div>
-                    {/* FaceID Sensor Dot */}
-                    <div className="w-2 h-2 rounded-full bg-[#0a0a0f]"></div>
-                  </div>
-                </div>
-
-                {/* Hub View Content */}
-                <div className="flex-1 w-full h-full overflow-hidden hub-preview-isolated">
-                  <HubView data={{
-                    businessName: data.businessName || "Business Name",
-                    description: data.description || "Welcome to our space. Select an option below.",
-                    greetingMessage: data.greetingMessage,
-                    links: data.links.length > 0 ? data.links : [
-                      { id: 1, category: "reviews", title: "Rate Us on Google", url: "#", icon: "google" },
-                      { id: 2, category: "contact", title: "WhatsApp Direct", url: "#", icon: "whatsapp" },
-                      { id: 3, category: "website", title: "Official Website", url: "#", icon: "globe" }
-                    ]
-                  }} />
-                </div>
-
-                {/* Home Indicator Bar */}
-                <div className="absolute bottom-1.5 inset-x-0 z-30 flex justify-center pointer-events-none">
-                  <div className="w-32 h-1 bg-black/40 rounded-full"></div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* TABLET / IPAD MODEL */
-          <div className="relative w-full max-w-[560px] sm:max-w-[620px] h-[700px] sm:h-[780px] transition-all">
-            <div className="w-full h-full p-3 sm:p-4 bg-[#1C1C1F] rounded-[2.5rem] border-[3px] border-[#2E2E35] shadow-2xl relative ring-1 ring-black/40 overflow-hidden flex flex-col">
-              
-              {/* Tablet Top Camera Dot */}
-              <div className="absolute top-2 inset-x-0 z-30 flex justify-center pointer-events-none">
-                <div className="w-2.5 h-2.5 rounded-full bg-black border border-[#2b2b36] shadow-sm"></div>
-              </div>
-
-              {/* Tablet Inner Screen */}
-              <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative shadow-inner flex-1 hub-preview-isolated">
-                <HubView data={{
-                  businessName: data.businessName || "Business Name",
-                  description: data.description || "Welcome to our space. Select an option below.",
-                  greetingMessage: data.greetingMessage,
-                  links: data.links.length > 0 ? data.links : [
-                    { id: 1, category: "reviews", title: "Rate Us on Google", url: "#", icon: "google" },
-                    { id: 2, category: "contact", title: "WhatsApp Direct", url: "#", icon: "whatsapp" },
-                    { id: 3, category: "website", title: "Official Website", url: "#", icon: "globe" }
-                  ]
-                }} />
-                {/* Home Indicator Bar */}
-                <div className="absolute bottom-1.5 inset-x-0 z-30 flex justify-center pointer-events-none">
-                  <div className="w-36 h-1 bg-black/40 rounded-full"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 
-  // SUCCESS SCREEN
+  // SUCCESS SCREEN (RESPONSIVE TO ALL SCREEN SIZES)
   const renderSuccess = () => {
     const liveUrl = typeof window !== "undefined" && createdHub?.slug 
       ? `${window.location.origin}/h/${createdHub.slug}` 
@@ -956,20 +873,20 @@ export default function HubSetupWizard() {
     };
 
     return (
-      <div className="max-w-lg mx-auto text-center py-4 space-y-6 animate-in fade-in zoom-in-95">
-        <div className="w-16 h-16 bg-tapsh-soft-green/10 text-tapsh-soft-green rounded-full flex items-center justify-center mx-auto border-2 border-tapsh-soft-green shadow-xs">
-          <Check className="w-8 h-8" />
+      <div className="max-w-lg mx-auto text-center py-2 sm:py-4 space-y-4 sm:space-y-6 animate-in fade-in zoom-in-95">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-tapsh-soft-green/10 text-tapsh-soft-green rounded-full flex items-center justify-center mx-auto border-2 border-tapsh-soft-green shadow-xs">
+          <Check className="w-7 h-7 sm:w-8 sm:h-8" />
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold text-tapsh-black">Hub Successfully Deployed!</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-tapsh-black">Hub Successfully Deployed!</h2>
           <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
             Permanent digital routing is provisioned for <strong className="text-tapsh-black">{createdHub?.businessName}</strong>.
           </p>
         </div>
 
         {/* Custom QR Code Card & Download */}
-        <div className="bg-[#FAF8F5] p-5 sm:p-6 rounded-3xl border border-tapsh-charcoal/15 text-center shadow-xs">
+        <div className="bg-[#FAF8F5] p-4 sm:p-6 rounded-3xl border border-tapsh-charcoal/15 text-center shadow-xs">
           <span className="inline-block px-3 py-1 rounded-full bg-tapsh-soft-green/10 text-tapsh-soft-green text-[10px] font-bold tracking-wider uppercase mb-2">
             Custom Hardware QR Code
           </span>
@@ -977,13 +894,14 @@ export default function HubSetupWizard() {
             Scan with any phone camera or download high-resolution PNG for printing stands & tags.
           </p>
 
-          <div className="bg-white p-4 rounded-2xl border-2 border-tapsh-charcoal/15 inline-block shadow-sm mb-4">
+          <div className="bg-white p-3 sm:p-4 rounded-2xl border-2 border-tapsh-charcoal/15 inline-block shadow-sm mb-4 max-w-full overflow-hidden">
             <QRCodeCanvas
               id="hub-qr-canvas"
               value={liveUrl}
-              size={200}
+              size={180}
               level="H"
               includeMargin={true}
+              style={{ maxWidth: "100%", height: "auto" }}
             />
           </div>
 
@@ -991,18 +909,18 @@ export default function HubSetupWizard() {
             <button
               type="button"
               onClick={handleDownloadQR}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tapsh-black text-tapsh-beige rounded-2xl text-xs sm:text-sm font-bold shadow-md hover:bg-tapsh-taupe active:scale-95 transition-all cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-tapsh-black text-tapsh-beige rounded-2xl text-xs sm:text-sm font-bold shadow-md hover:bg-tapsh-taupe active:scale-95 transition-all cursor-pointer"
             >
               <Download className="w-4 h-4 text-tapsh-soft-green" /> Download QR Code (PNG)
             </button>
           </div>
         </div>
 
-        {/* Working Live Shortlink (Copy & Paste to open) */}
-        <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 text-left space-y-2">
+        {/* Working Live Shortlink (Responsive on all screen sizes) */}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 text-left space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold text-tapsh-charcoal tracking-wider">
-              Live Hub Web Link (Copy & Paste in Browser)
+              Live Hub Web Link
             </span>
             {copiedLink && (
               <span className="text-[11px] font-bold text-emerald-600 animate-in fade-in">
@@ -1011,21 +929,24 @@ export default function HubSetupWizard() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              readOnly
-              value={liveUrl}
-              onClick={(e) => (e.target as HTMLInputElement).select()}
-              className="text-xs font-mono font-bold text-tapsh-black flex-1 p-2.5 bg-white border border-tapsh-charcoal/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green select-all"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                readOnly
+                value={liveUrl}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+                className="w-full text-xs font-mono font-bold text-tapsh-black p-2.5 sm:p-3 bg-white border border-tapsh-charcoal/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green select-all truncate"
+              />
+            </div>
             <button
+              type="button"
               onClick={() => handleCopyUrl(liveUrl)}
-              className="p-2.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
               title="Copy URL"
             >
-              {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{copiedLink ? "Copied" : "Copy Link"}</span>
+              {copiedLink ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4 text-white" />}
+              <span>{copiedLink ? "Copied!" : "Copy Link"}</span>
             </button>
           </div>
           <p className="text-[11px] text-tapsh-charcoal">
@@ -1033,19 +954,19 @@ export default function HubSetupWizard() {
           </p>
         </div>
 
-        {/* Quick Launch Buttons */}
-        <div className="grid grid-cols-2 gap-2.5">
+        {/* Quick Launch Buttons (Responsive grid) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <a 
             href={`/h/${createdHub?.slug}`} 
             target="_blank"
             rel="noopener noreferrer"
-            className="p-3 bg-tapsh-soft-green text-white rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs hover:brightness-110"
+            className="w-full p-3 bg-tapsh-soft-green text-white rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs hover:brightness-110 text-center"
           >
             <ExternalLink className="w-4 h-4" /> Open Live Hub Tab
           </a>
           <Link 
             href={`/admin/customers/${createdHub?.customerId}`}
-            className="p-3 bg-white border border-tapsh-charcoal/20 text-tapsh-black rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all hover:bg-tapsh-pale-blue/30"
+            className="w-full p-3 bg-white border border-tapsh-charcoal/20 text-tapsh-black rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all hover:bg-tapsh-pale-blue/30 text-center"
           >
             <User className="w-4 h-4" /> View Profile
           </Link>
@@ -1056,7 +977,7 @@ export default function HubSetupWizard() {
 
   if (isSuccess) {
     return (
-      <div className="bg-white rounded-3xl p-6 border border-tapsh-charcoal/15 shadow-xs">
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-tapsh-charcoal/15 shadow-xs">
         {renderSuccess()}
       </div>
     );

@@ -153,3 +153,40 @@
   background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
+/* ==================================================== */
+/* ISOLATE CLIENT HUB PREVIEW FROM ADMIN DARK MODE */
+/* (Hub preview represents the public client landing page) */
+/* ==================================================== */
+.admin-dark .hub-preview-isolated,
+.admin-dark .hub-preview-isolated .bg-\[\#FAF8F5\] {
+  background-color: #FAF8F5 !important;
+}
+
+.admin-dark .hub-preview-isolated .bg-white {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+.admin-dark .hub-preview-isolated .bg-tapsh-beige\/25 {
+  background-color: rgba(201, 173, 147, 0.25) !important;
+}
+
+.admin-dark .hub-preview-isolated .text-tapsh-black {
+  color: #000000 !important;
+}
+
+.admin-dark .hub-preview-isolated .text-tapsh-charcoal {
+  color: #73787C !important;
+}
+
+.admin-dark .hub-preview-isolated .border-tapsh-charcoal\/20,
+.admin-dark .hub-preview-isolated .border-tapsh-charcoal\/15,
+.admin-dark .hub-preview-isolated .border-tapsh-charcoal\/10 {
+  border-color: rgba(115, 120, 124, 0.2) !important;
+}
+
+.admin-dark .hub-preview-isolated input {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+}
+

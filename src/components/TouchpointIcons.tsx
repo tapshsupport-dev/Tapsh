@@ -128,3 +128,83 @@ export function getTouchpointIcon(
 
   return <LinkIcon className={`${iconClass} text-tapsh-taupe`} />;
 }
+
+export function resolveTouchpointUrl(link: { url?: string; category?: string; icon?: string; title?: string }): string {
+  if (!link || !link.url) return "#";
+  const raw = link.url.trim();
+  if (!raw || raw === "#") return "#";
+
+  const cat = (link.category || "").toLowerCase();
+  const iconKey = (link.icon || "").toLowerCase();
+  const title = (link.title || "").toLowerCase();
+
+  // WhatsApp
+  if (cat === "contact" && (iconKey === "whatsapp" || title.includes("whatsapp"))) {
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) return "#";
+    const full = digits.length === 10 ? `91${digits}` : digits;
+    return `https://wa.me/${full}`;
+  }
+
+  // Call / Phone
+  if (cat === "contact" && (iconKey === "phone" || title.includes("call") || title.includes("phone") || title.includes("reception"))) {
+    if (raw.startsWith("tel:")) return raw;
+    const cleanNumber = raw.replace(/[^\d+]/g, "");
+    return `tel:${cleanNumber}`;
+  }
+
+  // Email
+  if (cat === "contact" && (iconKey === "mail" || title.includes("email") || title.includes("mail"))) {
+    if (raw.startsWith("mailto:")) return raw;
+    return `mailto:${raw}`;
+  }
+
+  // Instagram
+  if (cat === "social" && (iconKey === "instagram" || title.includes("instagram"))) {
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    const handle = raw.startsWith("@") ? raw.slice(1) : raw;
+    if (handle.startsWith("instagram.com/")) return `https://${handle}`;
+    if (!handle.includes("/")) return `https://instagram.com/${handle}`;
+    return `https://${handle}`;
+  }
+
+  // Facebook
+  if (cat === "social" && (iconKey === "facebook" || title.includes("facebook"))) {
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    const handle = raw.startsWith("@") ? raw.slice(1) : raw;
+    if (handle.startsWith("facebook.com/")) return `https://${handle}`;
+    if (!handle.includes("/")) return `https://facebook.com/${handle}`;
+    return `https://${handle}`;
+  }
+
+  // YouTube
+  if (cat === "social" && (iconKey === "youtube" || title.includes("youtube"))) {
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    if (raw.startsWith("@")) return `https://youtube.com/${raw}`;
+    if (raw.startsWith("youtube.com/")) return `https://${raw}`;
+    if (!raw.includes("/")) return `https://youtube.com/@${raw}`;
+    return `https://${raw}`;
+  }
+
+  // Twitter / X
+  if (cat === "social" && (iconKey === "twitter" || iconKey === "x" || title.includes("twitter") || title.includes("x"))) {
+    if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+    const handle = raw.startsWith("@") ? raw.slice(1) : raw;
+    if (handle.startsWith("x.com/") || handle.startsWith("twitter.com/")) return `https://${handle}`;
+    if (!handle.includes("/")) return `https://x.com/${handle}`;
+    return `https://${handle}`;
+  }
+
+  // Wi-Fi
+  if (cat === "wifi" || iconKey === "wifi") {
+    return raw;
+  }
+
+  // Already has protocol
+  if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("tel:") || raw.startsWith("mailto:")) {
+    return raw;
+  }
+
+  return `https://${raw}`;
+}

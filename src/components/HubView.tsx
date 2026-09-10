@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Star, X, Check, Copy, Wifi } from "lucide-react";
 import Image from "next/image";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
-import { getTouchpointIcon } from "@/components/TouchpointIcons";
+import { getTouchpointIcon, resolveTouchpointUrl } from "@/components/TouchpointIcons";
 
 export default function HubView({ data }: { data: any }) {
   const { getAsset } = useSiteAssets();
@@ -50,7 +50,7 @@ export default function HubView({ data }: { data: any }) {
             {data.businessName || "Business Name"}
           </h1>
           <p className="text-sm text-tapsh-charcoal font-bold max-w-[280px] mx-auto leading-relaxed">
-            {data.description || "Welcome to our space. Select an option below to connect with us."}
+            {data.description || "Welcome to our space. Select an option below."}
           </p>
         </div>
 
@@ -62,38 +62,46 @@ export default function HubView({ data }: { data: any }) {
             <div className="bg-white rounded-[2rem] p-6 shadow-md border border-tapsh-charcoal/20 text-center">
               <h3 className="font-bold text-tapsh-charcoal mb-4 text-xs uppercase tracking-widest">How was your experience?</h3>
               <div className="space-y-3">
-                {reviewLinks.map((link: any, i: number) => (
-                  <a 
-                    key={i}
-                    href={link.url}
-                    target="_blank"
-                    className="flex items-center justify-center gap-3 w-full py-4 bg-tapsh-taupe text-tapsh-beige rounded-2xl font-bold text-base sm:text-lg hover:bg-tapsh-black transition-colors active:scale-95 shadow-lg group"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      {getTouchpointIcon(link, "md")}
-                    </div>
-                    <span>{link.title || "Rate Us on Google"}</span>
-                  </a>
-                ))}
+                {reviewLinks.map((link: any, i: number) => {
+                  const resolvedUrl = resolveTouchpointUrl(link);
+                  return (
+                    <a 
+                      key={i}
+                      href={resolvedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-3 w-full py-4 bg-tapsh-taupe text-tapsh-beige rounded-2xl font-bold text-base sm:text-lg hover:bg-tapsh-black transition-colors active:scale-95 shadow-lg group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        {getTouchpointIcon(link, "md")}
+                      </div>
+                      <span>{link.title || "Rate Us on Google"}</span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {/* Action Grid */}
           {actionLinks.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className={actionLinks.length === 1 ? "flex justify-center" : "grid grid-cols-2 gap-3 sm:gap-4"}>
               {actionLinks.map((link: any, i: number) => {
                 const isWifi = link.category === "wifi" || link.icon === "wifi";
                 const displayTitle = isWifi 
                   ? (link.title?.startsWith("Connect to Wi-Fi (") ? "Wi-Fi Network" : (link.title || "Wi-Fi Network"))
                   : link.title;
 
+                const singleCardClass = actionLinks.length === 1 ? "w-full max-w-[200px] sm:max-w-[220px]" : "";
+                const resolvedUrl = resolveTouchpointUrl(link);
+                const isPhone = link.category === "contact" && (link.icon === "phone" || link.title?.toLowerCase().includes("call"));
+
                 return isWifi ? (
                   <button 
                     key={i}
                     type="button"
                     onClick={() => setActiveWifiModal(link)}
-                    className="flex flex-col items-center justify-center p-5 sm:p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group cursor-pointer"
+                    className={`flex flex-col items-center justify-center p-5 sm:p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group cursor-pointer ${singleCardClass}`}
                   >
                     <div className="w-14 h-14 rounded-[1.2rem] bg-tapsh-beige/25 flex items-center justify-center mb-3 sm:mb-4 border border-tapsh-charcoal/10 shadow-inner group-hover:scale-110 group-hover:bg-white group-hover:shadow-md transition-all">
                       {getTouchpointIcon(link, "md")}
@@ -110,9 +118,10 @@ export default function HubView({ data }: { data: any }) {
                 ) : (
                   <a 
                     key={i}
-                    href={link.url}
-                    target="_blank"
-                    className="flex flex-col items-center justify-center p-5 sm:p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group"
+                    href={resolvedUrl}
+                    target={isPhone ? undefined : "_blank"}
+                    rel="noopener noreferrer"
+                    className={`flex flex-col items-center justify-center p-5 sm:p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group ${singleCardClass}`}
                   >
                     <div className="w-14 h-14 rounded-[1.2rem] bg-tapsh-beige/25 flex items-center justify-center mb-3 sm:mb-4 border border-tapsh-charcoal/10 shadow-inner group-hover:scale-110 group-hover:bg-white group-hover:shadow-md transition-all">
                       {getTouchpointIcon(link, "md")}

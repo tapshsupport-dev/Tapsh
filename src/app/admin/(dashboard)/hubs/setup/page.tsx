@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import HubView from "@/components/HubView";
-import { getTouchpointIcon } from "@/components/TouchpointIcons";
+import { getTouchpointIcon, resolveTouchpointUrl } from "@/components/TouchpointIcons";
 import Link from "next/link";
 import { createCustomer, createHub } from "@/lib/firestoreService";
 
@@ -278,6 +278,11 @@ export default function HubSetupWizard() {
         status: "ACTIVE"
       });
 
+      const resolvedLinks = (data.links || []).map((l: any) => ({
+        ...l,
+        url: resolveTouchpointUrl(l)
+      }));
+
       const hub = await createHub({
         id: hubId,
         customerId,
@@ -292,7 +297,7 @@ export default function HubSetupWizard() {
         phone: data.phone || "",
         whatsapp: (data.whatsapp || "").replace(/[^0-9]/g, ""),
         status: "ACTIVE",
-        links: data.links || []
+        links: resolvedLinks
       });
 
       setCreatedHub(hub);
@@ -871,7 +876,7 @@ export default function HubSetupWizard() {
                 </div>
 
                 {/* Hub View Content */}
-                <div className="flex-1 w-full h-full overflow-hidden">
+                <div className="flex-1 w-full h-full overflow-hidden hub-preview-isolated">
                   <HubView data={{
                     businessName: data.businessName || "Business Name",
                     description: data.description || "Welcome to our space. Select an option below.",
@@ -903,7 +908,7 @@ export default function HubSetupWizard() {
               </div>
 
               {/* Tablet Inner Screen */}
-              <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative shadow-inner flex-1">
+              <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative shadow-inner flex-1 hub-preview-isolated">
                 <HubView data={{
                   businessName: data.businessName || "Business Name",
                   description: data.description || "Welcome to our space. Select an option below.",

@@ -34,8 +34,10 @@ export default async function PublicHubPage({ params }: { params: Promise<{ slug
       {/* We constrain the max-width to simulate the mobile phone experience even on desktop */}
       <div className="w-full max-w-md bg-tapsh-pale-blue min-h-screen min-h-[100dvh] md:h-screen md:max-h-[920px] overflow-hidden shadow-2xl relative border-x border-tapsh-black">
         <HubView data={{
-          businessName: hubData.slug.replace("-", " ").toUpperCase(),
-          description: "Welcome to our digital hub.",
+          businessName: hubData.businessName,
+          description: hubData.shortDescription,
+          greetingMessage: hubData.greetingMessage,
+          coverUrl: hubData.coverUrl,
           links: hubData.links
         }} />
       </div>

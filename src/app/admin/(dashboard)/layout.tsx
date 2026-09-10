@@ -2,92 +2,276 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { 
+  LayoutDashboard, Users, Receipt, CreditCard, PlusCircle, 
+  Menu, X, ExternalLink, LogOut, ShieldCheck, ChevronRight,
+  Sparkles
+} from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    document.cookie = "tapsh_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    router.push("/admin/login");
+  };
+
+  const navItems = [
+    { name: "Overview", href: "/admin", icon: LayoutDashboard, exact: true },
+    { name: "Customers", href: "/admin/customers", icon: Users, exact: false },
+    { name: "Hubs", href: "/admin/hubs/setup", icon: PlusCircle, exact: false },
+    { name: "Invoices", href: "/admin/invoices", icon: Receipt, exact: false },
+    { name: "Payments", href: "/admin/payments", icon: CreditCard, exact: false },
+  ];
+
+  const isActive = (item: typeof navItems[0]) => {
+    if (item.exact) return pathname === item.href;
+    return pathname.startsWith(item.href);
+  };
 
   return (
-    <div className="flex min-h-screen bg-tapsh-bg-neutral text-tapsh-black relative">
+    <div className="flex min-h-[100dvh] bg-[#F7F7F8] text-tapsh-black relative selection:bg-tapsh-soft-green selection:text-white">
       
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-tapsh-black/50 z-20 lg:hidden backdrop-blur-sm"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside className={`fixed lg:static top-0 left-0 h-full w-64 bg-tapsh-black border-r border-tapsh-black/20 flex flex-col shadow-2xl z-30 transition-transform duration-300 transform ${
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      }`}>
-        <div className="p-6 border-b border-tapsh-taupe flex justify-between items-center">
+      {/* ---------------------------------------------------- */}
+      {/* DESKTOP SIDEBAR (Visible on lg: and larger) */}
+      {/* ---------------------------------------------------- */}
+      <aside className="hidden lg:flex w-64 bg-tapsh-black text-white flex-col shrink-0 border-r border-white/10 z-30 sticky top-0 h-screen">
+        {/* Brand Header */}
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
           <div>
-            <Image src="/images/logo-white.png" alt="TAPSH Logo" width={120} height={35} className="w-auto h-8 object-contain" />
-            <p className="text-[10px] text-tapsh-charcoal font-bold tracking-widest uppercase mt-3">Admin Panel</p>
+            <Image 
+              src="/images/logo-white.png" 
+              alt="TAPSH Logo" 
+              width={120} 
+              height={35} 
+              priority
+              className="w-auto h-7 object-contain" 
+            />
+            <div className="flex items-center gap-1.5 mt-2.5">
+              <span className="w-2 h-2 rounded-full bg-tapsh-soft-green animate-pulse"></span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-tapsh-gray">
+                Admin Console
+              </span>
+            </div>
           </div>
-          <button 
-            className="lg:hidden text-tapsh-pale-blue"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <X className="w-6 h-6" />
-          </button>
         </div>
-        
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <Link href="/admin" onClick={() => setIsSidebarOpen(false)} className="block px-4 py-3 rounded-xl text-sm font-medium text-tapsh-pale-blue hover:bg-tapsh-charcoal hover:text-white transition-colors">
-            Dashboard
-          </Link>
-          <Link href="/admin/customers" onClick={() => setIsSidebarOpen(false)} className="block px-4 py-3 rounded-xl text-sm font-medium text-tapsh-pale-blue hover:bg-tapsh-charcoal hover:text-white transition-colors">
-            Customers
-          </Link>
-          <Link href="/admin/invoices" onClick={() => setIsSidebarOpen(false)} className="block px-4 py-3 rounded-xl text-sm font-medium text-tapsh-pale-blue hover:bg-tapsh-charcoal hover:text-white transition-colors">
-            Invoices
-          </Link>
-          <Link href="/admin/payments" onClick={() => setIsSidebarOpen(false)} className="block px-4 py-3 rounded-xl text-sm font-medium text-tapsh-pale-blue hover:bg-tapsh-charcoal hover:text-white transition-colors">
-            Payments
-          </Link>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+          {navItems.map((item) => {
+            const active = isActive(item);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
+                  active 
+                    ? "bg-tapsh-soft-green text-white shadow-md" 
+                    : "text-tapsh-pale-blue/70 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <item.icon className={`w-5 h-5 ${active ? "text-white" : "text-tapsh-gray"}`} />
+                {item.name}
+              </Link>
+            );
+          })}
         </nav>
-        
-        <div className="p-4 border-t border-tapsh-taupe">
-          <Link href="/" className="block w-full text-center px-4 py-2 text-sm text-tapsh-charcoal hover:text-tapsh-pale-blue transition-colors">
-            ← Exit Admin
+
+        {/* Quick Launch & Sign Out */}
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <Link 
+            href="/" 
+            target="_blank"
+            className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-xs font-semibold text-tapsh-gray hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <ExternalLink className="w-3.5 h-3.5" /> View Public Site
+            </span>
           </Link>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 w-full px-4 py-2.5 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" /> Sign Out
+          </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col relative z-10 w-full lg:w-[calc(100%-16rem)] overflow-x-hidden">
-        {/* Top Header */}
-        <header className="h-16 bg-white border-b border-tapsh-charcoal/20 flex items-center justify-between px-4 sm:px-8 shadow-sm">
-          <div className="flex items-center gap-4">
-            <button 
-              className="lg:hidden p-2 -ml-2 text-tapsh-black rounded-md hover:bg-tapsh-pale-blue"
-              onClick={() => setIsSidebarOpen(true)}
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className="hidden sm:flex items-center gap-4">
-              <span className="w-2 h-2 rounded-full bg-tapsh-soft-green animate-pulse"></span>
-              <span className="text-sm font-bold text-tapsh-black">System Online</span>
+      {/* ---------------------------------------------------- */}
+      {/* MOBILE DRAWER / SIDE MENU (Accessible via hamburger) */}
+      {/* ---------------------------------------------------- */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+          {/* Drawer sheet */}
+          <div className="fixed inset-y-0 left-0 w-4/5 max-w-xs bg-tapsh-black text-white p-6 shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-300">
+            <div>
+              <div className="flex items-center justify-between pb-6 border-b border-white/10">
+                <Image 
+                  src="/images/logo-white.png" 
+                  alt="TAPSH" 
+                  width={110} 
+                  height={32} 
+                  className="w-auto h-6 object-contain" 
+                />
+                <button 
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="p-2 rounded-full text-tapsh-gray hover:text-white hover:bg-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="py-6 space-y-2">
+                <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-tapsh-gray">
+                  Quick Navigation
+                </div>
+                {navItems.map((item) => {
+                  const active = isActive(item);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsDrawerOpen(false)}
+                      className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
+                        active 
+                          ? "bg-tapsh-soft-green text-white" 
+                          : "text-tapsh-pale-blue/80 hover:bg-white/5"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <item.icon className="w-5 h-5" /> {item.name}
+                      </span>
+                      <ChevronRight className="w-4 h-4 opacity-50" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/10 space-y-3">
+              <Link 
+                href="/" 
+                target="_blank"
+                onClick={() => setIsDrawerOpen(false)}
+                className="flex items-center justify-between w-full px-4 py-3 rounded-2xl bg-white/5 text-xs font-semibold text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4 text-tapsh-soft-green" /> Open Public Website
+                </span>
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-red-500/10 text-red-400 text-xs font-bold"
+              >
+                <LogOut className="w-4 h-4" /> Log Out
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-tapsh-pale-blue rounded-full flex items-center justify-center border border-tapsh-charcoal/30 text-tapsh-black font-bold text-sm shadow-sm">
-              A
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MAIN VIEWPORT CONTAINER */}
+      {/* ---------------------------------------------------- */}
+      <div className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0">
+        
+        {/* MOBILE TOP BAR (Fixed/Sticky on Mobile) */}
+        <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-tapsh-charcoal/20 px-4 py-3 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsDrawerOpen(true)}
+              aria-label="Open menu"
+              className="p-2 -ml-1.5 rounded-xl text-tapsh-black hover:bg-tapsh-pale-blue/40 active:scale-95 transition-all"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <Link href="/admin" className="flex items-center">
+              <Image 
+                src="/images/logo-dark.png" 
+                alt="TAPSH" 
+                width={95} 
+                height={28} 
+                className="w-auto h-6 object-contain" 
+              />
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link 
+              href="/admin/hubs/setup" 
+              className="flex items-center gap-1 py-1.5 px-3 bg-tapsh-soft-green text-white rounded-full text-xs font-bold shadow-xs active:scale-95 transition-transform"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> + Hub
+            </Link>
+            <div className="w-8 h-8 rounded-full bg-tapsh-pale-blue border border-tapsh-charcoal/20 flex items-center justify-center text-xs font-bold text-tapsh-black">
+              TS
             </div>
           </div>
         </header>
-        
-        {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-8 bg-tapsh-bg-neutral">
-          <div className="max-w-7xl mx-auto">
-            {children}
+
+        {/* DESKTOP TOP BAR (Only visible on desktop) */}
+        <header className="hidden lg:flex h-16 bg-white border-b border-tapsh-charcoal/15 items-center justify-between px-8 shadow-xs">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
+            <span className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal">
+              TAPSH Enterprise Fleet • Live Status
+            </span>
           </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-xs font-bold text-tapsh-black leading-none">TAPSH Operations</p>
+              <p className="text-[10px] text-tapsh-charcoal mt-1">tapsh.support@gmail.com</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-tapsh-pale-blue border border-tapsh-charcoal/20 flex items-center justify-center font-bold text-xs text-tapsh-black shadow-inner">
+              TS
+            </div>
+          </div>
+        </header>
+
+        {/* MAIN PAGE BODY */}
+        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">
+          {children}
+        </main>
+      </div>
+
+      {/* ---------------------------------------------------- */}
+      {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly on phone) */}
+      {/* ---------------------------------------------------- */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-tapsh-charcoal/20 px-2 py-1.5 shadow-lg safe-area-bottom">
+        <div className="grid grid-cols-5 items-center">
+          {navItems.map((item) => {
+            const active = isActive(item);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
+                  active 
+                    ? "text-tapsh-black font-bold" 
+                    : "text-tapsh-charcoal hover:text-tapsh-black font-medium"
+                }`}
+              >
+                <div className={`p-1 rounded-xl transition-colors ${active ? "bg-tapsh-soft-green/15 text-tapsh-soft-green" : ""}`}>
+                  <item.icon className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] tracking-tight mt-0.5 leading-none">
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
         </div>
-      </main>
+      </nav>
+
     </div>
   );
 }

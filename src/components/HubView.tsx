@@ -22,13 +22,18 @@ export default function HubView({ data }: { data: any }) {
   return (
     <div className="w-full h-full bg-[#FAF8F5] overflow-y-auto scrollbar-hide text-tapsh-black relative">
       
-      {/* Dynamic Cover Image or Beige Gradient */}
-      <div className="w-full h-64 bg-white relative border-b border-tapsh-charcoal/20">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#FAF8F5] z-10"></div>
-        {/* Placeholder for actual cover image */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-50">
-           <span className="font-bold tracking-widest text-tapsh-charcoal">[ COVER ]</span>
-        </div>
+      {/* Dynamic Cover Image or Warm Gradient */}
+      <div className="w-full h-56 sm:h-64 bg-gradient-to-br from-tapsh-taupe to-tapsh-black relative border-b border-tapsh-charcoal/20 overflow-hidden">
+        {data.coverUrl ? (
+          <img 
+            src={data.coverUrl} 
+            alt={data.businessName || "Cover"} 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-tapsh-taupe via-[#3d332c] to-tapsh-black opacity-90" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#FAF8F5] z-10"></div>
       </div>
 
       <div className="relative z-20 px-6 pb-12 -mt-16">

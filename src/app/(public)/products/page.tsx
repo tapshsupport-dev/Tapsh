@@ -67,12 +67,12 @@ export default function ProductsPage() {
           {PRODUCTS.map((product) => (
             <StaggerItem key={product.slug} id={product.slug} className="scroll-mt-32 bg-white rounded-3xl border border-tapsh-charcoal/20 overflow-hidden hover:shadow-2xl hover:border-tapsh-charcoal/50 hover:-translate-y-1 transition-all group flex flex-col shadow-sm">
               
-              {/* Image Placeholder */}
-              <div className="h-56 sm:h-64 bg-tapsh-pale-blue flex items-center justify-center relative overflow-hidden transition-colors border-b border-tapsh-charcoal/20 group-hover:bg-[#E9E4D3]">
-                <product.icon className="w-20 h-20 text-tapsh-charcoal/50 absolute group-hover:scale-110 transition-transform duration-500" />
-                <span className="relative z-10 font-bold tracking-widest text-tapsh-black text-sm">
-                  [ PRODUCT IMAGE ]
-                </span>
+              {/* Product Visual */}
+              <div className="h-56 sm:h-64 bg-gradient-to-br from-tapsh-pale-blue via-white to-tapsh-pale-blue/60 flex items-center justify-center relative overflow-hidden transition-colors border-b border-tapsh-charcoal/20 group-hover:bg-[#E9E4D3]">
+                <div className="w-24 h-24 rounded-3xl bg-white shadow-xl border border-tapsh-charcoal/15 flex items-center justify-center relative z-10 group-hover:scale-110 transition-transform duration-500">
+                  <product.icon className="w-12 h-12 text-tapsh-soft-green" />
+                </div>
+                <div className="absolute inset-0 bg-tapsh-soft-green/10 rounded-full blur-2xl pointer-events-none scale-150"></div>
               </div>
               
               {/* Content */}

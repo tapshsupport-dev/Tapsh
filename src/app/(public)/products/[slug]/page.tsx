@@ -61,11 +61,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             
-            {/* Image Side */}
-            <div className="aspect-[4/3] bg-white rounded-[2rem] border border-tapsh-charcoal/30 shadow-xl flex items-center justify-center p-12 relative overflow-hidden">
-              <div className="relative z-10 w-full h-full border-2 border-dashed border-tapsh-charcoal/50 rounded-xl flex items-center justify-center">
-                 <span className="font-bold tracking-widest text-tapsh-black">[ LARGE PRODUCT IMAGE ]</span>
+            {/* Product Visual Showcase */}
+            <div className="aspect-[4/3] bg-gradient-to-br from-tapsh-pale-blue via-white to-tapsh-pale-blue/50 rounded-[2.5rem] border border-tapsh-charcoal/20 shadow-xl flex flex-col items-center justify-center p-8 relative overflow-hidden group">
+              <div className="w-32 h-48 bg-tapsh-black rounded-2xl shadow-2xl border border-tapsh-charcoal flex flex-col items-center justify-between p-4 transform -rotate-3 group-hover:rotate-0 transition-transform duration-500 relative z-10">
+                <div className="w-full flex justify-between items-center text-tapsh-beige">
+                  <span className="text-[10px] font-bold tracking-widest">TAPSH</span>
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div className="w-16 h-16 rounded-2xl bg-tapsh-taupe/40 border border-tapsh-charcoal/30 flex items-center justify-center">
+                  <Zap className="w-8 h-8 text-tapsh-beige" />
+                </div>
+                <span className="text-[9px] uppercase tracking-widest text-tapsh-beige font-semibold">NFC + QR Active</span>
               </div>
+              <div className="absolute inset-0 bg-tapsh-soft-green/10 rounded-full blur-3xl pointer-events-none scale-125"></div>
             </div>
 
             {/* Content Side */}

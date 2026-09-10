@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { 
   Settings, Image as ImageIcon, Sparkles, Upload, RotateCcw, 
   Check, ExternalLink, AlertCircle, Eye, Search, Filter,
-  ShieldCheck, Database, RefreshCw, X, CheckCircle2, Globe, User
+  ShieldCheck, Database, RefreshCw, X, CheckCircle2, Globe, User,
+  Package, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Star,
+  Wifi, MessageCircle, Camera, LayoutGrid, Layers, ArrowUpRight
 } from "lucide-react";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
 import { 
@@ -13,18 +16,28 @@ import {
   MEDIA_CATEGORIES, 
   MediaAssetDefinition 
 } from "@/lib/mediaAssetsRegistry";
+import { 
+  ProductItem, 
+  subscribeToProducts, 
+  saveProduct, 
+  deleteProduct, 
+  uploadProductImage,
+  resetToDefaultProducts,
+  DEFAULT_PRODUCTS 
+} from "@/lib/productsService";
+import ProductSlideshow from "@/components/products/ProductSlideshow";
 
 export default function AdminSettingsPage() {
   const { assets, isLoaded, getAsset, isCustom, updateAsset, resetAsset, resetAll } = useSiteAssets();
   
-  // Tabs: "content" | "identity" | "system"
-  const [activeTab, setActiveTab] = useState<"content" | "identity" | "system">("content");
+  // Tabs: "content" | "products" | "identity" | "system"
+  const [activeTab, setActiveTab] = useState<"content" | "products" | "identity" | "system">("content");
   
-  // Category filter
+  // Category filter for Media Assets
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
   
-  // Upload & action states
+  // Upload & action states for Media Assets
   const [updatingKey, setUpdatingKey] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [previewModalImage, setPreviewModalImage] = useState<{ title: string; url: string } | null>(null);
@@ -33,16 +46,49 @@ export default function AdminSettingsPage() {
 
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // ----------------------------------------------------
+  // PRODUCTS STATE & MANAGEMENT
+  // ----------------------------------------------------
+  const [products, setProducts] = useState<ProductItem[]>(DEFAULT_PRODUCTS);
+  const [productSearch, setProductSearch] = useState("");
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Partial<ProductItem> | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isUploadingProductImages, setIsUploadingProductImages] = useState(false);
+  const [productUrlInput, setProductUrlInput] = useState("");
+  const productFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Read URL query parameter on mount (e.g. /admin/settings?tab=products)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "products" || tab === "content" || tab === "identity" || tab === "system") {
+        setActiveTab(tab as any);
+      }
+    }
+  }, []);
+
+  // Subscribe to real-time products
+  useEffect(() => {
+    const unsubscribe = subscribeToProducts((items) => {
+      setProducts(items);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const showFeedback = (text: string, type: "success" | "error" = "success") => {
     setFeedbackMessage({ type, text });
     setTimeout(() => setFeedbackMessage(null), 4000);
   };
 
+  // ----------------------------------------------------
+  // MEDIA ASSET HANDLERS
+  // ----------------------------------------------------
   const handleFileUpload = async (asset: MediaAssetDefinition, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       showFeedback("Image file is too large (max 10MB). Please select a smaller image.", "error");
       return;
@@ -57,7 +103,6 @@ export default function AdminSettingsPage() {
       showFeedback(`Failed to update ${asset.label}. Please try again.`, "error");
     } finally {
       setUpdatingKey(null);
-      // Reset file input value so user can re-upload same file if desired
       if (fileInputRefs.current[asset.key]) {
         fileInputRefs.current[asset.key]!.value = "";
       }
@@ -105,7 +150,135 @@ export default function AdminSettingsPage() {
     }
   };
 
-  // Filter items
+  // ----------------------------------------------------
+  // PRODUCT CRUD HANDLERS
+  // ----------------------------------------------------
+  const handleOpenCreateProduct = () => {
+    setEditingProduct({
+      id: `prod-${Date.now()}`,
+      name: "",
+      slug: "",
+      tagline: "",
+      description: "",
+      benefit: "",
+      images: [],
+      iconType: "sparkles",
+      category: "General",
+      badge: "",
+      features: [],
+      status: "ACTIVE",
+    });
+    setProductUrlInput("");
+    setIsProductModalOpen(true);
+  };
+
+  const handleOpenEditProduct = (prod: ProductItem) => {
+    setEditingProduct({ ...prod, images: [...(prod.images || [])] });
+    setProductUrlInput("");
+    setIsProductModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (prod: ProductItem) => {
+    if (confirm(`Are you sure you want to delete "${prod.name}"? It will be removed from the public website immediately.`)) {
+      try {
+        await deleteProduct(prod.id);
+        showFeedback(`Product "${prod.name}" deleted from Firebase.`);
+      } catch (err) {
+        console.error(err);
+        showFeedback("Failed to delete product.", "error");
+      }
+    }
+  };
+
+  const handleUploadProductImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !editingProduct) return;
+
+    setIsUploadingProductImages(true);
+    const prodId = editingProduct.id || `prod-${Date.now()}`;
+    const newImageUrls: string[] = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadedUrl = await uploadProductImage(prodId, file);
+        if (uploadedUrl) newImageUrls.push(uploadedUrl);
+      }
+
+      setEditingProduct((prev) => ({
+        ...prev,
+        images: [...(prev?.images || []), ...newImageUrls],
+      }));
+      showFeedback(`Added ${newImageUrls.length} image(s) to product!`);
+    } catch (err) {
+      console.error(err);
+      showFeedback("Failed to upload some images.", "error");
+    } finally {
+      setIsUploadingProductImages(false);
+      if (productFileInputRef.current) productFileInputRef.current.value = "";
+    }
+  };
+
+  const handleAddProductImageUrl = () => {
+    if (!productUrlInput.trim() || !editingProduct) return;
+    setEditingProduct((prev) => ({
+      ...prev,
+      images: [...(prev?.images || []), productUrlInput.trim()],
+    }));
+    setProductUrlInput("");
+    showFeedback("Image URL added to product gallery!");
+  };
+
+  const handleRemoveProductImage = (indexToRemove: number) => {
+    if (!editingProduct) return;
+    setEditingProduct((prev) => ({
+      ...prev,
+      images: (prev?.images || []).filter((_, idx) => idx !== indexToRemove),
+    }));
+  };
+
+  const handleMakeCoverImage = (indexToCover: number) => {
+    if (!editingProduct) return;
+    const current = [...(editingProduct.images || [])];
+    const [selected] = current.splice(indexToCover, 1);
+    current.unshift(selected);
+    setEditingProduct((prev) => ({ ...prev, images: current }));
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct || !editingProduct.name?.trim()) {
+      showFeedback("Product Title is required.", "error");
+      return;
+    }
+
+    try {
+      setIsSavingProduct(true);
+      await saveProduct(editingProduct);
+      showFeedback(`Product "${editingProduct.name}" saved to Firebase! Live on website.`);
+      setIsProductModalOpen(false);
+      setEditingProduct(null);
+    } catch (err) {
+      console.error(err);
+      showFeedback("Failed to save product.", "error");
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
+
+  const handleResetDefaultProducts = async () => {
+    if (confirm("Reset all products back to standard 6 TAPSH default products?")) {
+      try {
+        await resetToDefaultProducts();
+        showFeedback("Products catalog restored to factory defaults.");
+      } catch (err) {
+        console.error(err);
+        showFeedback("Failed to reset products.", "error");
+      }
+    }
+  };
+
+  // Filter Media Assets
   const filteredAssets = MEDIA_ASSET_REGISTRY.filter((item) => {
     const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
     const matchesSearch = 
@@ -116,6 +289,17 @@ export default function AdminSettingsPage() {
   });
 
   const customCount = MEDIA_ASSET_REGISTRY.filter((item) => isCustom(item.key)).length;
+
+  // Filter Products
+  const filteredProducts = products.filter((prod) => {
+    const term = productSearch.toLowerCase();
+    return (
+      prod.name.toLowerCase().includes(term) ||
+      prod.description.toLowerCase().includes(term) ||
+      prod.benefit.toLowerCase().includes(term) ||
+      (prod.category && prod.category.toLowerCase().includes(term))
+    );
+  });
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -150,27 +334,38 @@ export default function AdminSettingsPage() {
                 Settings & Configuration
               </h1>
               <p className="text-xs sm:text-sm text-tapsh-charcoal mt-0.5">
-                Manage site content, website media assets, admin identity, and cloud sync.
+                Manage site content, website media assets, products, admin identity, and cloud sync.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Global Stats / Quick Action */}
+        {/* Global Quick Stats */}
         <div className="flex items-center gap-3">
-          <div className="bg-white px-4 py-2 rounded-2xl border border-tapsh-charcoal/20 shadow-xs flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
-            <span className="text-xs font-semibold text-tapsh-charcoal">
-              Custom Assets: <strong className="text-tapsh-black">{customCount}</strong> / {MEDIA_ASSET_REGISTRY.length}
-            </span>
-          </div>
-          {customCount > 0 && (
+          {activeTab === "products" ? (
             <button
-              onClick={handleResetAllConfirm}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white hover:bg-red-50 rounded-2xl border border-tapsh-charcoal/20 transition-all cursor-pointer"
+              onClick={handleOpenCreateProduct}
+              className="flex items-center gap-2 px-4 py-2.5 bg-tapsh-soft-green hover:brightness-105 text-white rounded-2xl text-xs font-bold shadow-md active:scale-95 transition-all cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" /> Revert All
+              <Plus className="w-4 h-4" /> Add Product
             </button>
+          ) : (
+            <>
+              <div className="bg-white px-4 py-2 rounded-2xl border border-tapsh-charcoal/20 shadow-xs flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
+                <span className="text-xs font-semibold text-tapsh-charcoal">
+                  Custom Assets: <strong className="text-tapsh-black">{customCount}</strong> / {MEDIA_ASSET_REGISTRY.length}
+                </span>
+              </div>
+              {customCount > 0 && (
+                <button
+                  onClick={handleResetAllConfirm}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white hover:bg-red-50 rounded-2xl border border-tapsh-charcoal/20 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Revert All
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -191,6 +386,24 @@ export default function AdminSettingsPage() {
             activeTab === "content" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/10 text-tapsh-charcoal"
           }`}>
             {MEDIA_ASSET_REGISTRY.length}
+          </span>
+        </button>
+
+        {/* PRODUCTS TAB */}
+        <button
+          onClick={() => setActiveTab("products")}
+          className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+            activeTab === "products"
+              ? "bg-tapsh-black text-white shadow-md"
+              : "text-tapsh-charcoal hover:text-tapsh-black hover:bg-tapsh-pale-blue/40"
+          }`}
+        >
+          <Package className="w-4 h-4 text-tapsh-soft-green" />
+          <span>Products</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            activeTab === "products" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/10 text-tapsh-charcoal"
+          }`}>
+            {products.length}
           </span>
         </button>
 
@@ -224,7 +437,6 @@ export default function AdminSettingsPage() {
       {/* ---------------------------------------------------- */}
       {activeTab === "content" && (
         <div className="space-y-6">
-          
           {/* Section Introduction Banner */}
           <div className="bg-gradient-to-br from-tapsh-black to-[#2A2B2D] text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
             <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-tapsh-soft-green/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -245,7 +457,6 @@ export default function AdminSettingsPage() {
 
           {/* Filter & Search Bar */}
           <div className="bg-white p-4 rounded-3xl border border-tapsh-charcoal/20 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Category Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
               {MEDIA_CATEGORIES.map((cat) => (
                 <button
@@ -262,7 +473,6 @@ export default function AdminSettingsPage() {
               ))}
             </div>
 
-            {/* Search Input */}
             <div className="relative w-full md:w-64">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
               <input
@@ -288,7 +498,6 @@ export default function AdminSettingsPage() {
                   key={asset.key}
                   className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
                 >
-                  {/* Top Status Header */}
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
@@ -300,7 +509,6 @@ export default function AdminSettingsPage() {
                         </h3>
                       </div>
 
-                      {/* Custom vs Default Badge */}
                       {customActive ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green shrink-0">
                           <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
@@ -326,7 +534,6 @@ export default function AdminSettingsPage() {
                         </div>
                       ) : liveValue ? (
                         <div className="relative w-full h-full flex items-center justify-center">
-                          {/* Use regular img for maximum reliability with data: URLs and cross-origin images */}
                           <img
                             src={liveValue}
                             alt={asset.label}
@@ -342,7 +549,6 @@ export default function AdminSettingsPage() {
                         </div>
                       )}
 
-                      {/* Overlay Action to Enlarge */}
                       {liveValue && asset.type === "image" && (
                         <button
                           onClick={() => setPreviewModalImage({ title: asset.label, url: liveValue })}
@@ -352,7 +558,6 @@ export default function AdminSettingsPage() {
                         </button>
                       )}
 
-                      {/* Loading spinner */}
                       {isUpdating && (
                         <div className="absolute inset-0 bg-tapsh-black/80 flex flex-col items-center justify-center text-white text-xs gap-2 z-20 backdrop-blur-xs">
                           <RefreshCw className="w-6 h-6 animate-spin text-tapsh-soft-green" />
@@ -361,16 +566,12 @@ export default function AdminSettingsPage() {
                       )}
                     </div>
 
-                    {/* Specification Hints */}
                     <div className="text-[11px] text-tapsh-charcoal/80 mb-4 bg-tapsh-pale-blue/30 p-2.5 rounded-xl border border-tapsh-charcoal/10">
                       <strong>Recommended:</strong> {asset.recommendedSize}
                     </div>
                   </div>
 
-                  {/* BOTTOM ACTION BUTTONS */}
                   <div className="space-y-2 pt-2 border-t border-tapsh-charcoal/15">
-                    
-                    {/* Hidden File Input */}
                     <input
                       type="file"
                       ref={(el) => {
@@ -381,7 +582,6 @@ export default function AdminSettingsPage() {
                       className="hidden"
                     />
 
-                    {/* Upload / Choose Image Button */}
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => fileInputRefs.current[asset.key]?.click()}
@@ -405,7 +605,6 @@ export default function AdminSettingsPage() {
                       </button>
                     </div>
 
-                    {/* Expandable URL Input Field */}
                     {isUrlOpen && (
                       <div className="p-3 bg-tapsh-pale-blue/50 rounded-2xl border border-tapsh-charcoal/20 space-y-2 animate-in slide-in-from-top-2">
                         <label className="text-[10px] uppercase font-bold text-tapsh-charcoal">
@@ -430,7 +629,6 @@ export default function AdminSettingsPage() {
                       </div>
                     )}
 
-                    {/* Reset to Default Button (Visible if custom) */}
                     {customActive && (
                       <button
                         onClick={() => handleResetSingle(asset)}
@@ -450,7 +648,182 @@ export default function AdminSettingsPage() {
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* TAB 2: ADMIN IDENTITY & PROFILE */}
+      {/* TAB 2: PRODUCTS MANAGEMENT SECTION */}
+      {/* ---------------------------------------------------- */}
+      {activeTab === "products" && (
+        <div className="space-y-6">
+          
+          {/* Header Banner */}
+          <div className="bg-gradient-to-br from-tapsh-black to-[#2A2B2D] text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
+            <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-tapsh-soft-green/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tapsh-soft-green/20 text-tapsh-soft-green text-[11px] font-bold uppercase tracking-wider mb-3">
+                  <Package className="w-3.5 h-3.5" /> Product Catalog & Slideshows
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
+                  Live Website Products & Multi-Image Slideshows
+                </h2>
+                <p className="text-xs sm:text-sm text-tapsh-gray leading-relaxed">
+                  Add, edit, or remove products displayed on the public website (<code className="text-tapsh-soft-green font-mono">/products</code>). 
+                  Upload multiple product showcase images per item to create an automatic interactive slideshow for prospective clients.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                <button
+                  onClick={handleOpenCreateProduct}
+                  className="flex items-center justify-center gap-2 px-5 py-3 bg-tapsh-soft-green text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Add Product
+                </button>
+                <Link
+                  href="/products"
+                  target="_blank"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm rounded-2xl transition-all"
+                >
+                  <ArrowUpRight className="w-4 h-4 text-tapsh-soft-green" /> View Public Page
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Actions Bar */}
+          <div className="bg-white p-4 rounded-3xl border border-tapsh-charcoal/20 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
+              <input
+                type="text"
+                placeholder="Search products by title, benefit, category..."
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-2xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+              <span className="text-xs font-semibold text-tapsh-charcoal">
+                Showing <strong className="text-tapsh-black">{filteredProducts.length}</strong> products
+              </span>
+              <button
+                onClick={handleResetDefaultProducts}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-tapsh-pale-blue/40 rounded-xl border border-tapsh-charcoal/15 transition-all cursor-pointer"
+                title="Reset to original 6 products"
+              >
+                <RotateCcw className="w-3 h-3" /> Factory Defaults
+              </button>
+            </div>
+          </div>
+
+          {/* PRODUCTS GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredProducts.map((product) => {
+              const imageCount = product.images?.length || 0;
+
+              return (
+                <div
+                  key={product.id}
+                  className="bg-white rounded-3xl border border-tapsh-charcoal/20 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                >
+                  {/* Top Slideshow Visual */}
+                  <div>
+                    <div className="relative">
+                      <ProductSlideshow
+                        images={product.images}
+                        name={product.name}
+                        iconType={product.iconType}
+                        className="h-52"
+                      />
+
+                      {/* Top Badges */}
+                      <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+                        {product.badge && (
+                          <span className="px-2.5 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                            {product.badge}
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                          product.status === "ACTIVE" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/20 text-tapsh-black"
+                        }`}>
+                          {product.status}
+                        </span>
+                      </div>
+
+                      {/* Image count pill */}
+                      <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-full bg-black/70 text-white text-[10px] font-bold backdrop-blur-xs flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3 text-tapsh-soft-green" />
+                        <span>{imageCount} {imageCount === 1 ? "image" : "images"}</span>
+                      </div>
+                    </div>
+
+                    {/* Product Content Details */}
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
+                            {product.category || "General"}
+                          </span>
+                          <h3 className="font-bold text-tapsh-black text-xl leading-tight mt-0.5">
+                            {product.name}
+                          </h3>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-tapsh-charcoal line-clamp-2 mb-4 leading-relaxed">
+                        {product.description || "No description provided."}
+                      </p>
+
+                      {/* Key Benefit Box */}
+                      {product.benefit && (
+                        <div className="bg-tapsh-pale-blue/40 p-3 rounded-2xl border border-tapsh-charcoal/15 mb-4">
+                          <span className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-soft-green mb-0.5">
+                            Key Benefit
+                          </span>
+                          <p className="text-xs font-semibold text-tapsh-black line-clamp-2">
+                            {product.benefit}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Footer */}
+                  <div className="p-4 bg-[#FAF8F5] border-t border-tapsh-charcoal/15 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenEditProduct(product)}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(product)}
+                        className="p-2 text-tapsh-charcoal hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                        title="Delete product"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <Link
+                      href={`/products/${product.slug}`}
+                      target="_blank"
+                      className="text-[11px] font-bold text-tapsh-charcoal hover:text-tapsh-black flex items-center gap-1"
+                    >
+                      <span>Public Details</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-tapsh-soft-green" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* TAB 3: ADMIN IDENTITY & PROFILE */}
       {/* ---------------------------------------------------- */}
       {activeTab === "identity" && (
         <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-8 shadow-xs max-w-2xl">
@@ -465,7 +838,6 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className="space-y-6">
-            {/* Current Profile Avatar */}
             <div className="flex items-center gap-5 p-4 bg-tapsh-pale-blue/30 rounded-2xl border border-tapsh-charcoal/15">
               <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-tapsh-soft-green bg-tapsh-black flex items-center justify-center shrink-0">
                 {getAsset("admin_avatar") ? (
@@ -496,7 +868,6 @@ export default function AdminSettingsPage() {
               </button>
             </div>
 
-            {/* Display Name Setting */}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-wider text-tapsh-black">
                 Console Display Label
@@ -524,7 +895,7 @@ export default function AdminSettingsPage() {
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* TAB 3: FIREBASE CLOUD SYNC STATUS */}
+      {/* TAB 4: FIREBASE CLOUD SYNC STATUS */}
       {/* ---------------------------------------------------- */}
       {activeTab === "system" && (
         <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-8 shadow-xs max-w-3xl space-y-6">
@@ -547,7 +918,7 @@ export default function AdminSettingsPage() {
                 </span>
               </div>
               <p className="text-xs text-tapsh-charcoal">
-                Collection: <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_settings</code> / Document: <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_assets</code>
+                Collections: <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_settings</code> & <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_products</code>
               </p>
             </div>
 
@@ -567,6 +938,338 @@ export default function AdminSettingsPage() {
           <div className="bg-tapsh-pale-blue/20 p-4 rounded-2xl border border-tapsh-charcoal/15 text-xs text-tapsh-charcoal leading-relaxed">
             <strong className="text-tapsh-black block mb-1">Resilient Dual-Mode Upload Pipeline:</strong>
             When uploading image files, the system first attempts cloud delivery to Firebase Storage (<code className="bg-white px-1 rounded">tapsh-ddea2.firebasestorage.app</code>). If storage rules are restricted or offline, the system automatically uses client-side canvas compression to encode high-resolution data URLs directly into Firestore and local cache. Images are never lost and always visible.
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL: ADD / EDIT PRODUCT */}
+      {/* ---------------------------------------------------- */}
+      {isProductModalOpen && editingProduct && (
+        <div 
+          className="fixed inset-0 z-50 bg-tapsh-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setIsProductModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] flex flex-col justify-between shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-tapsh-charcoal/20 pb-4 mb-6 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-tapsh-black text-white flex items-center justify-center">
+                  <Package className="w-4 h-4 text-tapsh-soft-green" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-tapsh-black">
+                    {editingProduct.name ? `Edit "${editingProduct.name}"` : "Add New Product"}
+                  </h3>
+                  <p className="text-xs text-tapsh-charcoal">
+                    Changes will be saved to Firebase and instantly published to the website.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsProductModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-tapsh-pale-blue/60 hover:bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Form Scrollable Area */}
+            <form onSubmit={handleSaveProduct} className="space-y-6 overflow-y-auto pr-1 flex-1">
+              
+              {/* Product Title & Slug */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
+                    Product Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. TAPSH Smart Stand"
+                    value={editingProduct.name || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const slug = val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+                      setEditingProduct((prev) => ({ 
+                        ...prev, 
+                        name: val,
+                        slug: prev?.slug && prev.slug !== "" ? prev.slug : slug 
+                      }));
+                    }}
+                    className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
+                    URL Slug
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. tapsh-smart-stand"
+                    value={editingProduct.slug || ""}
+                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, slug: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-mono text-tapsh-black focus:outline-none focus:border-tapsh-soft-green"
+                  />
+                </div>
+              </div>
+
+              {/* Tagline / Subtitle */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
+                  Tagline / Pitch
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Turn customer interactions into instant 5-star reviews."
+                  value={editingProduct.tagline || ""}
+                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, tagline: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-tapsh-soft-green"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
+                  Full Description *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Explain what the product accomplishes for physical businesses..."
+                  value={editingProduct.description || ""}
+                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-tapsh-soft-green"
+                />
+              </div>
+
+              {/* Key Benefit */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
+                  Key Benefit (Highlighted on Website Card) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Increase your Google & TripAdvisor ratings effortlessly."
+                  value={editingProduct.benefit || ""}
+                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, benefit: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
+                />
+              </div>
+
+              {/* Category, Badge, Status, Icon */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Reviews"
+                    value={editingProduct.category || ""}
+                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
+                    Ribbon Badge
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Popular"
+                    value={editingProduct.badge || ""}
+                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, badge: e.target.value }))}
+                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
+                    Fallback Icon
+                  </label>
+                  <select
+                    value={editingProduct.iconType || "sparkles"}
+                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, iconType: e.target.value as any }))}
+                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
+                  >
+                    <option value="star">Star (Review)</option>
+                    <option value="wifi">Wi-Fi</option>
+                    <option value="message">WhatsApp/Chat</option>
+                    <option value="camera">Instagram/Camera</option>
+                    <option value="globe">Globe/Website</option>
+                    <option value="grid">Grid (All-in-One)</option>
+                    <option value="sparkles">Sparkles (Custom)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={editingProduct.status || "ACTIVE"}
+                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, status: e.target.value as any }))}
+                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
+                  >
+                    <option value="ACTIVE">Active (Live)</option>
+                    <option value="DRAFT">Draft (Hidden)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* ---------------------------------------------------- */}
+              {/* MULTIPLE IMAGES SELECTOR & GALLERY MANAGER */}
+              {/* ---------------------------------------------------- */}
+              <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-tapsh-charcoal/20 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-bold text-sm text-tapsh-black flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-tapsh-soft-green" /> Product Showcase Images (Slideshow)
+                    </h4>
+                    <p className="text-[11px] text-tapsh-charcoal">
+                      Select multiple photos. These will auto-play as a slideshow on the website card and product page.
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-tapsh-black text-white">
+                    {editingProduct.images?.length || 0} Images
+                  </span>
+                </div>
+
+                {/* Upload Buttons / File Input */}
+                <input
+                  type="file"
+                  ref={productFileInputRef}
+                  multiple
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleUploadProductImages}
+                  className="hidden"
+                />
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => productFileInputRef.current?.click()}
+                    disabled={isUploadingProductImages}
+                    className="flex-1 py-3 px-4 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                  >
+                    {isUploadingProductImages ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-tapsh-soft-green" />
+                        <span>Uploading & Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Choose Multiple Image Files</span>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="flex flex-1 gap-2">
+                    <input
+                      type="url"
+                      placeholder="Or paste direct image URL..."
+                      value={productUrlInput}
+                      onChange={(e) => setProductUrlInput(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddProductImageUrl}
+                      disabled={!productUrlInput.trim()}
+                      className="px-3 py-2 bg-tapsh-pale-blue text-tapsh-black rounded-xl text-xs font-bold border border-tapsh-charcoal/20 hover:bg-tapsh-soft-green hover:text-white transition-colors disabled:opacity-40 cursor-pointer"
+                    >
+                      Add URL
+                    </button>
+                  </div>
+                </div>
+
+                {/* Image Thumbnails Gallery */}
+                {editingProduct.images && editingProduct.images.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                    {editingProduct.images.map((imgUrl, idx) => (
+                      <div
+                        key={idx}
+                        className="relative aspect-square rounded-2xl bg-white border border-tapsh-charcoal/20 overflow-hidden group/img shadow-xs flex items-center justify-center p-2"
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Product photo ${idx + 1}`}
+                          className="max-h-full max-w-full object-contain"
+                        />
+
+                        {/* First image badge */}
+                        {idx === 0 ? (
+                          <span className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-tapsh-soft-green text-white text-[9px] font-bold uppercase shadow-sm">
+                            Cover
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleMakeCoverImage(idx)}
+                            className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-black/60 hover:bg-tapsh-soft-green text-white text-[9px] font-bold opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer"
+                          >
+                            Set Cover
+                          </button>
+                        )}
+
+                        {/* Remove Image Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveProductImage(idx)}
+                          className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity shadow-md cursor-pointer"
+                          title="Remove image"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-xl border border-dashed border-tapsh-charcoal/30 text-center text-tapsh-charcoal text-xs">
+                    No custom images added yet. The product will use its default emblem until photos are uploaded.
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-tapsh-charcoal/20 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsProductModalOpen(false)}
+                  disabled={isSavingProduct}
+                  className="px-5 py-2.5 rounded-xl border border-tapsh-charcoal/20 text-xs font-bold text-tapsh-charcoal hover:bg-tapsh-pale-blue transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingProduct}
+                  className="px-6 py-2.5 bg-tapsh-soft-green hover:brightness-105 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingProduct ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving to Firebase...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Save Product</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
       )}

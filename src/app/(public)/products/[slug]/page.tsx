@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, Smartphone, Zap, Settings, CheckCircle2, Building2 } from "lucide-react";
+import { ArrowRight, Smartphone, Zap, Settings, CheckCircle2, Building2, MessageCircle } from "lucide-react";
+import ProductSlideshow from "@/components/products/ProductSlideshow";
+import { DEFAULT_PRODUCTS, getLocalCachedProducts, ProductItem } from "@/lib/productsService";
 
-const PRODUCT_DATA: Record<string, any> = {
+const FALLBACK_SPECS: Record<string, any> = {
   "tapsh-review": {
-    name: "TAPSH Review",
-    tagline: "Make it easier for customers to share their experience.",
-    description: "Capture 5-star Google and TripAdvisor reviews effortlessly while your customers are still on-premises and highly engaged.",
     howItWorks: [
       "Customer taps the TAPSH Review card or scans the QR code.",
       "They are instantly directed to your TAPSH Hub or directly to your Google Review page.",
@@ -20,9 +19,6 @@ const PRODUCT_DATA: Record<string, any> = {
     whoIsItFor: ["Restaurants & Cafés", "Hotels & Resorts", "Salons & Spas", "Clinics"],
   },
   "tapsh-all-in-one": {
-    name: "TAPSH All-in-One",
-    tagline: "The ultimate digital concierge for your physical space.",
-    description: "Give your guests instant access to your menu, Wi-Fi, reviews, social media, and WhatsApp through a single, beautifully branded TAPSH Hub.",
     howItWorks: [
       "Guest taps their phone against the TAPSH display in their room or table.",
       "The custom TAPSH Hub opens instantly—no app download required.",
@@ -40,18 +36,47 @@ const PRODUCT_DATA: Record<string, any> = {
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const product = PRODUCT_DATA[resolvedParams.slug] || {
-    name: resolvedParams.slug.replace("-", " ").toUpperCase(),
+  const slug = resolvedParams.slug;
+
+  // Look up product from cached products or defaults
+  const allProducts: ProductItem[] = getLocalCachedProducts();
+  const matched = allProducts.find((p) => p.slug === slug || p.id === slug) ||
+    DEFAULT_PRODUCTS.find((p) => p.slug === slug || p.id === slug);
+
+  const product = matched || {
+    id: slug,
+    slug: slug,
+    name: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     tagline: "Bridge the gap between your physical space and digital presence.",
-    description: "A premium NFC and QR solution tailored for your business needs.",
-    howItWorks: [
-      "Customer taps or scans the TAPSH product.",
-      "The relevant digital experience opens instantly.",
-      "Customer completes the action seamlessly."
-    ],
-    included: ["Premium NFC product", "Custom QR Code", "TAPSH Hub Integration"],
-    whoIsItFor: ["Any business with a physical location"],
+    description: "A premium NFC and QR smart touchpoint tailored for modern businesses.",
+    benefit: "Connect customers instantly with a single tap.",
+    images: [],
+    iconType: "sparkles" as const,
+    category: "Smart Solutions",
+    badge: "",
+    status: "ACTIVE" as const,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
+
+  const specs = FALLBACK_SPECS[product.slug] || {
+    howItWorks: [
+      "Customer taps or scans the physical TAPSH product.",
+      "The designated digital experience or Hub opens instantly on their phone browser.",
+      "Customer completes the action effortlessly without any app install."
+    ],
+    included: [
+      "Custom programmed NFC smart touchpoint",
+      "High-durability acrylic / metal finish with laser QR",
+      "Dynamic cloud-managed TAPSH Hub integration",
+      "100% device compatibility guarantee"
+    ],
+    whoIsItFor: ["Hospitality & Resorts", "Restaurants & Cafés", "Retail & Salons", "Professional Offices"],
+  };
+
+  const waOrderUrl = `https://wa.me/917977469926?text=${encodeURIComponent(
+    `Hello TAPSH, I would like to order or get a quote for *${product.name}*.`
+  )}`;
 
   return (
     <div className="pt-20 min-h-screen bg-white text-tapsh-black">
@@ -61,40 +86,65 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             
-            {/* Product Visual Showcase */}
-            <div className="aspect-[4/3] bg-gradient-to-br from-tapsh-pale-blue via-white to-tapsh-pale-blue/50 rounded-[2.5rem] border border-tapsh-charcoal/20 shadow-xl flex flex-col items-center justify-center p-8 relative overflow-hidden group">
-              <div className="w-32 h-48 bg-tapsh-black rounded-2xl shadow-2xl border border-tapsh-charcoal flex flex-col items-center justify-between p-4 transform -rotate-3 group-hover:rotate-0 transition-transform duration-500 relative z-10">
-                <div className="w-full flex justify-between items-center text-tapsh-beige">
-                  <span className="text-[10px] font-bold tracking-widest">TAPSH</span>
-                  <Smartphone className="w-4 h-4" />
-                </div>
-                <div className="w-16 h-16 rounded-2xl bg-tapsh-taupe/40 border border-tapsh-charcoal/30 flex items-center justify-center">
-                  <Zap className="w-8 h-8 text-tapsh-beige" />
-                </div>
-                <span className="text-[9px] uppercase tracking-widest text-tapsh-beige font-semibold">NFC + QR Active</span>
-              </div>
-              <div className="absolute inset-0 bg-tapsh-soft-green/10 rounded-full blur-3xl pointer-events-none scale-125"></div>
+            {/* Product Visual Showcase (Slideshow if multiple images, single image, or fallback emblem) */}
+            <div className="rounded-[2.5rem] border border-tapsh-charcoal/20 shadow-xl overflow-hidden bg-white">
+              <ProductSlideshow
+                images={product.images}
+                name={product.name}
+                iconType={product.iconType}
+                className="h-80 sm:h-96"
+              />
             </div>
 
             {/* Content Side */}
             <div>
               <Link href="/products" className="text-sm font-bold text-tapsh-soft-green hover:text-tapsh-black mb-6 inline-block transition-colors">
-                &larr; Back to Products
+                &larr; Back to All Products
               </Link>
-              <h1 className="text-4xl md:text-5xl font-bold text-tapsh-black mb-4">{product.name}</h1>
-              <p className="text-2xl text-tapsh-charcoal font-medium mb-6">{product.tagline}</p>
-              <p className="text-lg text-tapsh-black/70 mb-10 leading-relaxed">
+              
+              {product.category && (
+                <div className="mb-2">
+                  <span className="text-xs uppercase tracking-widest font-bold text-tapsh-taupe">
+                    {product.category}
+                  </span>
+                </div>
+              )}
+
+              <h1 className="text-4xl md:text-5xl font-bold text-tapsh-black mb-4">
+                {product.name}
+              </h1>
+              
+              {product.tagline && (
+                <p className="text-xl text-tapsh-charcoal font-medium mb-6">
+                  {product.tagline}
+                </p>
+              )}
+
+              <p className="text-base sm:text-lg text-tapsh-black/80 mb-8 leading-relaxed">
                 {product.description}
               </p>
 
+              {product.benefit && (
+                <div className="bg-white p-4 rounded-2xl border border-tapsh-charcoal/20 mb-8 shadow-xs">
+                  <span className="block text-xs font-bold text-tapsh-soft-green uppercase tracking-wider mb-1">
+                    Primary Advantage
+                  </span>
+                  <p className="font-semibold text-tapsh-black text-sm sm:text-base">
+                    {product.benefit}
+                  </p>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link 
-                  href="/contact"
-                  className="px-8 py-4 bg-tapsh-black text-tapsh-pale-blue rounded-xl font-bold hover:bg-tapsh-black transition-all text-center flex items-center justify-center gap-2 shadow-lg"
+                <a 
+                  href={waOrderUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-8 py-4 bg-tapsh-soft-green text-white rounded-xl font-bold hover:brightness-105 transition-all text-center flex items-center justify-center gap-2 shadow-lg active:scale-95"
                 >
-                  Get This for My Business
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
+                  <MessageCircle className="w-5 h-5" />
+                  Order on WhatsApp
+                </a>
                 <Link 
                   href="/contact"
                   className="px-8 py-4 bg-transparent text-tapsh-black border-2 border-tapsh-black rounded-xl font-bold hover:bg-tapsh-pale-blue transition-all text-center"
@@ -103,6 +153,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 </Link>
               </div>
             </div>
+
           </div>
         </div>
       </section>
@@ -151,7 +202,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <Smartphone className="w-6 h-6 text-tapsh-charcoal" /> How it Works
               </h3>
               <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-tapsh-charcoal/30">
-                {product.howItWorks.map((step: string, index: number) => (
+                {specs.howItWorks.map((step: string, index: number) => (
                   <div key={index} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                     <div className="flex items-center justify-center w-10 h-10 rounded-full border-2 border-tapsh-charcoal bg-tapsh-black text-tapsh-pale-blue shadow-xl shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 font-bold z-10">
                       {index + 1}
@@ -170,7 +221,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <CheckCircle2 className="w-6 h-6 text-tapsh-charcoal" /> What is Included
               </h3>
               <ul className="space-y-4">
-                {product.included.map((item: string, i: number) => (
+                {specs.included.map((item: string, i: number) => (
                   <li key={i} className="flex items-start gap-3 bg-tapsh-taupe p-4 rounded-2xl border border-tapsh-charcoal/30 shadow-lg">
                     <CheckCircle2 className="w-5 h-5 text-tapsh-charcoal shrink-0 mt-0.5" />
                     <span className="font-medium text-tapsh-pale-blue/90">{item}</span>
@@ -185,7 +236,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <Building2 className="w-6 h-6 text-tapsh-charcoal" /> Who is it For
               </h3>
               <div className="flex flex-wrap gap-3">
-                {product.whoIsItFor.map((audience: string, i: number) => (
+                {specs.whoIsItFor.map((audience: string, i: number) => (
                   <span key={i} className="px-4 py-2 bg-tapsh-taupe border border-tapsh-charcoal/50 text-tapsh-pale-blue font-medium rounded-full shadow-md">
                     {audience}
                   </span>

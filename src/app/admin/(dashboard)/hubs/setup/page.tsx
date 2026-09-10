@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Copy, QrCode, Download, ExternalLink, User,
   Sparkles, ArrowLeft, ArrowRight, Loader2
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import HubView from "@/components/HubView";
 import Link from "next/link";
 import { createCustomer, createHub } from "@/lib/firestoreService";
@@ -386,54 +387,127 @@ export default function HubSetupWizard() {
   );
 
   // SUCCESS SCREEN
-  const renderSuccess = () => (
-    <div className="max-w-md mx-auto text-center py-6 space-y-5 animate-in fade-in zoom-in-95">
-      <div className="w-16 h-16 bg-tapsh-soft-green/10 text-tapsh-soft-green rounded-full flex items-center justify-center mx-auto border-2 border-tapsh-soft-green shadow-xs">
-        <Check className="w-8 h-8" />
-      </div>
+  const renderSuccess = () => {
+    const liveUrl = typeof window !== "undefined" && createdHub?.slug 
+      ? `${window.location.origin}/h/${createdHub.slug}` 
+      : `https://tapsh.in/h/${createdHub?.slug || ""}`;
 
-      <div>
-        <h2 className="text-2xl font-bold text-tapsh-black">Hub Successfully Deployed!</h2>
-        <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-          Permanent digital routing has been provisioned.
-        </p>
-      </div>
+    const handleCopyUrl = (urlToCopy: string) => {
+      navigator.clipboard.writeText(urlToCopy);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    };
 
-      <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 text-left">
-        <span className="text-[10px] uppercase font-bold text-tapsh-charcoal block mb-1">
-          Deployed Permanent Address
-        </span>
-        <div className="flex items-center gap-2">
-          <code className="text-xs font-bold text-tapsh-black flex-1 truncate">
-            tapsh.in/h/{createdHub?.slug}
-          </code>
-          <button
-            onClick={handleCopySlug}
-            className="p-2 bg-tapsh-soft-green text-white rounded-xl text-xs active:scale-95 transition-all"
-            title="Copy URL"
+    const handleDownloadQR = () => {
+      const canvas = document.getElementById("hub-qr-canvas") as HTMLCanvasElement;
+      if (!canvas) return;
+      const pngUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `${createdHub?.slug || "tapsh-hub"}-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    };
+
+    return (
+      <div className="max-w-lg mx-auto text-center py-4 space-y-6 animate-in fade-in zoom-in-95">
+        <div className="w-16 h-16 bg-tapsh-soft-green/10 text-tapsh-soft-green rounded-full flex items-center justify-center mx-auto border-2 border-tapsh-soft-green shadow-xs">
+          <Check className="w-8 h-8" />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold text-tapsh-black">Hub Successfully Deployed!</h2>
+          <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+            Permanent digital routing is provisioned for <strong className="text-tapsh-black">{createdHub?.businessName}</strong>.
+          </p>
+        </div>
+
+        {/* Custom QR Code Card & Download */}
+        <div className="bg-[#FAF8F5] p-5 sm:p-6 rounded-3xl border border-tapsh-charcoal/15 text-center shadow-xs">
+          <span className="inline-block px-3 py-1 rounded-full bg-tapsh-soft-green/10 text-tapsh-soft-green text-[10px] font-bold tracking-wider uppercase mb-2">
+            Custom Hardware QR Code
+          </span>
+          <p className="text-xs text-tapsh-charcoal mb-4">
+            Scan with any phone camera or download high-resolution PNG for printing stands & tags.
+          </p>
+
+          <div className="bg-white p-4 rounded-2xl border-2 border-tapsh-charcoal/15 inline-block shadow-sm mb-4">
+            <QRCodeCanvas
+              id="hub-qr-canvas"
+              value={liveUrl}
+              size={200}
+              level="H"
+              includeMargin={true}
+            />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleDownloadQR}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-tapsh-black text-tapsh-beige rounded-2xl text-xs sm:text-sm font-bold shadow-md hover:bg-tapsh-taupe active:scale-95 transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-tapsh-soft-green" /> Download QR Code (PNG)
+            </button>
+          </div>
+        </div>
+
+        {/* Working Live Shortlink (Copy & Paste to open) */}
+        <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 text-left space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] uppercase font-bold text-tapsh-charcoal tracking-wider">
+              Live Hub Web Link (Copy & Paste in Browser)
+            </span>
+            {copiedLink && (
+              <span className="text-[11px] font-bold text-emerald-600 animate-in fade-in">
+                ✓ Copied to clipboard!
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={liveUrl}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+              className="text-xs font-mono font-bold text-tapsh-black flex-1 p-2.5 bg-white border border-tapsh-charcoal/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green select-all"
+            />
+            <button
+              onClick={() => handleCopyUrl(liveUrl)}
+              className="p-2.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+              title="Copy URL"
+            >
+              {copiedLink ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              <span>{copiedLink ? "Copied" : "Copy Link"}</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-tapsh-charcoal">
+            Paste this URL into any browser tab to open this customer's live mobile touchpoint Hub.
+          </p>
+        </div>
+
+        {/* Quick Launch Buttons */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <a 
+            href={`/h/${createdHub?.slug}`} 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-3 bg-tapsh-soft-green text-white rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs hover:brightness-110"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
+            <ExternalLink className="w-4 h-4" /> Open Live Hub Tab
+          </a>
+          <Link 
+            href={`/admin/customers/${createdHub?.customerId}`}
+            className="p-3 bg-white border border-tapsh-charcoal/20 text-tapsh-black rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all hover:bg-tapsh-pale-blue/30"
+          >
+            <User className="w-4 h-4" /> View Profile
+          </Link>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-2.5">
-        <a 
-          href={`/h/${createdHub?.slug}`} 
-          target="_blank"
-          className="p-3 bg-tapsh-black text-tapsh-beige rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs"
-        >
-          <ExternalLink className="w-3.5 h-3.5" /> Open Live Hub
-        </a>
-        <Link 
-          href={`/admin/customers/${createdHub?.customerId}`}
-          className="p-3 bg-white border border-tapsh-charcoal/20 text-tapsh-black rounded-2xl text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-        >
-          <User className="w-3.5 h-3.5" /> View Profile
-        </Link>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (isSuccess) {
     return (

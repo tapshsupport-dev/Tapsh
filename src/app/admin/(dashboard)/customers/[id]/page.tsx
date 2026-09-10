@@ -6,8 +6,9 @@ import Link from "next/link";
 import { 
   ArrowLeft, Phone, Mail, MapPin, ExternalLink, 
   Pencil, Trash2, X, Save, CheckCircle2, Receipt, Clock, Sparkles, Building2,
-  Loader2, User, FileText
+  Loader2, User, FileText, Download, Copy, Check
 } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import { Customer, Hub, mockInvoices, mockAuditLogs } from "@/lib/data";
 import { 
   getCustomerById, getHubByCustomerId, updateCustomer, deleteCustomer 
@@ -22,6 +23,7 @@ export default function CustomerProfilePage() {
   const [hub, setHub] = useState<Hub | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
 
   // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false);
@@ -250,26 +252,103 @@ export default function CustomerProfilePage() {
         </div>
 
         {hub ? (
-          <div className="space-y-4">
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="min-w-0">
-                <span className="text-[10px] uppercase font-bold text-tapsh-charcoal block mb-0.5 tracking-wider">
-                  Live Public Destination
-                </span>
-                <code className="text-xs sm:text-sm font-bold text-tapsh-black font-mono break-all">
-                  tapsh.in/h/{hub.slug}
-                </code>
-              </div>
-              <div className="flex items-center gap-2">
-                <a 
-                  href={`/h/${hub.slug}`} 
-                  target="_blank"
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-tapsh-black text-tapsh-beige text-xs font-bold shadow-xs active:scale-95 transition-all"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" /> Open Hub
-                </a>
-              </div>
-            </div>
+          <div className="space-y-5">
+            {/* Live Web URL Copy Card */}
+            {(() => {
+              const liveUrl = typeof window !== "undefined" && hub.slug
+                ? `${window.location.origin}/h/${hub.slug}`
+                : `https://tapsh.in/h/${hub.slug}`;
+
+              const handleCopy = () => {
+                navigator.clipboard.writeText(liveUrl);
+                setCopiedUrl(true);
+                setTimeout(() => setCopiedUrl(false), 2500);
+              };
+
+              const handleDownloadProfileQR = () => {
+                const canvas = document.getElementById("profile-hub-qr") as HTMLCanvasElement;
+                if (!canvas) return;
+                const pngUrl = canvas.toDataURL("image/png");
+                const dl = document.createElement("a");
+                dl.href = pngUrl;
+                dl.download = `${hub.slug}-qr.png`;
+                document.body.appendChild(dl);
+                dl.click();
+                document.body.removeChild(dl);
+              };
+
+              return (
+                <>
+                  <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] uppercase font-bold text-tapsh-charcoal block mb-0.5 tracking-wider">
+                        Live Web Destination Link
+                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="text"
+                          readOnly
+                          value={liveUrl}
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                          className="text-xs font-mono font-bold text-tapsh-black bg-white border border-tapsh-charcoal/20 px-3 py-2 rounded-xl flex-1 focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green select-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCopy}
+                          className="p-2 px-3 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                          title="Copy Link"
+                        >
+                          {copiedUrl ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedUrl ? "Copied!" : "Copy"}</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-tapsh-charcoal/10">
+                      <a 
+                        href={`/h/${hub.slug}`} 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-tapsh-black text-tapsh-beige text-xs font-bold shadow-xs active:scale-95 transition-all hover:bg-tapsh-taupe"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" /> Open Live Tab
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* QR Code Card & PNG Download */}
+                  <div className="p-5 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                      <div className="bg-white p-2.5 rounded-xl border border-tapsh-charcoal/20 shadow-xs inline-block">
+                        <QRCodeCanvas
+                          id="profile-hub-qr"
+                          value={liveUrl}
+                          size={120}
+                          level="H"
+                          includeMargin={true}
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-tapsh-black text-sm">Hardware QR Code</h3>
+                        <p className="text-xs text-tapsh-charcoal mt-0.5">
+                          High-resolution QR linking to this customer's live Hub.
+                        </p>
+                        <p className="text-[11px] font-mono text-tapsh-soft-green font-bold mt-1">
+                          tapsh.in/h/{hub.slug}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadProfileQR}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-tapsh-charcoal/30 text-tapsh-black rounded-xl text-xs font-bold hover:border-tapsh-soft-green active:scale-95 transition-all shadow-xs shrink-0 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-tapsh-soft-green" /> Download QR (PNG)
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
 
             {hub.links && hub.links.length > 0 && (
               <div>

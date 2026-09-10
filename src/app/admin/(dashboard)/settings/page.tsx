@@ -7,7 +7,7 @@ import {
   Settings, Image as ImageIcon, Sparkles, Upload, RotateCcw, 
   Check, ExternalLink, AlertCircle, Eye, Search, Filter,
   ShieldCheck, Database, RefreshCw, X, CheckCircle2, Globe, User,
-  Package, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Star,
+  Package, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, ChevronDown, Star,
   Wifi, MessageCircle, Camera, LayoutGrid, Layers, ArrowUpRight
 } from "lucide-react";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
@@ -30,8 +30,28 @@ import ProductSlideshow from "@/components/products/ProductSlideshow";
 export default function AdminSettingsPage() {
   const { assets, isLoaded, getAsset, isCustom, updateAsset, resetAsset, resetAll } = useSiteAssets();
   
-  // Tabs: "content" | "products" | "identity" | "system"
-  const [activeTab, setActiveTab] = useState<"content" | "products" | "identity" | "system">("content");
+  // Section Expand/Collapse State (Sections as Lists)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    content: true,
+    products: true,
+    identity: false,
+    system: false,
+  });
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleExpandAll = () => {
+    setOpenSections({ content: true, products: true, identity: true, system: true });
+  };
+
+  const handleCollapseAll = () => {
+    setOpenSections({ content: false, products: false, identity: false, system: false });
+  };
   
   // Category filter for Media Assets
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -63,8 +83,14 @@ export default function AdminSettingsPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab === "products" || tab === "content" || tab === "identity" || tab === "system") {
-        setActiveTab(tab as any);
+      if (tab === "products") {
+        setOpenSections({ content: false, products: true, identity: false, system: false });
+      } else if (tab === "content") {
+        setOpenSections({ content: true, products: false, identity: false, system: false });
+      } else if (tab === "identity") {
+        setOpenSections({ content: false, products: false, identity: true, system: false });
+      } else if (tab === "system") {
+        setOpenSections({ content: false, products: false, identity: false, system: true });
       }
     }
   }, []);
@@ -331,548 +357,563 @@ export default function AdminSettingsPage() {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-tapsh-black tracking-tight">
-                Settings & Configuration
+                Settings & Sections
               </h1>
               <p className="text-xs sm:text-sm text-tapsh-charcoal mt-0.5">
-                Manage site content, website media assets, products, admin identity, and cloud sync.
+                Click each section list below to open and manage content, media, products, and cloud services.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Global Quick Stats */}
+        {/* Global Expand / Collapse Controls */}
         <div className="flex items-center gap-3">
-          {activeTab === "products" ? (
-            <button
-              onClick={handleOpenCreateProduct}
-              className="flex items-center gap-2 px-4 py-2.5 bg-tapsh-soft-green hover:brightness-105 text-white rounded-2xl text-xs font-bold shadow-md active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Add Product
-            </button>
-          ) : (
-            <>
-              <div className="bg-white px-4 py-2 rounded-2xl border border-tapsh-charcoal/20 shadow-xs flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
-                <span className="text-xs font-semibold text-tapsh-charcoal">
-                  Custom Assets: <strong className="text-tapsh-black">{customCount}</strong> / {MEDIA_ASSET_REGISTRY.length}
-                </span>
-              </div>
-              {customCount > 0 && (
-                <button
-                  onClick={handleResetAllConfirm}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white hover:bg-red-50 rounded-2xl border border-tapsh-charcoal/20 transition-all cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" /> Revert All
-                </button>
-              )}
-            </>
-          )}
+          <button
+            onClick={handleExpandAll}
+            className="px-3.5 py-2 text-xs font-bold text-tapsh-black bg-white hover:bg-tapsh-pale-blue/60 rounded-xl border border-tapsh-charcoal/20 transition-all cursor-pointer shadow-xs"
+          >
+            Expand All
+          </button>
+          <button
+            onClick={handleCollapseAll}
+            className="px-3.5 py-2 text-xs font-bold text-tapsh-charcoal hover:text-tapsh-black bg-white hover:bg-tapsh-pale-blue/60 rounded-xl border border-tapsh-charcoal/20 transition-all cursor-pointer shadow-xs"
+          >
+            Collapse All
+          </button>
         </div>
       </div>
 
-      {/* TOP NAVIGATION TABS */}
-      <div className="flex items-center gap-2 border-b border-tapsh-charcoal/15 pb-1 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab("content")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
-            activeTab === "content"
-              ? "bg-tapsh-black text-white shadow-md"
-              : "text-tapsh-charcoal hover:text-tapsh-black hover:bg-tapsh-pale-blue/40"
-          }`}
-        >
-          <ImageIcon className="w-4 h-4 text-tapsh-soft-green" />
-          <span>Content & Media Assets</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            activeTab === "content" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/10 text-tapsh-charcoal"
-          }`}>
-            {MEDIA_ASSET_REGISTRY.length}
-          </span>
-        </button>
-
-        {/* PRODUCTS TAB */}
-        <button
-          onClick={() => setActiveTab("products")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
-            activeTab === "products"
-              ? "bg-tapsh-black text-white shadow-md"
-              : "text-tapsh-charcoal hover:text-tapsh-black hover:bg-tapsh-pale-blue/40"
-          }`}
-        >
-          <Package className="w-4 h-4 text-tapsh-soft-green" />
-          <span>Products</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            activeTab === "products" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/10 text-tapsh-charcoal"
-          }`}>
-            {products.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("identity")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
-            activeTab === "identity"
-              ? "bg-tapsh-black text-white shadow-md"
-              : "text-tapsh-charcoal hover:text-tapsh-black hover:bg-tapsh-pale-blue/40"
-          }`}
-        >
-          <User className="w-4 h-4 text-tapsh-taupe" />
-          <span>Admin Identity</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("system")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
-            activeTab === "system"
-              ? "bg-tapsh-black text-white shadow-md"
-              : "text-tapsh-charcoal hover:text-tapsh-black hover:bg-tapsh-pale-blue/40"
-          }`}
-        >
-          <Database className="w-4 h-4 text-tapsh-soft-green" />
-          <span>Firebase Cloud Sync</span>
-        </button>
-      </div>
-
       {/* ---------------------------------------------------- */}
-      {/* TAB 1: CONTENT & MEDIA ASSETS SECTION */}
+      {/* SECTIONS AS LIST ITEMS (CLICK TO OPEN & REVEAL DATA) */}
       {/* ---------------------------------------------------- */}
-      {activeTab === "content" && (
-        <div className="space-y-6">
-          {/* Section Introduction Banner */}
-          <div className="bg-gradient-to-br from-tapsh-black to-[#2A2B2D] text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
-            <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-tapsh-soft-green/10 rounded-full blur-3xl pointer-events-none"></div>
-            
-            <div className="relative z-10 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tapsh-soft-green/20 text-tapsh-soft-green text-[11px] font-bold uppercase tracking-wider mb-3">
-                <Sparkles className="w-3.5 h-3.5" /> Content Management Flow
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
-                Dynamic Website & Admin Media Catalog
-              </h2>
-              <p className="text-xs sm:text-sm text-tapsh-gray leading-relaxed">
-                Choose and customize every visual asset rendered across the public web pages and admin console. 
-                Upload files from your computer or provide direct URLs. Changes sync instantaneously through Firebase and update live for all visitors worldwide without requiring a deployment.
-              </p>
-            </div>
-          </div>
+      <div className="space-y-5">
 
-          {/* Filter & Search Bar */}
-          <div className="bg-white p-4 rounded-3xl border border-tapsh-charcoal/20 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-              {MEDIA_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                    selectedCategory === cat
-                      ? "bg-tapsh-soft-green text-white shadow-xs"
-                      : "bg-tapsh-pale-blue/40 text-tapsh-charcoal hover:text-tapsh-black hover:bg-tapsh-pale-blue"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            <div className="relative w-full md:w-64">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
-              <input
-                type="text"
-                placeholder="Search images & assets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-2xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* ASSET CARDS GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredAssets.map((asset) => {
-              const liveValue = getAsset(asset.key, asset.defaultPath);
-              const customActive = isCustom(asset.key);
-              const isUpdating = updatingKey === asset.key;
-              const isUrlOpen = urlInputOpenKey === asset.key;
-
-              return (
-                <div
-                  key={asset.key}
-                  className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
-                          {asset.category}
-                        </span>
-                        <h3 className="font-bold text-tapsh-black text-base mt-0.5 leading-snug">
-                          {asset.label}
-                        </h3>
-                      </div>
-
-                      {customActive ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green shrink-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
-                          Firebase Custom
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-tapsh-charcoal/10 text-tapsh-charcoal shrink-0">
-                          System Default
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-tapsh-charcoal mb-4 line-clamp-2">
-                      {asset.description}
-                    </p>
-
-                    {/* LIVE IMAGE PREVIEW CONTAINER */}
-                    <div className="relative w-full aspect-video bg-[#1F2022] rounded-2xl overflow-hidden border border-tapsh-charcoal/15 flex items-center justify-center p-3 mb-4 group/preview">
-                      {asset.type === "text" ? (
-                        <div className="text-center p-4">
-                          <span className="text-xs uppercase text-tapsh-gray tracking-wider">Current Text Value</span>
-                          <p className="text-lg font-bold text-white mt-1">{liveValue || "TAPSH Operations"}</p>
-                        </div>
-                      ) : liveValue ? (
-                        <div className="relative w-full h-full flex items-center justify-center">
-                          <img
-                            src={liveValue}
-                            alt={asset.label}
-                            className="max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-300 group-hover/preview:scale-105"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-tapsh-gray text-xs">
-                          <div className="w-12 h-12 rounded-full bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold text-sm mb-1">
-                            TS
-                          </div>
-                          <span>No custom avatar set</span>
-                        </div>
-                      )}
-
-                      {liveValue && asset.type === "image" && (
-                        <button
-                          onClick={() => setPreviewModalImage({ title: asset.label, url: liveValue })}
-                          className="absolute inset-0 bg-tapsh-black/60 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-bold backdrop-blur-xs cursor-pointer"
-                        >
-                          <Eye className="w-4 h-4 text-tapsh-soft-green" /> Click to Inspect
-                        </button>
-                      )}
-
-                      {isUpdating && (
-                        <div className="absolute inset-0 bg-tapsh-black/80 flex flex-col items-center justify-center text-white text-xs gap-2 z-20 backdrop-blur-xs">
-                          <RefreshCw className="w-6 h-6 animate-spin text-tapsh-soft-green" />
-                          <span className="font-semibold">Syncing to Firebase...</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-[11px] text-tapsh-charcoal/80 mb-4 bg-tapsh-pale-blue/30 p-2.5 rounded-xl border border-tapsh-charcoal/10">
-                      <strong>Recommended:</strong> {asset.recommendedSize}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-tapsh-charcoal/15">
-                    <input
-                      type="file"
-                      ref={(el) => {
-                        fileInputRefs.current[asset.key] = el;
-                      }}
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                      onChange={(e) => handleFileUpload(asset, e)}
-                      className="hidden"
-                    />
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => fileInputRefs.current[asset.key]?.click()}
-                        disabled={isUpdating}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Choose File</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setUrlInputOpenKey(isUrlOpen ? null : asset.key);
-                          setCustomUrlValue(customActive ? liveValue : "");
-                        }}
-                        disabled={isUpdating}
-                        className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-pale-blue hover:bg-tapsh-pale-blue/80 text-tapsh-black rounded-xl text-xs font-bold transition-all border border-tapsh-charcoal/20 active:scale-95 disabled:opacity-50 cursor-pointer"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>URL Link</span>
-                      </button>
-                    </div>
-
-                    {isUrlOpen && (
-                      <div className="p-3 bg-tapsh-pale-blue/50 rounded-2xl border border-tapsh-charcoal/20 space-y-2 animate-in slide-in-from-top-2">
-                        <label className="text-[10px] uppercase font-bold text-tapsh-charcoal">
-                          Paste Direct Image / CDN URL:
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="url"
-                            placeholder="https://example.com/image.png"
-                            value={customUrlValue}
-                            onChange={(e) => setCustomUrlValue(e.target.value)}
-                            className="flex-1 px-3 py-1.5 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
-                          />
-                          <button
-                            onClick={() => handleCustomUrlSubmit(asset.key)}
-                            disabled={isUpdating || !customUrlValue.trim()}
-                            className="px-3 py-1.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold shadow-xs hover:brightness-105 disabled:opacity-50 cursor-pointer"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {customActive && (
-                      <button
-                        onClick={() => handleResetSingle(asset)}
-                        disabled={isUpdating}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 text-tapsh-charcoal hover:text-red-500 text-[11px] font-semibold transition-colors cursor-pointer"
-                      >
-                        <RotateCcw className="w-3 h-3" />
-                        <span>Revert to original default</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ---------------------------------------------------- */}
-      {/* TAB 2: PRODUCTS MANAGEMENT SECTION */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === "products" && (
-        <div className="space-y-6">
+        {/* ==================================================== */}
+        {/* LIST ITEM 1: CONTENT & MEDIA ASSETS SECTION */}
+        {/* ==================================================== */}
+        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
           
-          {/* Header Banner */}
-          <div className="bg-gradient-to-br from-tapsh-black to-[#2A2B2D] text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
-            <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-tapsh-soft-green/10 rounded-full blur-3xl pointer-events-none"></div>
-            
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tapsh-soft-green/20 text-tapsh-soft-green text-[11px] font-bold uppercase tracking-wider mb-3">
-                  <Package className="w-3.5 h-3.5" /> Product Catalog & Slideshows
+          {/* Clickable Section Row */}
+          <button
+            onClick={() => toggleSection("content")}
+            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
+                <ImageIcon className="w-6 h-6 text-tapsh-soft-green" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
+                    Content & Media Assets
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
+                    {MEDIA_ASSET_REGISTRY.length} Assets
+                  </span>
+                  {customCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-black text-white">
+                      {customCount} Custom
+                    </span>
+                  )}
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
-                  Live Website Products & Multi-Image Slideshows
-                </h2>
-                <p className="text-xs sm:text-sm text-tapsh-gray leading-relaxed">
-                  Add, edit, or remove products displayed on the public website (<code className="text-tapsh-soft-green font-mono">/products</code>). 
-                  Upload multiple product showcase images per item to create an automatic interactive slideshow for prospective clients.
+                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                  Website dark/white logos, brand favicon, homepage hero backdrop, lifestyle NFC card, and industry hub mockups.
                 </p>
               </div>
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                <button
-                  onClick={handleOpenCreateProduct}
-                  className="flex items-center justify-center gap-2 px-5 py-3 bg-tapsh-soft-green text-white font-bold text-xs sm:text-sm rounded-2xl shadow-lg hover:brightness-105 active:scale-95 transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" /> Add Product
-                </button>
-                <Link
-                  href="/products"
-                  target="_blank"
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-white/10 hover:bg-white/15 text-white font-bold text-xs sm:text-sm rounded-2xl transition-all"
-                >
-                  <ArrowUpRight className="w-4 h-4 text-tapsh-soft-green" /> View Public Page
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Search & Actions Bar */}
-          <div className="bg-white p-4 rounded-3xl border border-tapsh-charcoal/20 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
-              <input
-                type="text"
-                placeholder="Search products by title, benefit, category..."
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-2xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
-              />
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <span className="text-xs font-semibold text-tapsh-charcoal">
-                Showing <strong className="text-tapsh-black">{filteredProducts.length}</strong> products
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
+                {openSections.content ? "Hide" : "Open"}
               </span>
-              <button
-                onClick={handleResetDefaultProducts}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-tapsh-pale-blue/40 rounded-xl border border-tapsh-charcoal/15 transition-all cursor-pointer"
-                title="Reset to original 6 products"
-              >
-                <RotateCcw className="w-3 h-3" /> Factory Defaults
-              </button>
+              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
+                openSections.content ? "rotate-180 bg-tapsh-soft-green text-white" : ""
+              }`}>
+                <ChevronDown className="w-5 h-5" />
+              </div>
             </div>
-          </div>
+          </button>
 
-          {/* PRODUCTS GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredProducts.map((product) => {
-              const imageCount = product.images?.length || 0;
-
-              return (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-3xl border border-tapsh-charcoal/20 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-                >
-                  {/* Top Slideshow Visual */}
-                  <div>
-                    <div className="relative">
-                      <ProductSlideshow
-                        images={product.images}
-                        name={product.name}
-                        iconType={product.iconType}
-                        className="h-52"
-                      />
-
-                      {/* Top Badges */}
-                      <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-                        {product.badge && (
-                          <span className="px-2.5 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                            {product.badge}
-                          </span>
-                        )}
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                          product.status === "ACTIVE" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/20 text-tapsh-black"
-                        }`}>
-                          {product.status}
-                        </span>
-                      </div>
-
-                      {/* Image count pill */}
-                      <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-full bg-black/70 text-white text-[10px] font-bold backdrop-blur-xs flex items-center gap-1">
-                        <ImageIcon className="w-3 h-3 text-tapsh-soft-green" />
-                        <span>{imageCount} {imageCount === 1 ? "image" : "images"}</span>
-                      </div>
-                    </div>
-
-                    {/* Product Content Details */}
-                    <div className="p-6">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div>
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
-                            {product.category || "General"}
-                          </span>
-                          <h3 className="font-bold text-tapsh-black text-xl leading-tight mt-0.5">
-                            {product.name}
-                          </h3>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-tapsh-charcoal line-clamp-2 mb-4 leading-relaxed">
-                        {product.description || "No description provided."}
-                      </p>
-
-                      {/* Key Benefit Box */}
-                      {product.benefit && (
-                        <div className="bg-tapsh-pale-blue/40 p-3 rounded-2xl border border-tapsh-charcoal/15 mb-4">
-                          <span className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-soft-green mb-0.5">
-                            Key Benefit
-                          </span>
-                          <p className="text-xs font-semibold text-tapsh-black line-clamp-2">
-                            {product.benefit}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Bottom Action Footer */}
-                  <div className="p-4 bg-[#FAF8F5] border-t border-tapsh-charcoal/15 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenEditProduct(product)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" /> Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProduct(product)}
-                        className="p-2 text-tapsh-charcoal hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
-                        title="Delete product"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <Link
-                      href={`/products/${product.slug}`}
-                      target="_blank"
-                      className="text-[11px] font-bold text-tapsh-charcoal hover:text-tapsh-black flex items-center gap-1"
+          {/* Section Body Content */}
+          {openSections.content && (
+            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200">
+              
+              {/* Filter & Search Bar */}
+              <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-tapsh-charcoal/15 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+                  {MEDIA_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        selectedCategory === cat
+                          ? "bg-tapsh-soft-green text-white shadow-xs"
+                          : "bg-white text-tapsh-charcoal hover:text-tapsh-black border border-tapsh-charcoal/15"
+                      }`}
                     >
-                      <span>Public Details</span>
-                      <ArrowUpRight className="w-3.5 h-3.5 text-tapsh-soft-green" />
-                    </Link>
-                  </div>
+                      {cat}
+                    </button>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                  <div className="relative w-full md:w-64">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
+                    <input
+                      type="text"
+                      placeholder="Search images..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
+                    />
+                  </div>
+
+                  {customCount > 0 && (
+                    <button
+                      onClick={handleResetAllConfirm}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white rounded-xl border border-tapsh-charcoal/20 transition-all cursor-pointer shrink-0"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Revert All
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ASSET CARDS GRID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredAssets.map((asset) => {
+                  const liveValue = getAsset(asset.key, asset.defaultPath);
+                  const customActive = isCustom(asset.key);
+                  const isUpdating = updatingKey === asset.key;
+                  const isUrlOpen = urlInputOpenKey === asset.key;
+
+                  return (
+                    <div
+                      key={asset.key}
+                      className="bg-white rounded-2xl border border-tapsh-charcoal/20 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
+                              {asset.category}
+                            </span>
+                            <h3 className="font-bold text-tapsh-black text-base mt-0.5 leading-snug">
+                              {asset.label}
+                            </h3>
+                          </div>
+
+                          {customActive ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
+                              Firebase Custom
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-charcoal/10 text-tapsh-charcoal shrink-0">
+                              Default
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-tapsh-charcoal mb-4 line-clamp-2">
+                          {asset.description}
+                        </p>
+
+                        {/* Image Preview Container */}
+                        <div className="relative w-full aspect-video bg-[#1F2022] rounded-xl overflow-hidden border border-tapsh-charcoal/15 flex items-center justify-center p-3 mb-4 group/preview">
+                          {asset.type === "text" ? (
+                            <div className="text-center p-4">
+                              <span className="text-xs uppercase text-tapsh-gray tracking-wider">Current Text Value</span>
+                              <p className="text-base font-bold text-white mt-1">{liveValue || "TAPSH Operations"}</p>
+                            </div>
+                          ) : liveValue ? (
+                            <div className="relative w-full h-full flex items-center justify-center">
+                              <img
+                                src={liveValue}
+                                alt={asset.label}
+                                className="max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-300 group-hover/preview:scale-105"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-tapsh-gray text-xs">
+                              <div className="w-10 h-10 rounded-full bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold text-sm mb-1">
+                                TS
+                              </div>
+                              <span>No avatar set</span>
+                            </div>
+                          )}
+
+                          {liveValue && asset.type === "image" && (
+                            <button
+                              onClick={() => setPreviewModalImage({ title: asset.label, url: liveValue })}
+                              className="absolute inset-0 bg-tapsh-black/60 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-bold backdrop-blur-xs cursor-pointer"
+                            >
+                              <Eye className="w-4 h-4 text-tapsh-soft-green" /> Click to Inspect
+                            </button>
+                          )}
+
+                          {isUpdating && (
+                            <div className="absolute inset-0 bg-tapsh-black/80 flex flex-col items-center justify-center text-white text-xs gap-2 z-20 backdrop-blur-xs">
+                              <RefreshCw className="w-6 h-6 animate-spin text-tapsh-soft-green" />
+                              <span className="font-semibold">Syncing to Firebase...</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="text-[11px] text-tapsh-charcoal/80 mb-4 bg-tapsh-pale-blue/30 p-2.5 rounded-xl border border-tapsh-charcoal/10">
+                          <strong>Recommended:</strong> {asset.recommendedSize}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 pt-2 border-t border-tapsh-charcoal/15">
+                        <input
+                          type="file"
+                          ref={(el) => {
+                            fileInputRefs.current[asset.key] = el;
+                          }}
+                          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                          onChange={(e) => handleFileUpload(asset, e)}
+                          className="hidden"
+                        />
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => fileInputRefs.current[asset.key]?.click()}
+                            disabled={isUpdating}
+                            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Choose File</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setUrlInputOpenKey(isUrlOpen ? null : asset.key);
+                              setCustomUrlValue(customActive ? liveValue : "");
+                            }}
+                            disabled={isUpdating}
+                            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-tapsh-pale-blue hover:bg-tapsh-pale-blue/80 text-tapsh-black rounded-xl text-xs font-bold transition-all border border-tapsh-charcoal/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>URL Link</span>
+                          </button>
+                        </div>
+
+                        {isUrlOpen && (
+                          <div className="p-3 bg-tapsh-pale-blue/50 rounded-xl border border-tapsh-charcoal/20 space-y-2 animate-in slide-in-from-top-2">
+                            <label className="text-[10px] uppercase font-bold text-tapsh-charcoal">
+                              Paste Direct Image / CDN URL:
+                            </label>
+                            <div className="flex gap-2">
+                              <input
+                                type="url"
+                                placeholder="https://example.com/image.png"
+                                value={customUrlValue}
+                                onChange={(e) => setCustomUrlValue(e.target.value)}
+                                className="flex-1 px-3 py-1.5 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
+                              />
+                              <button
+                                onClick={() => handleCustomUrlSubmit(asset.key)}
+                                disabled={isUpdating || !customUrlValue.trim()}
+                                className="px-3 py-1.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold shadow-xs hover:brightness-105 disabled:opacity-50 cursor-pointer"
+                              >
+                                Save
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {customActive && (
+                          <button
+                            onClick={() => handleResetSingle(asset)}
+                            disabled={isUpdating}
+                            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-tapsh-charcoal hover:text-red-500 text-[11px] font-semibold transition-colors cursor-pointer"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Revert to original default</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          )}
         </div>
-      )}
 
-      {/* ---------------------------------------------------- */}
-      {/* TAB 3: ADMIN IDENTITY & PROFILE */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === "identity" && (
-        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-8 shadow-xs max-w-2xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold">
-              <User className="w-6 h-6 text-tapsh-soft-green" />
+        {/* ==================================================== */}
+        {/* LIST ITEM 2: PRODUCTS SECTION (ADD, EDIT, SLIDESHOW) */}
+        {/* ==================================================== */}
+        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
+          
+          {/* Clickable Section Row */}
+          <button
+            onClick={() => toggleSection("products")}
+            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Package className="w-6 h-6 text-tapsh-soft-green" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
+                    Products & Hardware Catalog
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
+                    {products.length} Products
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                  Add new products, upload multiple showcase images that auto-slideshow on the website, edit titles & benefits, or delete items.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-tapsh-black">Admin Identity & Presence</h2>
-              <p className="text-xs text-tapsh-charcoal">Manage how your admin credentials appear in headers and consoles.</p>
-            </div>
-          </div>
 
-          <div className="space-y-6">
-            <div className="flex items-center gap-5 p-4 bg-tapsh-pale-blue/30 rounded-2xl border border-tapsh-charcoal/15">
-              <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-tapsh-soft-green bg-tapsh-black flex items-center justify-center shrink-0">
-                {getAsset("admin_avatar") ? (
-                  <img
-                    src={getAsset("admin_avatar")}
-                    alt="Admin Avatar"
-                    className="w-full h-full object-cover"
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
+                {openSections.products ? "Hide" : "Open"}
+              </span>
+              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
+                openSections.products ? "rotate-180 bg-tapsh-soft-green text-white" : ""
+              }`}>
+                <ChevronDown className="w-5 h-5" />
+              </div>
+            </div>
+          </button>
+
+          {/* Section Body Content */}
+          {openSections.products && (
+            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200">
+              
+              {/* Product Controls Bar */}
+              <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-tapsh-charcoal/15 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
+                  <input
+                    type="text"
+                    placeholder="Search products by title, benefit, category..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
                   />
-                ) : (
-                  <span className="text-lg font-bold text-white">TS</span>
-                )}
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end flex-wrap">
+                  <button
+                    onClick={handleOpenCreateProduct}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-tapsh-soft-green hover:brightness-105 text-white font-bold text-xs rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Add Product
+                  </button>
+
+                  <Link
+                    href="/products"
+                    target="_blank"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white text-tapsh-black font-bold text-xs rounded-xl border border-tapsh-charcoal/20 hover:bg-tapsh-pale-blue transition-colors"
+                  >
+                    <ArrowUpRight className="w-3.5 h-3.5 text-tapsh-soft-green" /> View Website
+                  </Link>
+
+                  <button
+                    onClick={handleResetDefaultProducts}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white rounded-xl border border-tapsh-charcoal/15 transition-all cursor-pointer"
+                    title="Reset to original 6 products"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Defaults
+                  </button>
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-tapsh-black text-sm">Active Administrator</h4>
-                <p className="text-xs text-tapsh-charcoal">tapsh.support@gmail.com</p>
-                <span className="inline-block mt-1 text-[10px] font-bold text-tapsh-soft-green uppercase tracking-wider">
-                  Full Superadmin Privileges
-                </span>
+
+              {/* PRODUCTS GRID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredProducts.map((product) => {
+                  const imageCount = product.images?.length || 0;
+
+                  return (
+                    <div
+                      key={product.id}
+                      className="bg-white rounded-2xl border border-tapsh-charcoal/20 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                    >
+                      {/* Top Slideshow Visual */}
+                      <div>
+                        <div className="relative">
+                          <ProductSlideshow
+                            images={product.images}
+                            name={product.name}
+                            iconType={product.iconType}
+                            className="h-48"
+                          />
+
+                          {/* Top Badges */}
+                          <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+                            {product.badge && (
+                              <span className="px-2.5 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                                {product.badge}
+                              </span>
+                            )}
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                              product.status === "ACTIVE" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/20 text-tapsh-black"
+                            }`}>
+                              {product.status}
+                            </span>
+                          </div>
+
+                          {/* Image count pill */}
+                          <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-full bg-black/70 text-white text-[10px] font-bold backdrop-blur-xs flex items-center gap-1">
+                            <ImageIcon className="w-3 h-3 text-tapsh-soft-green" />
+                            <span>{imageCount} {imageCount === 1 ? "image" : "images"}</span>
+                          </div>
+                        </div>
+
+                        {/* Product Content Details */}
+                        <div className="p-5">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
+                                {product.category || "General"}
+                              </span>
+                              <h3 className="font-bold text-tapsh-black text-lg leading-tight mt-0.5">
+                                {product.name}
+                              </h3>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-tapsh-charcoal line-clamp-2 mb-4 leading-relaxed">
+                            {product.description || "No description provided."}
+                          </p>
+
+                          {/* Key Benefit Box */}
+                          {product.benefit && (
+                            <div className="bg-tapsh-pale-blue/40 p-3 rounded-xl border border-tapsh-charcoal/15 mb-2">
+                              <span className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-soft-green mb-0.5">
+                                Key Benefit
+                              </span>
+                              <p className="text-xs font-semibold text-tapsh-black line-clamp-2">
+                                {product.benefit}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom Action Footer */}
+                      <div className="p-3.5 bg-[#FAF8F5] border-t border-tapsh-charcoal/15 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditProduct(product)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(product)}
+                            className="p-1.5 text-tapsh-charcoal hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                            title="Delete product"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <Link
+                          href={`/products/${product.slug}`}
+                          target="_blank"
+                          className="text-[11px] font-bold text-tapsh-charcoal hover:text-tapsh-black flex items-center gap-1"
+                        >
+                          <span>Public Page</span>
+                          <ArrowUpRight className="w-3.5 h-3.5 text-tapsh-soft-green" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <button
-                onClick={() => {
-                  setActiveTab("content");
-                  setSelectedCategory("Admin Identity");
-                }}
-                className="px-4 py-2 bg-tapsh-black text-white rounded-xl text-xs font-bold hover:bg-tapsh-soft-green transition-colors cursor-pointer"
-              >
-                Change Avatar
-              </button>
+
+            </div>
+          )}
+        </div>
+
+        {/* ==================================================== */}
+        {/* LIST ITEM 3: ADMIN IDENTITY SECTION */}
+        {/* ==================================================== */}
+        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
+          
+          {/* Clickable Section Row */}
+          <button
+            onClick={() => toggleSection("identity")}
+            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
+                <User className="w-6 h-6 text-tapsh-taupe" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
+                    Admin Identity & Profile
+                  </h2>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-pale-blue text-tapsh-black">
+                    Superadmin
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                  Custom administrator avatar photo shown in desktop/mobile headers and console display name.
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-tapsh-black">
-                Console Display Label
-              </label>
-              <div className="flex gap-2">
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
+                {openSections.identity ? "Hide" : "Open"}
+              </span>
+              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
+                openSections.identity ? "rotate-180 bg-tapsh-soft-green text-white" : ""
+              }`}>
+                <ChevronDown className="w-5 h-5" />
+              </div>
+            </div>
+          </button>
+
+          {/* Section Body Content */}
+          {openSections.identity && (
+            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200 max-w-3xl">
+              
+              <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-5 bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/15">
+                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-tapsh-soft-green bg-tapsh-black flex items-center justify-center shrink-0 shadow-md">
+                  {getAsset("admin_avatar") ? (
+                    <img
+                      src={getAsset("admin_avatar")}
+                      alt="Admin Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-lg font-bold text-white">TS</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-tapsh-black text-sm">Active Administrator</h4>
+                  <p className="text-xs text-tapsh-charcoal">tapsh.support@gmail.com</p>
+                  <span className="inline-block mt-1 text-[10px] font-bold text-tapsh-soft-green uppercase tracking-wider">
+                    Full Superadmin Privileges
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setOpenSections((prev) => ({ ...prev, content: true }));
+                    setSelectedCategory("Admin Identity");
+                  }}
+                  className="px-4 py-2 bg-tapsh-black text-white rounded-xl text-xs font-bold hover:bg-tapsh-soft-green transition-colors cursor-pointer w-fit"
+                >
+                  Change Avatar in Media
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-tapsh-black">
+                  Console Display Label
+                </label>
                 <input
                   type="text"
                   defaultValue={getAsset("admin_name", "TAPSH Operations")}
@@ -883,64 +924,99 @@ export default function AdminSettingsPage() {
                     }
                   }}
                   placeholder="e.g. TAPSH Operations or System Admin"
-                  className="flex-1 px-4 py-2.5 bg-tapsh-pale-blue/20 border border-tapsh-charcoal/20 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
+                  className="w-full px-4 py-2.5 bg-[#FAF8F5] border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
                 />
+                <p className="text-[11px] text-tapsh-charcoal">
+                  Shown in the top right desktop header beside your profile picture.
+                </p>
               </div>
-              <p className="text-[11px] text-tapsh-charcoal">
-                Shown in the top right desktop header beside the profile avatar.
-              </p>
+
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* ---------------------------------------------------- */}
-      {/* TAB 4: FIREBASE CLOUD SYNC STATUS */}
-      {/* ---------------------------------------------------- */}
-      {activeTab === "system" && (
-        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-8 shadow-xs max-w-3xl space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-tapsh-soft-green/15 text-tapsh-soft-green flex items-center justify-center font-bold">
-              <Database className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-tapsh-black">Cloud Sync Architecture</h2>
-              <p className="text-xs text-tapsh-charcoal">Dual-layer persistent storage and asset delivery health.</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-4 rounded-2xl bg-tapsh-pale-blue/30 border border-tapsh-charcoal/15">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-tapsh-charcoal uppercase">Firestore Sync</span>
-                <span className="flex items-center gap-1 text-[10px] font-bold text-tapsh-soft-green">
-                  <span className="w-2 h-2 rounded-full bg-tapsh-soft-green animate-pulse"></span> Connected
-                </span>
+        {/* ==================================================== */}
+        {/* LIST ITEM 4: FIREBASE CLOUD SYNC SECTION */}
+        {/* ==================================================== */}
+        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
+          
+          {/* Clickable Section Row */}
+          <button
+            onClick={() => toggleSection("system")}
+            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Database className="w-6 h-6 text-tapsh-soft-green" />
               </div>
-              <p className="text-xs text-tapsh-charcoal">
-                Collections: <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_settings</code> & <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_products</code>
-              </p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-tapsh-pale-blue/30 border border-tapsh-charcoal/15">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-tapsh-charcoal uppercase">Real-Time Broadcast</span>
-                <span className="flex items-center gap-1 text-[10px] font-bold text-tapsh-soft-green">
-                  <span className="w-2 h-2 rounded-full bg-tapsh-soft-green animate-pulse"></span> Active
-                </span>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
+                    Firebase Cloud Sync & Architecture
+                  </h2>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold text-tapsh-soft-green bg-tapsh-soft-green/15">
+                    <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
+                    Live Connected
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                  Dual-layer persistent storage status, real-time Firestore synchronization, and asset delivery pipeline.
+                </p>
               </div>
-              <p className="text-xs text-tapsh-charcoal">
-                Firestore <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">onSnapshot</code> listener propagates live updates to all client browser sessions without page reload.
-              </p>
             </div>
-          </div>
 
-          <div className="bg-tapsh-pale-blue/20 p-4 rounded-2xl border border-tapsh-charcoal/15 text-xs text-tapsh-charcoal leading-relaxed">
-            <strong className="text-tapsh-black block mb-1">Resilient Dual-Mode Upload Pipeline:</strong>
-            When uploading image files, the system first attempts cloud delivery to Firebase Storage (<code className="bg-white px-1 rounded">tapsh-ddea2.firebasestorage.app</code>). If storage rules are restricted or offline, the system automatically uses client-side canvas compression to encode high-resolution data URLs directly into Firestore and local cache. Images are never lost and always visible.
-          </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
+                {openSections.system ? "Hide" : "Open"}
+              </span>
+              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
+                openSections.system ? "rotate-180 bg-tapsh-soft-green text-white" : ""
+              }`}>
+                <ChevronDown className="w-5 h-5" />
+              </div>
+            </div>
+          </button>
+
+          {/* Section Body Content */}
+          {openSections.system && (
+            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200 max-w-3xl">
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-tapsh-charcoal uppercase">Firestore Sync</span>
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-tapsh-soft-green">
+                      <span className="w-2 h-2 rounded-full bg-tapsh-soft-green animate-pulse"></span> Connected
+                    </span>
+                  </div>
+                  <p className="text-xs text-tapsh-charcoal">
+                    Collections: <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_settings</code> & <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">site_products</code>
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-tapsh-charcoal uppercase">Real-Time Broadcast</span>
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-tapsh-soft-green">
+                      <span className="w-2 h-2 rounded-full bg-tapsh-soft-green animate-pulse"></span> Active
+                    </span>
+                  </div>
+                  <p className="text-xs text-tapsh-charcoal">
+                    Firestore <code className="bg-white px-1.5 py-0.5 rounded border text-[11px]">onSnapshot</code> listener automatically updates all open client browser sessions without page reload.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-tapsh-charcoal/15 text-xs text-tapsh-charcoal leading-relaxed">
+                <strong className="text-tapsh-black block mb-1">Resilient Dual-Mode Upload Pipeline:</strong>
+                When uploading image files, the system first attempts cloud delivery to Firebase Storage (<code className="bg-white px-1 rounded">tapsh-ddea2.firebasestorage.app</code>). If storage rules are restricted or offline, the system automatically uses client-side canvas compression to encode high-resolution data URLs directly into Firestore and local cache. Images are never lost and always visible.
+              </div>
+
+            </div>
+          )}
         </div>
-      )}
+
+      </div>
 
       {/* ---------------------------------------------------- */}
       {/* MODAL: ADD / EDIT PRODUCT */}
@@ -1143,7 +1219,6 @@ export default function AdminSettingsPage() {
                   </span>
                 </div>
 
-                {/* Upload Buttons / File Input */}
                 <input
                   type="file"
                   ref={productFileInputRef}
@@ -1206,7 +1281,6 @@ export default function AdminSettingsPage() {
                           className="max-h-full max-w-full object-contain"
                         />
 
-                        {/* First image badge */}
                         {idx === 0 ? (
                           <span className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-tapsh-soft-green text-white text-[9px] font-bold uppercase shadow-sm">
                             Cover
@@ -1221,7 +1295,6 @@ export default function AdminSettingsPage() {
                           </button>
                         )}
 
-                        {/* Remove Image Button */}
                         <button
                           type="button"
                           onClick={() => handleRemoveProductImage(idx)}

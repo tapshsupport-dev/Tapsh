@@ -234,7 +234,7 @@ export default function HubSetupWizard() {
             {
               id: "link_wifi",
               category: "wifi",
-              title: `Connect to Wi-Fi (${newWifi.ssid})`,
+              title: "Wi-Fi Network",
               url: wifiUri,
               icon: "wifi",
               ssid: newWifi.ssid,

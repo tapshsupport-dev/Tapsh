@@ -84,6 +84,10 @@ export default function HubView({ data }: { data: any }) {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {actionLinks.map((link: any, i: number) => {
                 const isWifi = link.category === "wifi" || link.icon === "wifi";
+                const displayTitle = isWifi 
+                  ? (link.title?.startsWith("Connect to Wi-Fi (") ? "Wi-Fi Network" : (link.title || "Wi-Fi Network"))
+                  : link.title;
+
                 return isWifi ? (
                   <button 
                     key={i}
@@ -95,8 +99,13 @@ export default function HubView({ data }: { data: any }) {
                       {getTouchpointIcon(link, "md")}
                     </div>
                     <span className="font-bold text-xs sm:text-sm text-center line-clamp-2">
-                      {link.title}
+                      {displayTitle}
                     </span>
+                    {link.ssid && (
+                      <span className="text-[10px] text-tapsh-charcoal/80 font-medium truncate max-w-full mt-0.5">
+                        {link.ssid}
+                      </span>
+                    )}
                   </button>
                 ) : (
                   <a 
@@ -134,11 +143,11 @@ export default function HubView({ data }: { data: any }) {
       {/* Interactive Wi-Fi Connection Modal */}
       {activeWifiModal && (
         <div 
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setActiveWifiModal(null)}
         >
           <div 
-            className="bg-white rounded-3xl p-6 max-w-xs w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center"
+            className="bg-white rounded-3xl p-5 sm:p-6 max-w-xs w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -148,18 +157,18 @@ export default function HubView({ data }: { data: any }) {
               <X className="w-4 h-4" />
             </button>
 
-            <div className="w-14 h-14 rounded-2xl bg-tapsh-soft-green/15 text-tapsh-soft-green mx-auto mb-4 flex items-center justify-center border border-tapsh-soft-green/30">
+            <div className="w-14 h-14 rounded-2xl bg-tapsh-soft-green/15 text-tapsh-soft-green mx-auto mb-3 flex items-center justify-center border border-tapsh-soft-green/30">
               <Wifi className="w-7 h-7" />
             </div>
 
-            <h3 className="text-lg font-bold text-tapsh-black mb-1">
+            <h3 className="text-base sm:text-lg font-bold text-tapsh-black mb-1">
               Guest Wi-Fi Network
             </h3>
-            <p className="text-xs text-tapsh-charcoal mb-4">
+            <p className="text-[11px] text-tapsh-charcoal mb-4">
               Tap below to connect or copy the network password.
             </p>
 
-            <div className="bg-[#FAF8F5] rounded-2xl p-4 border border-tapsh-charcoal/15 text-left mb-4 space-y-2">
+            <div className="bg-[#FAF8F5] rounded-2xl p-3.5 border border-tapsh-charcoal/15 text-left mb-4 space-y-2.5 text-xs">
               <div>
                 <span className="block text-[10px] font-bold text-tapsh-charcoal uppercase tracking-wider">Network Name (SSID)</span>
                 <span className="text-sm font-bold text-tapsh-black">{activeWifiModal.ssid || "Guest Wi-Fi"}</span>
@@ -168,7 +177,7 @@ export default function HubView({ data }: { data: any }) {
                 <div>
                   <span className="block text-[10px] font-bold text-tapsh-charcoal uppercase tracking-wider">Password</span>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className="text-sm font-mono font-bold text-tapsh-black bg-white px-2 py-0.5 rounded border border-tapsh-charcoal/20 select-all">
+                    <span className="text-xs sm:text-sm font-mono font-bold text-tapsh-black bg-white px-2.5 py-1 rounded-lg border border-tapsh-charcoal/20 select-all flex-1 truncate">
                       {activeWifiModal.password}
                     </span>
                     <button
@@ -180,12 +189,29 @@ export default function HubView({ data }: { data: any }) {
                           setTimeout(() => setCopiedWifiPass(false), 2000);
                         }
                       }}
-                      className="px-2.5 py-1 bg-tapsh-black text-white text-[11px] font-bold rounded-lg hover:bg-tapsh-soft-green transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1 bg-tapsh-black text-white text-[11px] font-bold rounded-lg hover:bg-tapsh-soft-green transition-colors cursor-pointer flex items-center gap-1 shrink-0"
                     >
-                      {copiedWifiPass ? <Check className="w-3 h-3 text-tapsh-soft-green" /> : <Copy className="w-3 h-3" />}
+                      {copiedWifiPass ? <Check className="w-3 h-3 text-tapsh-soft-green" /> : <Copy className="w-3 h-3 text-tapsh-beige" />}
                       <span>{copiedWifiPass ? "Copied" : "Copy"}</span>
                     </button>
                   </div>
+                </div>
+              )}
+
+              {(activeWifiModal.authType || activeWifiModal.encryption) && (
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-tapsh-charcoal/10 text-[11px]">
+                  {activeWifiModal.authType && (
+                    <div>
+                      <span className="text-[10px] text-tapsh-charcoal block">Security</span>
+                      <span className="font-semibold text-tapsh-black">{activeWifiModal.authType}</span>
+                    </div>
+                  )}
+                  {activeWifiModal.encryption && (
+                    <div>
+                      <span className="text-[10px] text-tapsh-charcoal block">Encryption</span>
+                      <span className="font-semibold text-tapsh-black">{activeWifiModal.encryption}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

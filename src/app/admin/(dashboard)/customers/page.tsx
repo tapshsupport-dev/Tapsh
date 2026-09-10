@@ -5,12 +5,12 @@ import Link from "next/link";
 import { 
   Plus, Search, Phone, Mail, MapPin, Building2, ExternalLink, 
   Pencil, Trash2, X, Save, User, FileText, CheckCircle2,
-  Sparkles, Loader2, AlertCircle
+  Loader2, AlertCircle
 } from "lucide-react";
 import { Customer, Hub } from "@/lib/data";
 import { 
   subscribeCustomers, subscribeHubs, updateCustomer, 
-  deleteCustomer, createCustomer, onFirestorePermissionChange 
+  deleteCustomer, onFirestorePermissionChange 
 } from "@/lib/firestoreService";
 
 export default function CustomersPage() {
@@ -36,19 +36,6 @@ export default function CustomersPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Add Customer Modal State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({
-    businessName: "",
-    contactPerson: "",
-    phone: "",
-    email: "",
-    address: "",
-    city: "",
-    businessType: "Resort / Hotel" as any,
-    notes: ""
-  });
-  const [savingAdd, setSavingAdd] = useState(false);
 
   // Real-time Firestore Subscriptions
   useEffect(() => {
@@ -138,33 +125,6 @@ export default function CustomersPage() {
     }
   };
 
-  // Submit Add Customer
-  const handleSaveAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!addForm.businessName.trim()) return;
-    setSavingAdd(true);
-
-    try {
-      await createCustomer(addForm);
-      showNotification(`New client "${addForm.businessName}" created successfully.`);
-      setShowAddModal(false);
-      setAddForm({
-        businessName: "",
-        contactPerson: "",
-        phone: "",
-        email: "",
-        address: "",
-        city: "",
-        businessType: "Resort / Hotel",
-        notes: ""
-      });
-    } catch (err: any) {
-      showNotification(`New client "${addForm.businessName}" created successfully.`);
-      setShowAddModal(false);
-    } finally {
-      setSavingAdd(false);
-    }
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -180,21 +140,12 @@ export default function CustomersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-tapsh-black text-tapsh-beige rounded-2xl text-xs sm:text-sm font-bold shadow-md hover:bg-tapsh-taupe active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Add New Client
-          </button>
-          <Link 
-            href="/admin/hubs/setup"
-            className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-tapsh-soft-green text-white rounded-2xl text-xs sm:text-sm font-bold shadow-md hover:brightness-110 active:scale-95 transition-all"
-            title="Launch Full Hub Wizard"
-          >
-            <Sparkles className="w-4 h-4" /> + Hub Wizard
-          </Link>
-        </div>
+        <Link 
+          href="/admin/hubs/setup"
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-tapsh-soft-green text-white rounded-2xl text-xs sm:text-sm font-bold shadow-md hover:brightness-110 active:scale-95 transition-all w-full sm:w-auto"
+        >
+          <Plus className="w-4 h-4" /> Add Customer
+        </Link>
       </div>
 
       {/* Firebase Notice if rules are locked */}
@@ -268,12 +219,12 @@ export default function CustomersPage() {
               Your customer database in Firestore is currently clear. Add a new enterprise client to begin live deployment.
             </p>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
+          <Link
+            href="/admin/hubs/setup"
             className="inline-flex items-center gap-2 px-6 py-3 bg-tapsh-soft-green text-white font-bold text-xs sm:text-sm rounded-2xl shadow-md hover:brightness-110 active:scale-95 transition-all"
           >
-            <Plus className="w-4 h-4" /> Add First Customer
-          </button>
+            <Plus className="w-4 h-4" /> Add Customer
+          </Link>
         </div>
       ) : filteredCustomers.length === 0 ? (
         <div className="bg-white p-8 rounded-3xl border border-tapsh-charcoal/15 text-center">
@@ -588,157 +539,6 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* ---------------------------------------------------- */}
-      {/* ADD CUSTOMER MODAL */}
-      {/* ---------------------------------------------------- */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
-            <div className="p-5 border-b border-tapsh-charcoal/10 flex items-center justify-between bg-[#FAF8F5]">
-              <h3 className="font-bold text-lg text-tapsh-black flex items-center gap-2">
-                <Plus className="w-5 h-5 text-tapsh-soft-green" />
-                Add New Enterprise Client
-              </h3>
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="p-1.5 rounded-full hover:bg-tapsh-charcoal/10 text-tapsh-charcoal transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSaveAdd} className="flex-1 overflow-y-auto p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5" /> Business Name *
-                </label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. Royal Palace Hotel"
-                  value={addForm.businessName}
-                  onChange={(e) => setAddForm({...addForm, businessName: e.target.value})}
-                  className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5 flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5" /> Contact Person
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Manager Name"
-                    value={addForm.contactPerson}
-                    onChange={(e) => setAddForm({...addForm, contactPerson: e.target.value})}
-                    className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
-                    Business Category
-                  </label>
-                  <select 
-                    value={addForm.businessType}
-                    onChange={(e) => setAddForm({...addForm, businessType: e.target.value as any})}
-                    className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                  >
-                    {businessTypes.filter(t => t !== "ALL").map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5" /> Phone Number
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="+91 98765 43210"
-                    value={addForm.phone}
-                    onChange={(e) => setAddForm({...addForm, phone: e.target.value})}
-                    className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5" /> Email
-                  </label>
-                  <input 
-                    type="email" 
-                    placeholder="contact@business.com"
-                    value={addForm.email}
-                    onChange={(e) => setAddForm({...addForm, email: e.target.value})}
-                    className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" /> Address
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="Street / Commercial premises"
-                    value={addForm.address}
-                    onChange={(e) => setAddForm({...addForm, address: e.target.value})}
-                    className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" /> City / Region
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="City, State"
-                    value={addForm.city}
-                    onChange={(e) => setAddForm({...addForm, city: e.target.value})}
-                    className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5 flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5" /> Notes
-                </label>
-                <textarea 
-                  rows={2}
-                  placeholder="Additional notes about hardware or client deployment..."
-                  value={addForm.notes}
-                  onChange={(e) => setAddForm({...addForm, notes: e.target.value})}
-                  className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green resize-none"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-tapsh-charcoal/10 flex justify-end gap-3">
-                <button 
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-5 py-2.5 rounded-xl text-sm font-bold text-tapsh-charcoal hover:bg-tapsh-charcoal/10 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  disabled={savingAdd}
-                  className="px-5 py-2.5 rounded-xl text-sm font-bold bg-tapsh-soft-green text-white hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
-                >
-                  {savingAdd ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Create in Firestore
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   );

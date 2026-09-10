@@ -27,7 +27,7 @@ export default function ContactPage() {
     const text = `*Hello TAPSH,*\n\nI'd like to enquire about TAPSH solutions for my business.\n\n*Name:* ${name}\n*Business Name:* ${businessName}\n*Phone:* ${phone}${email ? `\n*Email:* ${email}` : ""}\n*Business Type:* ${businessType}${message ? `\n*Requirements:* ${message}` : ""}\n\nThank you.`;
 
     const encodedText = encodeURIComponent(text);
-    window.open(`https://wa.me/910000000000?text=${encodedText}`, '_blank');
+    window.open(`https://wa.me/917977469926?text=${encodedText}`, '_blank');
   };
 
   return (
@@ -47,7 +47,7 @@ export default function ContactPage() {
               <h3 className="font-bold text-xl text-tapsh-black mb-4">Fastest way to reach us</h3>
               <p className="text-tapsh-charcoal mb-6">Send us a direct message on WhatsApp for immediate assistance.</p>
               <Link 
-                href="https://wa.me/910000000000" 
+                href="https://wa.me/917977469926" 
                 target="_blank"
                 className="inline-flex items-center gap-3 px-6 py-3 bg-[#25D366] text-white rounded-xl font-bold hover:bg-[#20bd5a] transition-colors shadow-md"
               >
@@ -58,15 +58,24 @@ export default function ContactPage() {
             
             <div className="space-y-4 bg-tapsh-pale-blue p-6 rounded-2xl border border-tapsh-charcoal/20">
               <p className="text-tapsh-black">
+                <strong className="block text-sm uppercase tracking-wider text-tapsh-charcoal mb-1">WhatsApp & Phone</strong>
+                <a href="https://wa.me/917977469926" target="_blank" rel="noopener noreferrer" className="text-tapsh-black font-semibold hover:text-tapsh-soft-green transition-colors">
+                  +91 79774 69926
+                </a>
+              </p>
+              <p className="text-tapsh-black">
                 <strong className="block text-sm uppercase tracking-wider text-tapsh-charcoal mb-1">Email</strong>
-                hello@tapsh.in
+                <a href="mailto:tapsh.support@gmail.com" className="text-tapsh-black font-semibold hover:text-tapsh-soft-green transition-colors">
+                  tapsh.support@gmail.com
+                </a>
               </p>
               <p className="text-tapsh-black">
                 <strong className="block text-sm uppercase tracking-wider text-tapsh-charcoal mb-1">Location</strong>
-                India
+                <span className="font-semibold text-tapsh-black">Kanyakumari, Tamil Nadu, India</span>
               </p>
             </div>
           </div>
+
 
           {/* Form Side */}
           <div className="bg-white p-6 sm:p-8 md:p-12 rounded-3xl border border-tapsh-charcoal/20 shadow-xl">

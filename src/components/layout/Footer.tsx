@@ -96,20 +96,20 @@ export default function Footer() {
             <h4 className="font-bold text-lg text-white mb-6">Get in Touch</h4>
             <ul className="space-y-6">
               <li>
-                <a href="https://wa.me/910000000000" target="_blank" rel="noopener noreferrer" className="flex items-start group">
+                <a href="https://wa.me/917977469926" target="_blank" rel="noopener noreferrer" className="flex items-start group">
                   <MessageCircle className="w-5 h-5 text-tapsh-charcoal group-hover:text-[#25D366] transition-colors mr-4 shrink-0" />
                   <div>
                     <span className="block text-white font-medium text-sm mb-1 group-hover:text-[#25D366] transition-colors">WhatsApp</span>
-                    <span className="text-tapsh-charcoal text-sm">Message us instantly</span>
+                    <span className="text-tapsh-charcoal text-sm group-hover:text-white transition-colors">+91 79774 69926</span>
                   </div>
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@tapsh.in" className="flex items-start group">
+                <a href="mailto:tapsh.support@gmail.com" className="flex items-start group">
                   <Mail className="w-5 h-5 text-tapsh-charcoal group-hover:text-tapsh-pale-blue transition-colors mr-4 shrink-0" />
                   <div>
                     <span className="block text-white font-medium text-sm mb-1 group-hover:text-tapsh-pale-blue transition-colors">Email</span>
-                    <span className="text-tapsh-charcoal text-sm">hello@tapsh.in</span>
+                    <span className="text-tapsh-charcoal text-sm group-hover:text-white transition-colors">tapsh.support@gmail.com</span>
                   </div>
                 </a>
               </li>
@@ -118,10 +118,11 @@ export default function Footer() {
                   <MapPin className="w-5 h-5 text-tapsh-charcoal mr-4 shrink-0" />
                   <div>
                     <span className="block text-white font-medium text-sm mb-1">Location</span>
-                    <span className="text-tapsh-charcoal text-sm">India</span>
+                    <span className="text-tapsh-charcoal text-sm">Kanyakumari, Tamil Nadu, India</span>
                   </div>
                 </div>
               </li>
+
             </ul>
           </div>
 

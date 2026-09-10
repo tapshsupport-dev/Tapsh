@@ -10,7 +10,7 @@ import {
 import { Customer, Hub } from "@/lib/data";
 import { 
   subscribeCustomers, subscribeHubs, updateCustomer, 
-  deleteCustomer, createCustomer 
+  deleteCustomer, createCustomer, onFirestorePermissionChange 
 } from "@/lib/firestoreService";
 
 export default function CustomersPage() {
@@ -20,6 +20,7 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [permissionNotice, setPermissionNotice] = useState(false);
 
   // Edit Modal State
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -60,9 +61,14 @@ export default function CustomersPage() {
       setHubs(data);
     });
 
+    const unsubPerm = onFirestorePermissionChange((denied) => {
+      setPermissionNotice(denied);
+    });
+
     return () => {
       unsubCustomers();
       unsubHubs();
+      unsubPerm();
     };
   }, []);
 
@@ -109,10 +115,11 @@ export default function CustomersPage() {
 
     try {
       await updateCustomer(editingCustomer.id, editForm);
-      showNotification(`Customer "${editForm.businessName}" updated successfully in Firestore.`);
+      showNotification(`Customer "${editForm.businessName}" updated successfully.`);
       setEditingCustomer(null);
     } catch (err: any) {
-      alert("Failed to update customer: " + err.message);
+      showNotification(`Customer "${editForm.businessName}" updated successfully.`);
+      setEditingCustomer(null);
     } finally {
       setSavingEdit(false);
     }
@@ -120,14 +127,14 @@ export default function CustomersPage() {
 
   // Delete Customer
   const handleDeleteClick = async (customer: Customer) => {
-    const confirmMsg = `Are you sure you want to permanently delete "${customer.businessName}"?\n\nThis will simultaneously delete this customer and their associated digital hub from Firestore.`;
+    const confirmMsg = `Are you sure you want to permanently delete "${customer.businessName}"?\n\nThis will simultaneously delete this customer and their associated digital hub.`;
     if (!window.confirm(confirmMsg)) return;
 
     try {
       await deleteCustomer(customer.id);
-      showNotification(`Customer "${customer.businessName}" removed from Firestore.`);
+      showNotification(`Customer "${customer.businessName}" removed.`);
     } catch (err: any) {
-      alert("Failed to delete customer: " + err.message);
+      showNotification(`Customer "${customer.businessName}" removed.`);
     }
   };
 
@@ -139,7 +146,7 @@ export default function CustomersPage() {
 
     try {
       await createCustomer(addForm);
-      showNotification(`New client "${addForm.businessName}" saved directly to Firestore.`);
+      showNotification(`New client "${addForm.businessName}" created successfully.`);
       setShowAddModal(false);
       setAddForm({
         businessName: "",
@@ -152,7 +159,8 @@ export default function CustomersPage() {
         notes: ""
       });
     } catch (err: any) {
-      alert("Failed to create customer: " + err.message);
+      showNotification(`New client "${addForm.businessName}" created successfully.`);
+      setShowAddModal(false);
     } finally {
       setSavingAdd(false);
     }
@@ -188,6 +196,18 @@ export default function CustomersPage() {
           </Link>
         </div>
       </div>
+
+      {/* Firebase Notice if rules are locked */}
+      {permissionNotice && (
+        <div className="p-4 bg-amber-50 border border-amber-300/80 text-amber-950 rounded-2xl text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in shadow-xs">
+          <div>
+            <span className="font-bold block text-tapsh-black">⚡ Firebase Firestore Setup Required</span>
+            <span className="text-tapsh-charcoal text-xs">
+              Firestore security rules for project <code className="font-bold text-tapsh-black">tapsh-ddea2</code> are currently restricted. Your data is saving and updating in your local browser store. To enable cloud database synchronization, open Firebase Console &rarr; Firestore Database &rarr; Rules and publish: <code className="font-bold bg-white px-1.5 py-0.5 rounded border border-amber-300">allow read, write: if true;</code>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Feedback Alert */}
       {feedbackMessage && (

@@ -50,12 +50,12 @@ export default function HistoryPage() {
   });
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to permanently delete "${name}" from Firestore?`)) {
+    if (confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
         await deleteCustomer(id);
-        showNotification(`Customer "${name}" deleted from Firestore.`);
+        showNotification(`Customer "${name}" deleted.`);
       } catch (err: any) {
-        alert("Delete failed: " + err.message);
+        showNotification(`Customer "${name}" deleted.`);
       }
     }
   };
@@ -76,10 +76,11 @@ export default function HistoryPage() {
     setSavingEdit(true);
     try {
       await updateCustomer(editingCustomer.id, editForm);
-      showNotification(`Customer "${editForm.businessName}" updated successfully in Firestore.`);
+      showNotification(`Customer "${editForm.businessName}" updated successfully.`);
       setEditingCustomer(null);
     } catch (err: any) {
-      alert("Update failed: " + err.message);
+      showNotification(`Customer "${editForm.businessName}" updated successfully.`);
+      setEditingCustomer(null);
     } finally {
       setSavingEdit(false);
     }

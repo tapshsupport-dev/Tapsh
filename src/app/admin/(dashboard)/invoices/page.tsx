@@ -1,22 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   Plus, Search, Receipt, CheckCircle2, Clock, AlertCircle, 
   ArrowRight, Download, Printer, Filter 
 } from "lucide-react";
-import { mockInvoices, mockCustomers } from "@/lib/data";
+import { mockInvoices, Customer } from "@/lib/data";
+import { subscribeCustomers } from "@/lib/firestoreService";
 
 export default function InvoicesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [customers, setCustomers] = useState<Customer[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeCustomers(setCustomers);
+    return () => unsub();
+  }, []);
 
   const filteredInvoices = mockInvoices.filter((inv) => {
-    const customer = mockCustomers.find(c => c.id === inv.customerId);
+    const customer = customers.find(c => c.id === inv.customerId);
+    const clientName = customer?.businessName || "Enterprise Account";
     const matchesSearch = 
       inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (customer?.businessName && customer.businessName.toLowerCase().includes(searchTerm.toLowerCase()));
+      clientName.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === "ALL" || inv.status === statusFilter;
 
@@ -106,7 +114,7 @@ export default function InvoicesPage() {
           </div>
         ) : (
           filteredInvoices.map((inv) => {
-            const customer = mockCustomers.find(c => c.id === inv.customerId);
+            const customer = customers.find((c: Customer) => c.id === inv.customerId);
             const balance = inv.total - inv.amountPaid;
 
             return (
@@ -120,7 +128,7 @@ export default function InvoicesPage() {
                       {inv.invoiceNumber}
                     </span>
                     <h3 className="font-bold text-tapsh-black text-sm mt-0.5">
-                      {customer?.businessName}
+                      {customer?.businessName || "Enterprise Account"}
                     </h3>
                   </div>
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
@@ -179,14 +187,14 @@ export default function InvoicesPage() {
             </thead>
             <tbody className="divide-y divide-tapsh-charcoal/10">
               {filteredInvoices.map((inv) => {
-                const customer = mockCustomers.find(c => c.id === inv.customerId);
+                const customer = customers.find((c: Customer) => c.id === inv.customerId);
                 return (
                   <tr key={inv.id} className="hover:bg-[#FAF8F5]/60 transition-colors">
                     <td className="px-6 py-4 font-mono font-bold text-xs text-tapsh-black">
                       {inv.invoiceNumber}
                     </td>
                     <td className="px-6 py-4 font-bold text-tapsh-black">
-                      {customer?.businessName}
+                      {customer?.businessName || "Enterprise Account"}
                     </td>
                     <td className="px-6 py-4 text-xs text-tapsh-charcoal font-medium">
                       {new Date(inv.date).toLocaleDateString()}

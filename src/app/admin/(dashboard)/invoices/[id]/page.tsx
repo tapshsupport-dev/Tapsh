@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { mockInvoices, mockCustomers } from "@/lib/data";
-import { Printer, Download, CreditCard, ArrowLeft, CheckCircle2, Building2 } from "lucide-react";
+import { mockInvoices } from "@/lib/data";
+import { getCustomerById } from "@/lib/firestoreService";
+import { Printer, Download, Clock, ArrowLeft, CheckCircle2, Building2 } from "lucide-react";
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const invoice = mockInvoices.find(i => i.id === id);
-  const customer = mockCustomers.find(c => c.id === invoice?.customerId);
 
-  if (!invoice || !customer) {
+  if (!invoice) {
     return (
       <div className="bg-white p-8 rounded-3xl border border-tapsh-charcoal/20 text-center max-w-md mx-auto my-12">
         <h2 className="text-xl font-bold text-tapsh-black mb-2">Invoice Not Found</h2>
@@ -19,6 +19,21 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       </div>
     );
   }
+
+  const firestoreCustomer = await getCustomerById(invoice.customerId);
+  const customer = firestoreCustomer || {
+    id: invoice.customerId,
+    businessName: "Enterprise Account",
+    contactPerson: "Account Manager",
+    phone: "+91 99000 00000",
+    email: "billing@tapsh.in",
+    address: "Commercial Premises",
+    city: "India",
+    businessType: "Other" as const,
+    notes: "",
+    status: "ACTIVE" as const,
+    createdAt: new Date().toISOString()
+  };
 
   const balanceDue = invoice.total - invoice.amountPaid;
 
@@ -36,10 +51,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Link
-            href="/admin/payments"
+            href="/admin/history"
             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold hover:brightness-110 shadow-xs active:scale-95 transition-all"
           >
-            <CreditCard className="w-4 h-4" /> Record Payment
+            <Clock className="w-4 h-4" /> View History
           </Link>
         </div>
       </div>

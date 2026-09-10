@@ -104,6 +104,40 @@ const LINK_TEMPLATES = {
   ]
 };
 
+interface SetupAccordionItemProps {
+  id: string;
+  title: string;
+  isExpanded: boolean;
+  onToggle: (id: string) => void;
+  children: React.ReactNode;
+}
+
+function SetupAccordionItem({
+  id,
+  title,
+  isExpanded,
+  onToggle,
+  children
+}: SetupAccordionItemProps) {
+  return (
+    <div className="border border-tapsh-charcoal/15 rounded-2xl overflow-hidden bg-[#FAF8F5] mb-2.5 transition-all shadow-xs">
+      <button 
+        type="button"
+        onClick={() => onToggle(id)}
+        className="w-full flex items-center justify-between p-3.5 sm:p-4 text-left font-bold text-xs sm:text-sm text-tapsh-black hover:bg-tapsh-pale-blue/30 transition-colors cursor-pointer"
+      >
+        <span>{title}</span>
+        {isExpanded ? <ChevronUp className="w-4 h-4 text-tapsh-charcoal" /> : <ChevronDown className="w-4 h-4 text-tapsh-charcoal" />}
+      </button>
+      {isExpanded && (
+        <div className="p-3.5 sm:p-4 pt-1 border-t border-tapsh-charcoal/10 space-y-3.5 bg-white">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HubSetupWizard() {
   const [step, setStep] = useState(1);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -127,16 +161,36 @@ export default function HubSetupWizard() {
     return `https://wa.me/${full}`;
   };
 
-  const getWhatsAppDisplayValue = () => {
-    const currentUrl = data.links.find(l => l.category === "contact" && l.title === "WhatsApp Direct")?.url || "";
-    if (!currentUrl) return data.whatsapp || "";
-    return currentUrl.replace(/^https?:\/\/wa\.me\//, "");
-  };
-
   const handleWhatsAppChange = (rawNumber: string) => {
     const formattedUrl = formatWhatsAppUrl(rawNumber);
-    handleUpdateLink("contact", "WhatsApp Direct", formattedUrl, "whatsapp");
-    setData(prev => ({ ...prev, whatsapp: rawNumber.replace(/\D/g, "") }));
+    setData(prev => {
+      const existingLinkIndex = prev.links.findIndex(l => l.category === "contact" && l.title === "WhatsApp Direct");
+      const newLinks = [...prev.links];
+      if (!rawNumber.trim()) {
+        if (existingLinkIndex >= 0) newLinks.splice(existingLinkIndex, 1);
+      } else {
+        if (existingLinkIndex >= 0) {
+          newLinks[existingLinkIndex] = {
+            ...newLinks[existingLinkIndex],
+            url: formattedUrl,
+            icon: "whatsapp"
+          };
+        } else {
+          newLinks.push({
+            id: `link_whatsapp_${Date.now()}`,
+            category: "contact",
+            title: "WhatsApp Direct",
+            url: formattedUrl,
+            icon: "whatsapp"
+          });
+        }
+      }
+      return {
+        ...prev,
+        whatsapp: rawNumber,
+        links: newLinks
+      };
+    });
   };
 
   const [data, setData] = useState({
@@ -395,25 +449,8 @@ export default function HubSetupWizard() {
 
   // STEP 3: LINKS
   const renderStep3 = () => {
-    const AccordionItem = ({ id, title, children }: any) => {
-      const isExpanded = expandedCategory === id;
-      return (
-        <div className="border border-tapsh-charcoal/15 rounded-2xl overflow-hidden bg-[#FAF8F5] mb-2.5 transition-all shadow-xs">
-          <button 
-            type="button"
-            onClick={() => setExpandedCategory(isExpanded ? null : id)}
-            className="w-full flex items-center justify-between p-3.5 sm:p-4 text-left font-bold text-xs sm:text-sm text-tapsh-black hover:bg-tapsh-pale-blue/30 transition-colors"
-          >
-            <span>{title}</span>
-            {isExpanded ? <ChevronUp className="w-4 h-4 text-tapsh-charcoal" /> : <ChevronDown className="w-4 h-4 text-tapsh-charcoal" />}
-          </button>
-          {isExpanded && (
-            <div className="p-3.5 sm:p-4 pt-1 border-t border-tapsh-charcoal/10 space-y-3.5 bg-white">
-              {children}
-            </div>
-          )}
-        </div>
-      );
+    const toggleAccordion = (id: string) => {
+      setExpandedCategory(prev => prev === id ? null : id);
     };
 
     return (
@@ -428,7 +465,12 @@ export default function HubSetupWizard() {
         </div>
 
         {/* 1. CUSTOMER REVIEW LINKS (GOOGLE REVIEWS ONLY) */}
-        <AccordionItem id="reviews" title="🌟 Customer Review Links">
+        <SetupAccordionItem 
+          id="reviews" 
+          title="🌟 Customer Review Links"
+          isExpanded={expandedCategory === "reviews"}
+          onToggle={toggleAccordion}
+        >
           <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/15 space-y-2">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-6 h-6 rounded-lg bg-white shadow-xs flex items-center justify-center shrink-0">
@@ -449,10 +491,15 @@ export default function HubSetupWizard() {
               When guests tap the TAPSH NFC hardware stand or card, it directs straight to your Google Business review page so customers can leave 5-star feedback instantly.
             </p>
           </div>
-        </AccordionItem>
+        </SetupAccordionItem>
 
         {/* 2. CONTACT & WHATSAPP (DIRECT NUMBER, NO GOOGLE MAPS) */}
-        <AccordionItem id="contact" title="💬 Contact & WhatsApp">
+        <SetupAccordionItem 
+          id="contact" 
+          title="💬 Contact & WhatsApp"
+          isExpanded={expandedCategory === "contact"}
+          onToggle={toggleAccordion}
+        >
           {/* Dedicated WhatsApp Section (Direct Phone Number) */}
           <div className="p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 space-y-2">
             <div className="flex items-center justify-between">
@@ -471,7 +518,7 @@ export default function HubSetupWizard() {
             <input 
               type="tel" 
               placeholder="Enter WhatsApp phone number (e.g. 7977469926 or +91 79774 69926)" 
-              value={getWhatsAppDisplayValue()}
+              value={data.whatsapp}
               onChange={(e) => handleWhatsAppChange(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-white text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
             />
@@ -518,10 +565,15 @@ export default function HubSetupWizard() {
               className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-[#FAF8F5] text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
             />
           </div>
-        </AccordionItem>
+        </SetupAccordionItem>
 
         {/* 3. SOCIAL CHANNELS (WITH TWITTER / X) */}
-        <AccordionItem id="social" title="📸 Social Channels">
+        <SetupAccordionItem 
+          id="social" 
+          title="📸 Social Channels"
+          isExpanded={expandedCategory === "social"}
+          onToggle={toggleAccordion}
+        >
           {LINK_TEMPLATES.social.map(link => (
             <div key={link.title}>
               <div className="flex items-center gap-2 mb-1">
@@ -539,10 +591,15 @@ export default function HubSetupWizard() {
               />
             </div>
           ))}
-        </AccordionItem>
+        </SetupAccordionItem>
 
         {/* 4. WEBSITE & BOOKING */}
-        <AccordionItem id="website" title="🌐 Website & Booking">
+        <SetupAccordionItem 
+          id="website" 
+          title="🌐 Website & Booking"
+          isExpanded={expandedCategory === "website"}
+          onToggle={toggleAccordion}
+        >
           {LINK_TEMPLATES.website.map(link => (
             <div key={link.title}>
               <div className="flex items-center gap-2 mb-1">
@@ -560,10 +617,15 @@ export default function HubSetupWizard() {
               />
             </div>
           ))}
-        </AccordionItem>
+        </SetupAccordionItem>
 
         {/* 5. WI-FI NETWORK (AS REQUESTED) */}
-        <AccordionItem id="wifi" title="📶 Wi-Fi Network">
+        <SetupAccordionItem 
+          id="wifi" 
+          title="📶 Wi-Fi Network"
+          isExpanded={expandedCategory === "wifi"}
+          onToggle={toggleAccordion}
+        >
           {editingWifiAuth ? (
             /* AUTHENTICATION SELECTION SCREEN (Screenshot 4) */
             <div className="bg-[#121214] text-white rounded-2xl p-4 sm:p-5 border border-white/10 animate-in fade-in duration-150">
@@ -731,7 +793,7 @@ export default function HubSetupWizard() {
               )}
             </div>
           )}
-        </AccordionItem>
+        </SetupAccordionItem>
       </div>
     );
   };

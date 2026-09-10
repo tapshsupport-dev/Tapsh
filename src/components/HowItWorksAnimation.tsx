@@ -3,8 +3,12 @@
 import { motion, type Variants } from "framer-motion";
 import { Smartphone, Wifi, Star, MessageCircle, Globe, Camera } from "lucide-react";
 import Image from "next/image";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function HowItWorksAnimation() {
+  const { getAsset } = useSiteAssets();
+  const logoIcon = getAsset("logo_icon", "/images/logo-icon.png");
+
   // Animation variants
   const container: Variants = {
     hidden: { opacity: 0 },
@@ -113,10 +117,11 @@ export default function HowItWorksAnimation() {
                     whileInView={{ scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ delay: 1.6, type: "spring" }}
-                    className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center"
+                    className="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center p-2.5"
                   >
-                    <Image src="/images/logo-icon.png" alt="Icon" width={24} height={24} className="opacity-80" />
+                    <img src={logoIcon} alt="Icon" className="w-6 h-6 object-contain opacity-80" />
                   </motion.div>
+
                 </motion.div>
               </div>
             </div>

@@ -1,8 +1,13 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, MapPin, Mail, MessageCircle } from "lucide-react";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function Footer() {
+  const { getAsset } = useSiteAssets();
+  const logoWhite = getAsset("logo_white", "/images/logo-white.png");
+
   return (
     <footer className="bg-tapsh-black text-white mt-auto border-t border-tapsh-charcoal/20">
       
@@ -30,14 +35,13 @@ export default function Footer() {
           {/* COLUMN 1 - TAPSH BRAND */}
           <div className="lg:pr-8">
             <Link href="/" className="inline-block mb-6">
-              <Image 
-                src="/images/logo-white.png" 
+              <img 
+                src={logoWhite} 
                 alt="TAPSH Logo" 
-                width={140} 
-                height={40} 
                 className="w-auto h-8 md:h-10 object-contain" 
               />
             </Link>
+
             <h3 className="font-bold tracking-widest text-sm text-tapsh-pale-blue uppercase mb-4">Tap. Connect. Grow.</h3>
             <p className="text-tapsh-charcoal leading-relaxed text-sm">
               Smart NFC, QR & digital solutions that connect physical businesses to simple digital experiences.

@@ -1,8 +1,18 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight, Smartphone, Link as LinkIcon, Edit, ShieldCheck } from "lucide-react";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function HubInfoPage() {
+  const { getAsset } = useSiteAssets();
+
+  const hubPreview = getAsset("hub_preview", "/images/hub-preview.png");
+  const resortHubUi = getAsset("resort_hub_ui", "/images/resort_hub_ui.png");
+  const restaurantHubUi = getAsset("restaurant_hub_ui", "/images/restaurant_hub_ui.png");
+  const salonHubUi = getAsset("salon_hub_ui", "/images/salon_hub_ui.png");
+  const clinicHubUi = getAsset("clinic_hub_ui", "/images/clinic_hub_ui.png");
+
   return (
     <div className="pt-20 min-h-screen bg-tapsh-pale-blue text-tapsh-black">
       
@@ -18,35 +28,40 @@ export default function HubInfoPage() {
         </div>
       </section>
 
-      {/* Feature Explanation */}
-      <section className="py-12 sm:py-20 md:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+      {/* Feature Section */}
+      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-16 items-center">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-tapsh-black mb-4 sm:mb-6">Designed for Simplicity</h2>
-            <p className="text-lg text-tapsh-charcoal mb-8 leading-relaxed">
-              We built TAPSH Hub to be frictionless. Customers don't want to download an app or navigate a complex 10-page website just to find the Wi-Fi password or leave a review.
+            <h2 className="text-2xl sm:text-3xl font-bold text-tapsh-black mb-6">
+              A Micro-Landing Page Built for Quick Guest Action
+            </h2>
+            <p className="text-tapsh-charcoal text-base sm:text-lg mb-8 leading-relaxed">
+              When a guest taps or scans a TAPSH product, they don't get lost on a heavy website. Instead, they open a streamlined digital hub with exactly what they need at that moment.
             </p>
+
             <div className="space-y-6">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-tapsh-charcoal/30 flex items-center justify-center shrink-0 shadow-md">
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-soft-green/10 flex items-center justify-center shrink-0 border border-tapsh-soft-green/30">
                   <Smartphone className="w-6 h-6 text-tapsh-soft-green" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-tapsh-black text-lg">No App Required</h4>
-                  <p className="text-tapsh-charcoal">Works instantly in the native browser of any modern smartphone.</p>
+                  <h4 className="font-bold text-tapsh-black text-lg">Instant Mobile Access</h4>
+                  <p className="text-tapsh-charcoal">Loads fast in any smartphone browser. No app install required.</p>
                 </div>
               </div>
+
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-tapsh-charcoal/30 flex items-center justify-center shrink-0 shadow-md">
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-soft-green/10 flex items-center justify-center shrink-0 border border-tapsh-soft-green/30">
                   <LinkIcon className="w-6 h-6 text-tapsh-soft-green" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-tapsh-black text-lg">Dynamic Display</h4>
-                  <p className="text-tapsh-charcoal">Only display modules that actually have data. If you don't use Instagram, it simply doesn't show up.</p>
+                  <h4 className="font-bold text-tapsh-black text-lg">Direct Action Modules</h4>
+                  <p className="text-tapsh-charcoal">Direct buttons for Google Reviews, Instagram, Wi-Fi, WhatsApp, Menu & Booking.</p>
                 </div>
               </div>
+
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white border border-tapsh-charcoal/30 flex items-center justify-center shrink-0 shadow-md">
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-soft-green/10 flex items-center justify-center shrink-0 border border-tapsh-soft-green/30">
                   <Edit className="w-6 h-6 text-tapsh-soft-green" />
                 </div>
                 <div>
@@ -59,11 +74,9 @@ export default function HubInfoPage() {
 
           <div className="relative">
              <div className="rounded-3xl overflow-hidden shadow-2xl relative">
-               <Image 
-                 src="/images/hub-preview.png" 
+               <img 
+                 src={hubPreview} 
                  alt="TAPSH Hub Mobile Preview" 
-                 width={800} 
-                 height={1000} 
                  className="w-full h-auto object-cover transform hover:scale-[1.02] transition-transform duration-700" 
                />
              </div>
@@ -83,18 +96,17 @@ export default function HubInfoPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { title: "Resort / Hotel", image: "/images/resort_hub_ui.png", tags: ["Wi-Fi", "Room Service", "Reviews", "Maps"] },
-              { title: "Restaurant / Café", image: "/images/restaurant_hub_ui.png", tags: ["Menu", "Reviews", "Instagram", "WhatsApp"] },
-              { title: "Salon / Spa", image: "/images/salon_hub_ui.png", tags: ["Booking", "Services", "Reviews", "Call"] },
-              { title: "Clinic / Healthcare", image: "/images/clinic_hub_ui.png", tags: ["Appointment", "Location", "Contact", "Reviews"] }
+              { title: "Resort / Hotel", image: resortHubUi, tags: ["Wi-Fi", "Room Service", "Reviews", "Maps"] },
+              { title: "Restaurant / Café", image: restaurantHubUi, tags: ["Menu", "Reviews", "Instagram", "WhatsApp"] },
+              { title: "Salon / Spa", image: salonHubUi, tags: ["Booking", "Services", "Reviews", "Call"] },
+              { title: "Clinic / Healthcare", image: clinicHubUi, tags: ["Appointment", "Location", "Contact", "Reviews"] }
             ].map((industry, i) => (
               <div key={i} className="bg-tapsh-pale-blue rounded-3xl p-6 border border-tapsh-charcoal/20 text-center shadow-md hover:-translate-y-1 transition-transform duration-300">
                 <div className="w-full aspect-[9/16] bg-white rounded-2xl mb-6 overflow-hidden border border-tapsh-charcoal/30 shadow-inner relative group">
-                  <Image 
+                  <img 
                     src={industry.image} 
                     alt={`${industry.title} Hub UI`} 
-                    fill 
-                    className="object-cover transform transition-transform duration-700 group-hover:scale-105" 
+                    className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105" 
                   />
                 </div>
                 <h3 className="font-bold text-lg text-tapsh-black mb-4">{industry.title}</h3>

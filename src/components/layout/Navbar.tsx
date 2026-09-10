@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { getAsset } = useSiteAssets();
+  const logoDark = getAsset("logo_dark", "/images/logo-dark.png");
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -35,9 +37,14 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="group z-50 relative">
-              <Image src="/images/logo-dark.png" alt="TAPSH Logo" width={140} height={40} className="w-auto h-8 md:h-10 object-contain" />
+              <img 
+                src={logoDark} 
+                alt="TAPSH Logo" 
+                className="w-auto h-8 md:h-10 object-contain" 
+              />
             </Link>
           </div>
+
 
           {/* Desktop Center Links */}
           <div className="hidden lg:flex space-x-8 items-center">

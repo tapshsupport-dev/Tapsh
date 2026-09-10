@@ -1,10 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Smartphone, Building2, Coffee, Scissors, Briefcase, ShoppingBag, PlusCircle, CheckCircle2 } from "lucide-react";
 import { FadeIn, SlideUp, StaggerContainer, StaggerItem } from "@/components/ui/motion";
 import HowItWorksAnimation from "@/components/HowItWorksAnimation";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function HomePage() {
+  const { getAsset } = useSiteAssets();
+  const heroBackdrop = getAsset("hero_backdrop", "/images/hero_backdrop.png");
+  const tapshLifestyle = getAsset("tapsh_lifestyle", "/images/tapsh_lifestyle.png");
+
   return (
     <div className="flex flex-col min-h-screen pt-20 bg-tapsh-bg-warm text-tapsh-black">
       
@@ -12,17 +19,16 @@ export default function HomePage() {
       <section className="relative overflow-hidden min-h-[90vh] flex items-center">
         {/* Premium Product Backdrop Layer */}
         <div className="absolute inset-0 z-0">
-          <Image 
-            src="/images/hero_backdrop.png" 
+          <img 
+            src={heroBackdrop} 
             alt="TAPSH Premium NFC Products" 
-            fill 
-            priority
-            className="object-cover object-[70%_center] lg:object-right opacity-30 md:opacity-60 lg:opacity-100 pointer-events-none mix-blend-multiply" 
+            className="w-full h-full object-cover object-[70%_center] lg:object-right opacity-30 md:opacity-60 lg:opacity-100 pointer-events-none mix-blend-multiply" 
           />
           {/* Gradient Overlays to guarantee text readability */}
           <div className="absolute inset-0 bg-gradient-to-b md:bg-gradient-to-r from-tapsh-bg-warm via-tapsh-bg-warm/90 to-transparent lg:w-3/4 z-10"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-tapsh-bg-warm via-transparent to-transparent z-10 h-full"></div>
         </div>
+
 
         <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 w-full">
           <div className="text-center lg:text-left max-w-3xl lg:mr-auto">
@@ -99,10 +105,11 @@ export default function HomePage() {
             <FadeIn delay={0.2} className="relative h-full flex items-center justify-center">
               <div className="aspect-square w-full max-w-xl mx-auto bg-tapsh-black rounded-3xl sm:rounded-[3rem] border-4 sm:border-8 border-tapsh-beige/30 shadow-2xl overflow-hidden relative group">
                 <img 
-                  src="/images/tapsh_lifestyle.png" 
+                  src={tapshLifestyle} 
                   alt="TAPSH Lifestyle NFC Card" 
                   className="object-cover w-full h-full transform transition-transform duration-700 group-hover:scale-105"
                 />
+
               </div>
             </FadeIn>
           </div>

@@ -1,5 +1,8 @@
+"use client";
+
 import { Star, Wifi, Phone, MapPin, Globe, Camera, MessageCircle, Link as LinkIcon } from "lucide-react";
 import Image from "next/image";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 // Helper to map category to correct icon
 const getIconForCategory = (category: string) => {
@@ -15,9 +18,14 @@ const getIconForCategory = (category: string) => {
 };
 
 export default function HubView({ data }: { data: any }) {
+  const { getAsset } = useSiteAssets();
+  const logoIcon = getAsset("logo_icon", "/images/logo-icon.png");
+  const logoDark = getAsset("logo_dark", "/images/logo-dark.png");
+
   // Extract specific link types
   const reviewLinks = data.links?.filter((l: any) => l.category === "reviews") || [];
   const actionLinks = data.links?.filter((l: any) => l.category !== "reviews") || [];
+
 
   return (
     <div className="w-full h-full bg-[#FAF8F5] overflow-y-auto scrollbar-hide text-tapsh-black relative">
@@ -40,8 +48,9 @@ export default function HubView({ data }: { data: any }) {
         
         {/* Logo */}
         <div className="w-28 h-28 bg-white rounded-full border-[6px] border-[#FAF8F5] shadow-xl mx-auto flex items-center justify-center mb-6 overflow-hidden relative">
-          <Image src="/images/logo-icon.png" alt="TAPSH Icon" fill className="object-cover" />
+          <img src={logoIcon} alt="TAPSH Icon" className="w-full h-full object-cover" />
         </div>
+
 
         {/* Business Info */}
         <div className="text-center mb-8">
@@ -104,8 +113,9 @@ export default function HubView({ data }: { data: any }) {
           <p className="font-[signature] italic text-3xl text-tapsh-black mb-8">{data.greetingMessage || "Thank you ♡"}</p>
           <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-tapsh-charcoal mb-1">Powered By</p>
           <div className="flex flex-col items-center mt-2">
-            <Image src="/images/logo-dark.png" alt="TAPSH" width={80} height={24} className="w-auto h-5 object-contain opacity-80" />
+            <img src={logoDark} alt="TAPSH" className="w-auto h-5 object-contain opacity-80" />
           </div>
+
         </div>
 
       </div>

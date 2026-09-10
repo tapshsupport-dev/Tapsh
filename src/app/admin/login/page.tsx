@@ -5,14 +5,19 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldCheck, ArrowLeft, Sparkles } from "lucide-react";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function AdminLoginPage() {
+  const { getAsset } = useSiteAssets();
+  const logoWhite = getAsset("logo_white", "/images/logo-white.png");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,16 +84,14 @@ export default function AdminLoginPage() {
           {/* Logo & Header */}
           <div className="text-center mb-7 pt-2">
             <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-black/40 border border-white/10 shadow-inner mb-3">
-              <Image 
-                src="/images/logo-white.png" 
+              <img 
+                src={logoWhite} 
                 alt="TAPSH Logo" 
-                width={120} 
-                height={35} 
-                priority
                 className="w-auto h-7 sm:h-8 object-contain" 
               />
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mt-1">
+
               Admin Gateway
             </h1>
             <p className="text-xs sm:text-sm text-tapsh-gray mt-1.5">

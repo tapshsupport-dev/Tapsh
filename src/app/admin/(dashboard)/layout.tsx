@@ -5,15 +5,22 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { 
-  LayoutDashboard, Users, Receipt, CreditCard, PlusCircle, 
+  LayoutDashboard, Users, Receipt, PlusCircle, 
   Menu, X, ExternalLink, LogOut, ShieldCheck, ChevronRight,
-  Sparkles, History
+  Sparkles, History, Settings
 } from "lucide-react";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { getAsset } = useSiteAssets();
+
+  const logoWhite = getAsset("logo_white", "/images/logo-white.png");
+  const logoDark = getAsset("logo_dark", "/images/logo-dark.png");
+  const adminAvatar = getAsset("admin_avatar");
+  const adminName = getAsset("admin_name", "TAPSH Operations");
 
   const handleLogout = () => {
     document.cookie = "tapsh_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -26,6 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Hubs", href: "/admin/hubs/setup", icon: PlusCircle, exact: false },
     { name: "Invoices", href: "/admin/invoices", icon: Receipt, exact: false },
     { name: "History", href: "/admin/history", icon: History, exact: false },
+    { name: "Settings", href: "/admin/settings", icon: Settings, exact: false },
   ];
 
   const isActive = (item: typeof navItems[0]) => {
@@ -43,12 +51,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Brand Header */}
         <div className="p-6 border-b border-white/10 flex items-center justify-between">
           <div>
-            <Image 
-              src="/images/logo-white.png" 
+            <img 
+              src={logoWhite} 
               alt="TAPSH Logo" 
-              width={120} 
-              height={35} 
-              priority
               className="w-auto h-7 object-contain" 
             />
             <div className="flex items-center gap-1.5 mt-2.5">
@@ -59,6 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
         </div>
+
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
@@ -115,11 +121,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="fixed inset-y-0 left-0 w-4/5 max-w-xs bg-tapsh-black text-white p-6 shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-300">
             <div>
               <div className="flex items-center justify-between pb-6 border-b border-white/10">
-                <Image 
-                  src="/images/logo-white.png" 
+                <img 
+                  src={logoWhite} 
                   alt="TAPSH" 
-                  width={110} 
-                  height={32} 
                   className="w-auto h-6 object-contain" 
                 />
                 <button 
@@ -195,11 +199,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Menu className="w-5 h-5" />
             </button>
             <Link href="/admin" className="flex items-center">
-              <Image 
-                src="/images/logo-dark.png" 
+              <img 
+                src={logoDark} 
                 alt="TAPSH" 
-                width={95} 
-                height={28} 
                 className="w-auto h-6 object-contain" 
               />
             </Link>
@@ -212,9 +214,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               <Sparkles className="w-3.5 h-3.5" /> + Hub
             </Link>
-            <div className="w-8 h-8 rounded-full bg-tapsh-pale-blue border border-tapsh-charcoal/20 flex items-center justify-center text-xs font-bold text-tapsh-black">
-              TS
-            </div>
+            <Link 
+              href="/admin/settings"
+              title="Settings & Profile"
+              className="relative w-8 h-8 rounded-full overflow-hidden border border-tapsh-charcoal/20 flex items-center justify-center text-xs font-bold text-tapsh-black bg-tapsh-pale-blue shadow-xs"
+            >
+              {adminAvatar ? (
+                <img src={adminAvatar} alt="Admin" className="w-full h-full object-cover" />
+              ) : (
+                "TS"
+              )}
+            </Link>
           </div>
         </header>
 
@@ -228,12 +238,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-xs font-bold text-tapsh-black leading-none">TAPSH Operations</p>
+              <p className="text-xs font-bold text-tapsh-black leading-none">{adminName}</p>
               <p className="text-[10px] text-tapsh-charcoal mt-1">tapsh.support@gmail.com</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-tapsh-pale-blue border border-tapsh-charcoal/20 flex items-center justify-center font-bold text-xs text-tapsh-black shadow-inner">
-              TS
-            </div>
+            <Link 
+              href="/admin/settings" 
+              title="Settings & Profile"
+              className="relative w-9 h-9 rounded-full overflow-hidden border border-tapsh-charcoal/20 flex items-center justify-center font-bold text-xs text-tapsh-black bg-tapsh-pale-blue shadow-inner hover:ring-2 hover:ring-tapsh-soft-green transition-all"
+            >
+              {adminAvatar ? (
+                <img src={adminAvatar} alt="Admin" className="w-full h-full object-cover" />
+              ) : (
+                "TS"
+              )}
+            </Link>
           </div>
         </header>
 
@@ -247,23 +265,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly on phone) */}
       {/* ---------------------------------------------------- */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-tapsh-charcoal/20 px-2 py-1.5 shadow-lg safe-area-bottom">
-        <div className="grid grid-cols-5 items-center">
+        <div className="grid grid-cols-6 items-center">
           {navItems.map((item) => {
             const active = isActive(item);
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all ${
+                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all ${
                   active 
                     ? "text-tapsh-black font-bold" 
                     : "text-tapsh-charcoal hover:text-tapsh-black font-medium"
                 }`}
               >
                 <div className={`p-1 rounded-xl transition-colors ${active ? "bg-tapsh-soft-green/15 text-tapsh-soft-green" : ""}`}>
-                  <item.icon className="w-5 h-5" />
+                  <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <span className="text-[10px] tracking-tight mt-0.5 leading-none">
+                <span className="text-[9px] tracking-tight mt-0.5 leading-none">
                   {item.name}
                 </span>
               </Link>
@@ -271,6 +289,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </div>
       </nav>
+
 
     </div>
   );

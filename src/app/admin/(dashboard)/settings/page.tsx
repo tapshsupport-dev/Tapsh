@@ -7,8 +7,9 @@ import {
   Settings, Image as ImageIcon, Sparkles, Upload, RotateCcw, 
   Check, ExternalLink, AlertCircle, Eye, Search, Filter,
   ShieldCheck, Database, RefreshCw, X, CheckCircle2, Globe, User,
-  Package, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, ChevronDown, Star,
-  Wifi, MessageCircle, Camera, LayoutGrid, Layers, ArrowUpRight
+  Package, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Star,
+  Wifi, MessageCircle, Camera, LayoutGrid, Layers, ArrowUpRight,
+  ArrowLeft, SlidersHorizontal
 } from "lucide-react";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
 import { 
@@ -30,28 +31,41 @@ import ProductSlideshow from "@/components/products/ProductSlideshow";
 export default function AdminSettingsPage() {
   const { assets, isLoaded, getAsset, isCustom, updateAsset, resetAsset, resetAll } = useSiteAssets();
   
-  // Section Expand/Collapse State (Sections as Lists)
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    content: true,
-    products: true,
-    identity: false,
-    system: false,
-  });
+  // Navigation State: null (Main List) | "content" | "products" | "identity" | "system"
+  const [currentSection, setCurrentSection] = useState<string | null>(null);
 
-  const toggleSection = (key: string) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const navigateToSection = (sec: string | null) => {
+    setCurrentSection(sec);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (sec) {
+        url.searchParams.set("section", sec);
+      } else {
+        url.searchParams.delete("section");
+        url.searchParams.delete("tab");
+      }
+      window.history.pushState({}, "", url.toString());
+    }
   };
 
-  const handleExpandAll = () => {
-    setOpenSections({ content: true, products: true, identity: true, system: true });
-  };
+  // Sync with URL query parameter on mount and browser back/forward buttons
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const sec = params.get("section") || params.get("tab");
+      if (sec && ["content", "products", "identity", "system"].includes(sec)) {
+        setCurrentSection(sec);
+      }
 
-  const handleCollapseAll = () => {
-    setOpenSections({ content: false, products: false, identity: false, system: false });
-  };
+      const handlePopState = () => {
+        const p = new URLSearchParams(window.location.search);
+        const s = p.get("section") || p.get("tab");
+        setCurrentSection(s && ["content", "products", "identity", "system"].includes(s) ? s : null);
+      };
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }
+  }, []);
   
   // Category filter for Media Assets
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -77,23 +91,6 @@ export default function AdminSettingsPage() {
   const [isUploadingProductImages, setIsUploadingProductImages] = useState(false);
   const [productUrlInput, setProductUrlInput] = useState("");
   const productFileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Read URL query parameter on mount (e.g. /admin/settings?tab=products)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab");
-      if (tab === "products") {
-        setOpenSections({ content: false, products: true, identity: false, system: false });
-      } else if (tab === "content") {
-        setOpenSections({ content: true, products: false, identity: false, system: false });
-      } else if (tab === "identity") {
-        setOpenSections({ content: false, products: false, identity: true, system: false });
-      } else if (tab === "system") {
-        setOpenSections({ content: false, products: false, identity: false, system: true });
-      }
-    }
-  }, []);
 
   // Subscribe to real-time products
   useEffect(() => {
@@ -348,98 +345,226 @@ export default function AdminSettingsPage() {
         </div>
       )}
 
-      {/* PAGE HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-tapsh-charcoal/20 pb-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shadow-sm">
-              <Settings className="w-5 h-5 text-tapsh-soft-green" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-tapsh-black tracking-tight">
-                Settings & Sections
-              </h1>
-              <p className="text-xs sm:text-sm text-tapsh-charcoal mt-0.5">
-                Click each section list below to open and manage content, media, products, and cloud services.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Global Expand / Collapse Controls */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleExpandAll}
-            className="px-3.5 py-2 text-xs font-bold text-tapsh-black bg-white hover:bg-tapsh-pale-blue/60 rounded-xl border border-tapsh-charcoal/20 transition-all cursor-pointer shadow-xs"
-          >
-            Expand All
-          </button>
-          <button
-            onClick={handleCollapseAll}
-            className="px-3.5 py-2 text-xs font-bold text-tapsh-charcoal hover:text-tapsh-black bg-white hover:bg-tapsh-pale-blue/60 rounded-xl border border-tapsh-charcoal/20 transition-all cursor-pointer shadow-xs"
-          >
-            Collapse All
-          </button>
-        </div>
-      </div>
-
       {/* ---------------------------------------------------- */}
-      {/* SECTIONS AS LIST ITEMS (CLICK TO OPEN & REVEAL DATA) */}
+      {/* VIEW 1: MAIN SETTINGS LIST (WHEN NO SECTION IS OPEN) */}
       {/* ---------------------------------------------------- */}
-      <div className="space-y-5">
-
-        {/* ==================================================== */}
-        {/* LIST ITEM 1: CONTENT & MEDIA ASSETS SECTION */}
-        {/* ==================================================== */}
-        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
+      {currentSection === null ? (
+        <div className="space-y-6 animate-in fade-in duration-200">
           
-          {/* Clickable Section Row */}
-          <button
-            onClick={() => toggleSection("content")}
-            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
-                <ImageIcon className="w-6 h-6 text-tapsh-soft-green" />
+          {/* Header */}
+          <div className="border-b border-tapsh-charcoal/20 pb-6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shadow-sm">
+                <Settings className="w-5 h-5 text-tapsh-soft-green" />
               </div>
               <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
-                    Content & Media Assets
-                  </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
-                    {MEDIA_ASSET_REGISTRY.length} Assets
-                  </span>
-                  {customCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-black text-white">
-                      {customCount} Custom
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                  Website dark/white logos, brand favicon, homepage hero backdrop, lifestyle NFC card, and industry hub mockups.
+                <h1 className="text-2xl sm:text-3xl font-bold text-tapsh-black tracking-tight">
+                  Settings & Configurations
+                </h1>
+                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-0.5">
+                  Select a section below to open its contents and manage images, products, and cloud data.
                 </p>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
-                {openSections.content ? "Hide" : "Open"}
-              </span>
-              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
-                openSections.content ? "rotate-180 bg-tapsh-soft-green text-white" : ""
-              }`}>
-                <ChevronDown className="w-5 h-5" />
+          {/* LIST OF SETTING SECTIONS */}
+          <div className="grid grid-cols-1 gap-4">
+            
+            {/* ITEM 1: CONTENT & MEDIA ASSETS */}
+            <div
+              onClick={() => navigateToSection("content")}
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+            >
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <ImageIcon className="w-7 h-7 text-tapsh-soft-green" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                      Content & Media Assets
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
+                      {MEDIA_ASSET_REGISTRY.length} Assets
+                    </span>
+                    {customCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-black text-white">
+                        {customCount} Custom
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                    Website dark/white logos, brand favicon, homepage hero backdrop, lifestyle card, and industry hub mockups.
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
+                <ChevronRight className="w-5 h-5" />
               </div>
             </div>
-          </button>
 
-          {/* Section Body Content */}
-          {openSections.content && (
-            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200">
-              
+            {/* ITEM 2: PRODUCTS & HARDWARE */}
+            <div
+              onClick={() => navigateToSection("products")}
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+            >
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <Package className="w-7 h-7 text-tapsh-soft-green" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                      Products & Hardware Catalog
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
+                      {products.length} Products
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                    Add new products, upload multiple showcase images that auto-slideshow on the website, edit titles & benefits, or delete items.
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* ITEM 3: ADMIN IDENTITY & PROFILE */}
+            <div
+              onClick={() => navigateToSection("identity")}
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+            >
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <User className="w-7 h-7 text-tapsh-taupe" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                      Admin Identity & Profile
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-pale-blue text-tapsh-black">
+                      Superadmin
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                    Custom administrator avatar photo shown in desktop/mobile headers and console display name.
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* ITEM 4: FIREBASE CLOUD SYNC & ARCHITECTURE */}
+            <div
+              onClick={() => navigateToSection("system")}
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+            >
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <Database className="w-7 h-7 text-tapsh-soft-green" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                      Firebase Cloud Sync & Architecture
+                    </h2>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold text-tapsh-soft-green bg-tapsh-soft-green/15">
+                      <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
+                      Live Connected
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
+                    Dual-layer persistent storage status, real-time Firestore synchronization, and asset delivery pipeline.
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      ) : (
+        /* ---------------------------------------------------- */
+        /* VIEW 2: DEDICATED SECTION PAGE (OPENED FROM LIST)    */
+        /* ---------------------------------------------------- */
+        <div className="space-y-6 animate-in fade-in duration-200">
+          
+          {/* Back Navigation Bar & Breadcrumb */}
+          <div className="flex items-center justify-between gap-4 border-b border-tapsh-charcoal/20 pb-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigateToSection(null)}
+                className="flex items-center gap-2 py-2 px-3.5 bg-white hover:bg-tapsh-pale-blue text-tapsh-black rounded-xl text-xs font-bold border border-tapsh-charcoal/20 transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>All Settings</span>
+              </button>
+              <div className="text-xs text-tapsh-charcoal font-medium hidden sm:flex items-center gap-1.5">
+                <span>Settings</span>
+                <span>/</span>
+                <span className="font-bold text-tapsh-black uppercase tracking-wider">
+                  {currentSection === "content" && "Content & Media Assets"}
+                  {currentSection === "products" && "Products & Hardware"}
+                  {currentSection === "identity" && "Admin Identity"}
+                  {currentSection === "system" && "Firebase Cloud Sync"}
+                </span>
+              </div>
+            </div>
+
+            {/* Section Specific Action Button in Navbar */}
+            {currentSection === "products" && (
+              <button
+                onClick={handleOpenCreateProduct}
+                className="flex items-center gap-1.5 px-4 py-2 bg-tapsh-soft-green text-white font-bold text-xs rounded-xl shadow-xs hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Add Product
+              </button>
+            )}
+
+            {currentSection === "content" && customCount > 0 && (
+              <button
+                onClick={handleResetAllConfirm}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white rounded-xl border border-tapsh-charcoal/20 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Revert All
+              </button>
+            )}
+          </div>
+
+          {/* SECTION CONTENTS: CONTENT & MEDIA ASSETS */}
+          {currentSection === "content" && (
+            <div className="space-y-6">
+              {/* Introduction Banner */}
+              <div className="bg-gradient-to-br from-tapsh-black to-[#2A2B2D] text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
+                <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-tapsh-soft-green/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="relative z-10 max-w-3xl">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tapsh-soft-green/20 text-tapsh-soft-green text-[11px] font-bold uppercase tracking-wider mb-3">
+                    <Sparkles className="w-3.5 h-3.5" /> Content Management Flow
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
+                    Dynamic Website & Admin Media Catalog
+                  </h2>
+                  <p className="text-xs sm:text-sm text-tapsh-gray leading-relaxed">
+                    Choose and customize every visual asset rendered across the public web pages and admin console. 
+                    Upload files from your computer or provide direct URLs. Changes sync instantaneously through Firebase and update live for all visitors worldwide without requiring a deployment.
+                  </p>
+                </div>
+              </div>
+
               {/* Filter & Search Bar */}
-              <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-tapsh-charcoal/15 flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="bg-white p-4 rounded-3xl border border-tapsh-charcoal/20 shadow-xs flex flex-col md:flex-row gap-4 items-center justify-between">
                 <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
                   {MEDIA_CATEGORIES.map((cat) => (
                     <button
@@ -448,7 +573,7 @@ export default function AdminSettingsPage() {
                       className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 cursor-pointer ${
                         selectedCategory === cat
                           ? "bg-tapsh-soft-green text-white shadow-xs"
-                          : "bg-white text-tapsh-charcoal hover:text-tapsh-black border border-tapsh-charcoal/15"
+                          : "bg-tapsh-pale-blue/40 text-tapsh-charcoal hover:text-tapsh-black hover:bg-tapsh-pale-blue"
                       }`}
                     >
                       {cat}
@@ -456,26 +581,15 @@ export default function AdminSettingsPage() {
                   ))}
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                  <div className="relative w-full md:w-64">
-                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
-                    <input
-                      type="text"
-                      placeholder="Search images..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
-                    />
-                  </div>
-
-                  {customCount > 0 && (
-                    <button
-                      onClick={handleResetAllConfirm}
-                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white rounded-xl border border-tapsh-charcoal/20 transition-all cursor-pointer shrink-0"
-                    >
-                      <RotateCcw className="w-3 h-3" /> Revert All
-                    </button>
-                  )}
+                <div className="relative w-full md:w-64">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
+                  <input
+                    type="text"
+                    placeholder="Search images & assets..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-2xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
+                  />
                 </div>
               </div>
 
@@ -490,10 +604,10 @@ export default function AdminSettingsPage() {
                   return (
                     <div
                       key={asset.key}
-                      className="bg-white rounded-2xl border border-tapsh-charcoal/20 p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
+                      className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden"
                     >
                       <div>
-                        <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-start justify-between gap-2 mb-3">
                           <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
                               {asset.category}
@@ -504,13 +618,13 @@ export default function AdminSettingsPage() {
                           </div>
 
                           {customActive ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green shrink-0">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green shrink-0">
                               <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
                               Firebase Custom
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-charcoal/10 text-tapsh-charcoal shrink-0">
-                              Default
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-tapsh-charcoal/10 text-tapsh-charcoal shrink-0">
+                              System Default
                             </span>
                           )}
                         </div>
@@ -520,11 +634,11 @@ export default function AdminSettingsPage() {
                         </p>
 
                         {/* Image Preview Container */}
-                        <div className="relative w-full aspect-video bg-[#1F2022] rounded-xl overflow-hidden border border-tapsh-charcoal/15 flex items-center justify-center p-3 mb-4 group/preview">
+                        <div className="relative w-full aspect-video bg-[#1F2022] rounded-2xl overflow-hidden border border-tapsh-charcoal/15 flex items-center justify-center p-3 mb-4 group/preview">
                           {asset.type === "text" ? (
                             <div className="text-center p-4">
                               <span className="text-xs uppercase text-tapsh-gray tracking-wider">Current Text Value</span>
-                              <p className="text-base font-bold text-white mt-1">{liveValue || "TAPSH Operations"}</p>
+                              <p className="text-lg font-bold text-white mt-1">{liveValue || "TAPSH Operations"}</p>
                             </div>
                           ) : liveValue ? (
                             <div className="relative w-full h-full flex items-center justify-center">
@@ -536,10 +650,10 @@ export default function AdminSettingsPage() {
                             </div>
                           ) : (
                             <div className="flex flex-col items-center justify-center text-tapsh-gray text-xs">
-                              <div className="w-10 h-10 rounded-full bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold text-sm mb-1">
+                              <div className="w-12 h-12 rounded-full bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold text-sm mb-1">
                                 TS
                               </div>
-                              <span>No avatar set</span>
+                              <span>No custom avatar set</span>
                             </div>
                           )}
 
@@ -580,7 +694,7 @@ export default function AdminSettingsPage() {
                           <button
                             onClick={() => fileInputRefs.current[asset.key]?.click()}
                             disabled={isUpdating}
-                            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
+                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
                           >
                             <Upload className="w-3.5 h-3.5" />
                             <span>Choose File</span>
@@ -592,7 +706,7 @@ export default function AdminSettingsPage() {
                               setCustomUrlValue(customActive ? liveValue : "");
                             }}
                             disabled={isUpdating}
-                            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-tapsh-pale-blue hover:bg-tapsh-pale-blue/80 text-tapsh-black rounded-xl text-xs font-bold transition-all border border-tapsh-charcoal/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-pale-blue hover:bg-tapsh-pale-blue/80 text-tapsh-black rounded-xl text-xs font-bold transition-all border border-tapsh-charcoal/20 active:scale-95 disabled:opacity-50 cursor-pointer"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                             <span>URL Link</span>
@@ -600,7 +714,7 @@ export default function AdminSettingsPage() {
                         </div>
 
                         {isUrlOpen && (
-                          <div className="p-3 bg-tapsh-pale-blue/50 rounded-xl border border-tapsh-charcoal/20 space-y-2 animate-in slide-in-from-top-2">
+                          <div className="p-3 bg-tapsh-pale-blue/50 rounded-2xl border border-tapsh-charcoal/20 space-y-2 animate-in slide-in-from-top-2">
                             <label className="text-[10px] uppercase font-bold text-tapsh-charcoal">
                               Paste Direct Image / CDN URL:
                             </label>
@@ -638,58 +752,15 @@ export default function AdminSettingsPage() {
                   );
                 })}
               </div>
-
             </div>
           )}
-        </div>
 
-        {/* ==================================================== */}
-        {/* LIST ITEM 2: PRODUCTS SECTION (ADD, EDIT, SLIDESHOW) */}
-        {/* ==================================================== */}
-        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
-          
-          {/* Clickable Section Row */}
-          <button
-            onClick={() => toggleSection("products")}
-            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Package className="w-6 h-6 text-tapsh-soft-green" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
-                    Products & Hardware Catalog
-                  </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
-                    {products.length} Products
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                  Add new products, upload multiple showcase images that auto-slideshow on the website, edit titles & benefits, or delete items.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
-                {openSections.products ? "Hide" : "Open"}
-              </span>
-              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
-                openSections.products ? "rotate-180 bg-tapsh-soft-green text-white" : ""
-              }`}>
-                <ChevronDown className="w-5 h-5" />
-              </div>
-            </div>
-          </button>
-
-          {/* Section Body Content */}
-          {openSections.products && (
-            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200">
+          {/* SECTION CONTENTS: PRODUCTS CATALOG */}
+          {currentSection === "products" && (
+            <div className="space-y-6">
               
               {/* Product Controls Bar */}
-              <div className="bg-[#FAF8F5] p-4 rounded-2xl border border-tapsh-charcoal/15 flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="bg-white p-4 rounded-3xl border border-tapsh-charcoal/20 shadow-xs flex flex-col sm:flex-row gap-4 items-center justify-between">
                 <div className="relative w-full sm:w-80">
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-tapsh-charcoal" />
                   <input
@@ -697,24 +768,17 @@ export default function AdminSettingsPage() {
                     placeholder="Search products by title, benefit, category..."
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
+                    className="w-full pl-9 pr-4 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-2xl text-xs focus:outline-none focus:border-tapsh-soft-green transition-colors"
                   />
                 </div>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end flex-wrap">
-                  <button
-                    onClick={handleOpenCreateProduct}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-tapsh-soft-green hover:brightness-105 text-white font-bold text-xs rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" /> Add Product
-                  </button>
-
                   <Link
                     href="/products"
                     target="_blank"
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white text-tapsh-black font-bold text-xs rounded-xl border border-tapsh-charcoal/20 hover:bg-tapsh-pale-blue transition-colors"
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-tapsh-pale-blue/60 text-tapsh-black font-bold text-xs rounded-xl border border-tapsh-charcoal/20 hover:bg-tapsh-pale-blue transition-colors"
                   >
-                    <ArrowUpRight className="w-3.5 h-3.5 text-tapsh-soft-green" /> View Website
+                    <ArrowUpRight className="w-3.5 h-3.5 text-tapsh-soft-green" /> View Public Page
                   </Link>
 
                   <button
@@ -722,7 +786,7 @@ export default function AdminSettingsPage() {
                     className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-tapsh-charcoal hover:text-red-500 bg-white rounded-xl border border-tapsh-charcoal/15 transition-all cursor-pointer"
                     title="Reset to original 6 products"
                   >
-                    <RotateCcw className="w-3 h-3" /> Defaults
+                    <RotateCcw className="w-3 h-3" /> Factory Defaults
                   </button>
                 </div>
               </div>
@@ -735,7 +799,7 @@ export default function AdminSettingsPage() {
                   return (
                     <div
                       key={product.id}
-                      className="bg-white rounded-2xl border border-tapsh-charcoal/20 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+                      className="bg-white rounded-3xl border border-tapsh-charcoal/20 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
                     >
                       {/* Top Slideshow Visual */}
                       <div>
@@ -744,7 +808,7 @@ export default function AdminSettingsPage() {
                             images={product.images}
                             name={product.name}
                             iconType={product.iconType}
-                            className="h-48"
+                            className="h-52"
                           />
 
                           {/* Top Badges */}
@@ -769,13 +833,13 @@ export default function AdminSettingsPage() {
                         </div>
 
                         {/* Product Content Details */}
-                        <div className="p-5">
+                        <div className="p-6">
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div>
                               <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
                                 {product.category || "General"}
                               </span>
-                              <h3 className="font-bold text-tapsh-black text-lg leading-tight mt-0.5">
+                              <h3 className="font-bold text-tapsh-black text-xl leading-tight mt-0.5">
                                 {product.name}
                               </h3>
                             </div>
@@ -787,7 +851,7 @@ export default function AdminSettingsPage() {
 
                           {/* Key Benefit Box */}
                           {product.benefit && (
-                            <div className="bg-tapsh-pale-blue/40 p-3 rounded-xl border border-tapsh-charcoal/15 mb-2">
+                            <div className="bg-tapsh-pale-blue/40 p-3 rounded-2xl border border-tapsh-charcoal/15 mb-4">
                               <span className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-soft-green mb-0.5">
                                 Key Benefit
                               </span>
@@ -800,17 +864,17 @@ export default function AdminSettingsPage() {
                       </div>
 
                       {/* Bottom Action Footer */}
-                      <div className="p-3.5 bg-[#FAF8F5] border-t border-tapsh-charcoal/15 flex items-center justify-between gap-2">
+                      <div className="p-4 bg-[#FAF8F5] border-t border-tapsh-charcoal/15 flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleOpenEditProduct(product)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                            className="flex items-center gap-1.5 px-3 py-2 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                           >
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(product)}
-                            className="p-1.5 text-tapsh-charcoal hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                            className="p-2 text-tapsh-charcoal hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                             title="Delete product"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -833,154 +897,88 @@ export default function AdminSettingsPage() {
 
             </div>
           )}
-        </div>
 
-        {/* ==================================================== */}
-        {/* LIST ITEM 3: ADMIN IDENTITY SECTION */}
-        {/* ==================================================== */}
-        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
-          
-          {/* Clickable Section Row */}
-          <button
-            onClick={() => toggleSection("identity")}
-            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
-                <User className="w-6 h-6 text-tapsh-taupe" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
-                    Admin Identity & Profile
-                  </h2>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-pale-blue text-tapsh-black">
-                    Superadmin
-                  </span>
+          {/* SECTION CONTENTS: ADMIN IDENTITY */}
+          {currentSection === "identity" && (
+            <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-8 shadow-xs max-w-2xl space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold">
+                  <User className="w-6 h-6 text-tapsh-soft-green" />
                 </div>
-                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                  Custom administrator avatar photo shown in desktop/mobile headers and console display name.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
-                {openSections.identity ? "Hide" : "Open"}
-              </span>
-              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
-                openSections.identity ? "rotate-180 bg-tapsh-soft-green text-white" : ""
-              }`}>
-                <ChevronDown className="w-5 h-5" />
-              </div>
-            </div>
-          </button>
-
-          {/* Section Body Content */}
-          {openSections.identity && (
-            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200 max-w-3xl">
-              
-              <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-5 bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/15">
-                <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-tapsh-soft-green bg-tapsh-black flex items-center justify-center shrink-0 shadow-md">
-                  {getAsset("admin_avatar") ? (
-                    <img
-                      src={getAsset("admin_avatar")}
-                      alt="Admin Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-lg font-bold text-white">TS</span>
-                  )}
+                <div>
+                  <h2 className="text-xl font-bold text-tapsh-black">Admin Identity & Presence</h2>
+                  <p className="text-xs text-tapsh-charcoal">Manage how your admin credentials appear in headers and consoles.</p>
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-tapsh-black text-sm">Active Administrator</h4>
-                  <p className="text-xs text-tapsh-charcoal">tapsh.support@gmail.com</p>
-                  <span className="inline-block mt-1 text-[10px] font-bold text-tapsh-soft-green uppercase tracking-wider">
-                    Full Superadmin Privileges
-                  </span>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-5 p-5 bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/15">
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-tapsh-soft-green bg-tapsh-black flex items-center justify-center shrink-0 shadow-md">
+                    {getAsset("admin_avatar") ? (
+                      <img
+                        src={getAsset("admin_avatar")}
+                        alt="Admin Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-lg font-bold text-white">TS</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-tapsh-black text-sm">Active Administrator</h4>
+                    <p className="text-xs text-tapsh-charcoal">tapsh.support@gmail.com</p>
+                    <span className="inline-block mt-1 text-[10px] font-bold text-tapsh-soft-green uppercase tracking-wider">
+                      Full Superadmin Privileges
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigateToSection("content");
+                      setSelectedCategory("Admin Identity");
+                    }}
+                    className="px-4 py-2 bg-tapsh-black text-white rounded-xl text-xs font-bold hover:bg-tapsh-soft-green transition-colors cursor-pointer w-fit"
+                  >
+                    Change Avatar in Media
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setOpenSections((prev) => ({ ...prev, content: true }));
-                    setSelectedCategory("Admin Identity");
-                  }}
-                  className="px-4 py-2 bg-tapsh-black text-white rounded-xl text-xs font-bold hover:bg-tapsh-soft-green transition-colors cursor-pointer w-fit"
-                >
-                  Change Avatar in Media
-                </button>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-tapsh-black">
-                  Console Display Label
-                </label>
-                <input
-                  type="text"
-                  defaultValue={getAsset("admin_name", "TAPSH Operations")}
-                  onBlur={(e) => {
-                    if (e.target.value.trim()) {
-                      updateAsset("admin_name", e.target.value.trim());
-                      showFeedback("Updated admin display label in Firebase.");
-                    }
-                  }}
-                  placeholder="e.g. TAPSH Operations or System Admin"
-                  className="w-full px-4 py-2.5 bg-[#FAF8F5] border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
-                />
-                <p className="text-[11px] text-tapsh-charcoal">
-                  Shown in the top right desktop header beside your profile picture.
-                </p>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-tapsh-black">
+                    Console Display Label
+                  </label>
+                  <input
+                    type="text"
+                    defaultValue={getAsset("admin_name", "TAPSH Operations")}
+                    onBlur={(e) => {
+                      if (e.target.value.trim()) {
+                        updateAsset("admin_name", e.target.value.trim());
+                        showFeedback("Updated admin display label in Firebase.");
+                      }
+                    }}
+                    placeholder="e.g. TAPSH Operations or System Admin"
+                    className="w-full px-4 py-2.5 bg-[#FAF8F5] border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
+                  />
+                  <p className="text-[11px] text-tapsh-charcoal">
+                    Shown in the top right desktop header beside your profile avatar.
+                  </p>
+                </div>
               </div>
-
             </div>
           )}
-        </div>
 
-        {/* ==================================================== */}
-        {/* LIST ITEM 4: FIREBASE CLOUD SYNC SECTION */}
-        {/* ==================================================== */}
-        <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 shadow-xs overflow-hidden transition-all">
-          
-          {/* Clickable Section Row */}
-          <button
-            onClick={() => toggleSection("system")}
-            className="w-full p-5 sm:p-6 flex items-center justify-between gap-4 text-left hover:bg-tapsh-pale-blue/15 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm">
-                <Database className="w-6 h-6 text-tapsh-soft-green" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg sm:text-xl font-bold text-tapsh-black">
-                    Firebase Cloud Sync & Architecture
-                  </h2>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold text-tapsh-soft-green bg-tapsh-soft-green/15">
-                    <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
-                    Live Connected
-                  </span>
+          {/* SECTION CONTENTS: FIREBASE CLOUD SYNC */}
+          {currentSection === "system" && (
+            <div className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-8 shadow-xs max-w-3xl space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-soft-green/15 text-tapsh-soft-green flex items-center justify-center font-bold">
+                  <Database className="w-6 h-6" />
                 </div>
-                <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                  Dual-layer persistent storage status, real-time Firestore synchronization, and asset delivery pipeline.
-                </p>
+                <div>
+                  <h2 className="text-xl font-bold text-tapsh-black">Cloud Sync Architecture</h2>
+                  <p className="text-xs text-tapsh-charcoal">Dual-layer persistent storage and asset delivery health.</p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="hidden sm:inline-block text-xs font-bold text-tapsh-charcoal">
-                {openSections.system ? "Hide" : "Open"}
-              </span>
-              <div className={`w-9 h-9 rounded-full bg-tapsh-pale-blue flex items-center justify-center text-tapsh-black transition-transform duration-300 ${
-                openSections.system ? "rotate-180 bg-tapsh-soft-green text-white" : ""
-              }`}>
-                <ChevronDown className="w-5 h-5" />
-              </div>
-            </div>
-          </button>
-
-          {/* Section Body Content */}
-          {openSections.system && (
-            <div className="p-5 sm:p-8 pt-2 border-t border-tapsh-charcoal/15 space-y-6 animate-in slide-in-from-top-2 duration-200 max-w-3xl">
-              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15">
                   <div className="flex items-center justify-between mb-2">
@@ -1011,12 +1009,11 @@ export default function AdminSettingsPage() {
                 <strong className="text-tapsh-black block mb-1">Resilient Dual-Mode Upload Pipeline:</strong>
                 When uploading image files, the system first attempts cloud delivery to Firebase Storage (<code className="bg-white px-1 rounded">tapsh-ddea2.firebasestorage.app</code>). If storage rules are restricted or offline, the system automatically uses client-side canvas compression to encode high-resolution data URLs directly into Firestore and local cache. Images are never lost and always visible.
               </div>
-
             </div>
           )}
-        </div>
 
-      </div>
+        </div>
+      )}
 
       {/* ---------------------------------------------------- */}
       {/* MODAL: ADD / EDIT PRODUCT */}

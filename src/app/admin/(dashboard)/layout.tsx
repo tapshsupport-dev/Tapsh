@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   LayoutDashboard, Users, Receipt, PlusCircle, 
   Menu, X, ExternalLink, LogOut, ShieldCheck, ChevronRight,
@@ -13,9 +13,29 @@ import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isAdminDark, setIsAdminDark] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { getAsset } = useSiteAssets();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Ensure the root document never has a global dark class
+      document.documentElement.classList.remove("dark");
+      setIsAdminDark(localStorage.getItem("tapsh_admin_theme") === "dark");
+
+      const handleThemeChange = () => {
+        setIsAdminDark(localStorage.getItem("tapsh_admin_theme") === "dark");
+      };
+
+      window.addEventListener("admin_theme_change", handleThemeChange);
+      window.addEventListener("storage", handleThemeChange);
+      return () => {
+        window.removeEventListener("admin_theme_change", handleThemeChange);
+        window.removeEventListener("storage", handleThemeChange);
+      };
+    }
+  }, []);
 
   const logoWhite = getAsset("logo_white", "/images/logo-white.png");
   const logoDark = getAsset("logo_dark", "/images/logo-dark.png");
@@ -42,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="flex min-h-[100dvh] bg-[#F7F7F8] text-tapsh-black relative selection:bg-tapsh-soft-green selection:text-white">
+    <div className={`flex min-h-[100dvh] bg-[#F7F7F8] text-tapsh-black relative selection:bg-tapsh-soft-green selection:text-white transition-colors duration-200 ${isAdminDark ? "admin-dark dark" : ""}`}>
       
       {/* ---------------------------------------------------- */}
       {/* DESKTOP SIDEBAR (Visible on lg: and larger) */}

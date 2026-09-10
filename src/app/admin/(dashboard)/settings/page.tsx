@@ -67,14 +67,14 @@ export default function AdminSettingsPage() {
     }
   }, []);
 
-  // Dark Mode State & Toggle
+  // Dark Mode State & Toggle (Scoped strictly to Admin Page)
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const isDark = 
-        document.documentElement.classList.contains("dark") || 
-        localStorage.getItem("tapsh_theme") === "dark";
+      // Ensure documentElement never retains a global dark class
+      document.documentElement.classList.remove("dark");
+      const isDark = localStorage.getItem("tapsh_admin_theme") === "dark";
       setIsDarkMode(isDark);
     }
   }, []);
@@ -84,12 +84,15 @@ export default function AdminSettingsPage() {
     setIsDarkMode(nextMode);
     if (typeof window !== "undefined") {
       if (nextMode) {
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("tapsh_theme", "dark");
+        localStorage.setItem("tapsh_admin_theme", "dark");
       } else {
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem("tapsh_theme", "light");
+        localStorage.setItem("tapsh_admin_theme", "light");
       }
+      // Clean up any legacy site-wide keys
+      localStorage.removeItem("tapsh_theme");
+      document.documentElement.classList.remove("dark");
+      // Notify AdminLayout to immediately apply or remove .admin-dark class
+      window.dispatchEvent(new Event("admin_theme_change"));
     }
   };
   

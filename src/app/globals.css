@@ -63,66 +63,93 @@
 }
 
 /* ==================================================== */
-/* GLOBAL DARK MODE OVERRIDES                           */
+/* ADMIN-ONLY DARK MODE STYLES (DOES NOT AFFECT WEBSITE) */
 /* ==================================================== */
-html.dark {
+.admin-dark {
   color-scheme: dark;
-}
-
-html.dark body {
   background-color: #0F1012 !important;
   color: #FFFFFF !important;
 }
 
-html.dark .bg-\[\#F7F7F8\],
-html.dark .bg-tapsh-pale-blue {
+.admin-dark .bg-\[\#F7F7F8\],
+.admin-dark.bg-\[\#F7F7F8\],
+.admin-dark .bg-tapsh-pale-blue {
   background-color: #0F1012 !important;
 }
 
-html.dark .bg-white {
+.admin-dark .bg-white {
   background-color: #1A1B1F !important;
   color: #FFFFFF !important;
 }
 
-html.dark .bg-\[\#FAF8F5\] {
+.admin-dark .bg-\[\#FAF8F5\] {
   background-color: #151619 !important;
 }
 
-html.dark .text-tapsh-black {
+.admin-dark .text-tapsh-black {
   color: #FFFFFF !important;
 }
 
-html.dark .text-tapsh-charcoal {
+.admin-dark .text-tapsh-charcoal {
   color: #A0A5AA !important;
 }
 
-html.dark header.bg-white,
-html.dark header.bg-white\/95 {
+.admin-dark header.bg-white,
+.admin-dark header.bg-white\/95,
+.admin-dark header {
   background-color: rgba(26, 27, 31, 0.95) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-html.dark nav.bg-white\/95 {
+.admin-dark nav.bg-white\/95,
+.admin-dark nav.bg-white,
+.admin-dark nav.border-t {
   background-color: rgba(26, 27, 31, 0.95) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-html.dark .border-tapsh-charcoal\/20,
-html.dark .border-tapsh-charcoal\/15,
-html.dark .border-tapsh-charcoal\/30,
-html.dark .border-tapsh-charcoal\/40 {
+.admin-dark .border-tapsh-charcoal\/20,
+.admin-dark .border-tapsh-charcoal\/15,
+.admin-dark .border-tapsh-charcoal\/30,
+.admin-dark .border-tapsh-charcoal\/40 {
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-html.dark .bg-tapsh-pale-blue\/60,
-html.dark .bg-tapsh-pale-blue\/40,
-html.dark .bg-tapsh-pale-blue\/30,
-html.dark .bg-tapsh-pale-blue\/20 {
+.admin-dark .bg-tapsh-pale-blue\/60,
+.admin-dark .bg-tapsh-pale-blue\/40,
+.admin-dark .bg-tapsh-pale-blue\/30,
+.admin-dark .bg-tapsh-pale-blue\/20 {
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-html.dark aside {
-  background-color: #1A1B1F !important;
+.admin-dark aside {
+  background-color: #141517 !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.admin-dark input:not([type="checkbox"]):not([type="radio"]),
+.admin-dark textarea,
+.admin-dark select {
+  background-color: #151619 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.admin-dark input::placeholder,
+.admin-dark textarea::placeholder {
+  color: #6C7278 !important;
+}
+
+.admin-dark table thead th {
+  background-color: #151619 !important;
+  color: #A0A5AA !important;
+}
+
+.admin-dark table tbody tr {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.admin-dark table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
 }
 

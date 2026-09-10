@@ -18,23 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`${inter.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                if (localStorage.getItem('tapsh_theme') === 'dark') {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
-              } catch (_) {}
-            `,
-          }}
-        />
-      </head>
       <body className="min-h-full flex flex-col font-sans bg-tapsh-pale-blue text-tapsh-black">
         <SiteAssetsProvider>
           {children}

@@ -25,6 +25,16 @@ export type Invoice = {
   id: string;
   invoiceNumber: string;
   customerId: string;
+  customerName?: string;
+  customerDetails?: {
+    businessName: string;
+    contactPerson?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+  };
+  tapshHubUsed: boolean;
   date: string;
   dueDate: string;
   items: InvoiceItem[];
@@ -36,6 +46,9 @@ export type Invoice = {
   amountPaid: number;
   status: "PAID" | "PARTIAL" | "PENDING" | "OVERDUE";
   paymentMethods: string[];
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Customer = {
@@ -195,105 +208,7 @@ export const mockHubs: Hub[] = [
   }
 ];
 
-export const mockInvoices: Invoice[] = [
-  {
-    id: "inv_2026_0341",
-    invoiceNumber: "TAPSH/2026/0341",
-    customerId: "cus_tamara_coorg",
-    date: "2026-02-10T10:00:00.000Z",
-    dueDate: "2026-02-24T10:00:00.000Z",
-    items: [
-      { productId: "prod_nfc_stand", productName: "TAPSH Matte Black NFC Table Stand (Brass Base)", quantity: 20, unitPrice: 1800, total: 36000 },
-      { productId: "prod_hub_cloud", productName: "TAPSH Hub Annual Cloud Routing & Dynamic Hub", quantity: 1, unitPrice: 8500, total: 8500 },
-      { productId: "prod_nfc_discs", productName: "TAPSH Walnut Wood NFC Review Disc", quantity: 15, unitPrice: 1200, total: 18000 }
-    ],
-    subtotal: 62500,
-    discount: 2500,
-    taxRate: 0.18,
-    taxAmount: 10800,
-    total: 70800,
-    amountPaid: 70800,
-    status: "PAID",
-    paymentMethods: ["UPI", "BANK_TRANSFER"]
-  },
-  {
-    id: "inv_2026_0342",
-    invoiceNumber: "TAPSH/2026/0342",
-    customerId: "cus_subko_coffee",
-    date: "2026-02-18T14:00:00.000Z",
-    dueDate: "2026-03-04T14:00:00.000Z",
-    items: [
-      { productId: "prod_nfc_discs", productName: "TAPSH Walnut Wood NFC Review Disc (Laser-Engraved)", quantity: 12, unitPrice: 1200, total: 14400 },
-      { productId: "prod_hub_cloud", productName: "TAPSH Hub Annual Cloud Routing & Dynamic Hub", quantity: 1, unitPrice: 6000, total: 6000 }
-    ],
-    subtotal: 20400,
-    discount: 400,
-    taxRate: 0.18,
-    taxAmount: 3600,
-    total: 23600,
-    amountPaid: 23600,
-    status: "PAID",
-    paymentMethods: ["UPI"]
-  },
-  {
-    id: "inv_2026_0343",
-    invoiceNumber: "TAPSH/2026/0343",
-    customerId: "cus_truefitt_hill",
-    date: "2026-02-25T11:30:00.000Z",
-    dueDate: "2026-03-11T11:30:00.000Z",
-    items: [
-      { productId: "prod_nfc_cards", productName: "TAPSH Smart Matte NFC Stylist Mirror Cards", quantity: 8, unitPrice: 950, total: 7600 },
-      { productId: "prod_nfc_stand", productName: "TAPSH Premium Reception Review Stand", quantity: 2, unitPrice: 2200, total: 4400 },
-      { productId: "prod_hub_cloud", productName: "TAPSH Hub Annual Cloud Routing & Dynamic Hub", quantity: 1, unitPrice: 6000, total: 6000 }
-    ],
-    subtotal: 18000,
-    discount: 0,
-    taxRate: 0.18,
-    taxAmount: 3240,
-    total: 21240,
-    amountPaid: 15000,
-    status: "PARTIAL",
-    paymentMethods: ["UPI"]
-  },
-  {
-    id: "inv_2026_0344",
-    invoiceNumber: "TAPSH/2026/0344",
-    customerId: "cus_dr_vaidya",
-    date: "2026-03-01T09:30:00.000Z",
-    dueDate: "2026-03-15T09:30:00.000Z",
-    items: [
-      { productId: "prod_nfc_stand", productName: "TAPSH Dental Reception Review & Wi-Fi Dock", quantity: 2, unitPrice: 2200, total: 4400 },
-      { productId: "prod_hub_cloud", productName: "TAPSH Hub Annual Cloud Routing & Management", quantity: 1, unitPrice: 6000, total: 6000 }
-    ],
-    subtotal: 10400,
-    discount: 400,
-    taxRate: 0.18,
-    taxAmount: 1800,
-    total: 11800,
-    amountPaid: 0,
-    status: "PENDING",
-    paymentMethods: ["UPI"]
-  },
-  {
-    id: "inv_2026_0345",
-    invoiceNumber: "TAPSH/2026/0345",
-    customerId: "cus_blue_tokai",
-    date: "2026-03-06T15:00:00.000Z",
-    dueDate: "2026-03-20T15:00:00.000Z",
-    items: [
-      { productId: "prod_nfc_discs", productName: "TAPSH Walnut Wood NFC Review Disc", quantity: 10, unitPrice: 1200, total: 12000 },
-      { productId: "prod_hub_cloud", productName: "TAPSH Hub Annual Cloud Routing & Dynamic Hub", quantity: 1, unitPrice: 6000, total: 6000 }
-    ],
-    subtotal: 18000,
-    discount: 500,
-    taxRate: 0.18,
-    taxAmount: 3150,
-    total: 20650,
-    amountPaid: 10000,
-    status: "PARTIAL",
-    paymentMethods: ["UPI"]
-  }
-];
+export const mockInvoices: Invoice[] = [];
 
 export const mockAuditLogs: AuditLog[] = [
   {

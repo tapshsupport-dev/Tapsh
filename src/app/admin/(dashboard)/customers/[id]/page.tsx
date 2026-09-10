@@ -9,9 +9,9 @@ import {
   Loader2, User, FileText, Download, Copy, Check
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Customer, Hub, mockInvoices, mockAuditLogs } from "@/lib/data";
+import { Customer, Hub, mockAuditLogs, Invoice } from "@/lib/data";
 import { 
-  getCustomerById, getHubByCustomerId, updateCustomer, deleteCustomer 
+  getCustomerById, getHubByCustomerId, updateCustomer, deleteCustomer, subscribeInvoices 
 } from "@/lib/firestoreService";
 
 export default function CustomerProfilePage() {
@@ -21,6 +21,7 @@ export default function CustomerProfilePage() {
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [hub, setHub] = useState<Hub | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -64,6 +65,12 @@ export default function CustomerProfilePage() {
       setLoading(false);
     }
     loadData();
+
+    const unsubInvoices = subscribeInvoices((data) => {
+      setInvoices(data);
+    });
+
+    return () => unsubInvoices();
   }, [id]);
 
   const showNotification = (msg: string) => {
@@ -125,7 +132,7 @@ export default function CustomerProfilePage() {
   }
 
   const cleanPhone = (customer.phone || "").replace(/[^0-9+]/g, "");
-  const customerInvoices = mockInvoices.filter(i => i.customerId === customer.id);
+  const customerInvoices = invoices.filter(i => i.customerId === customer.id);
   const customerLogs = mockAuditLogs.filter(l => l.entityId === hub?.id || l.entityId === customer.id);
 
   return (

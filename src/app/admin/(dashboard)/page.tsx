@@ -9,11 +9,11 @@ import {
   TrendingUp, Plus
 } from "lucide-react";
 import { 
-  mockInvoices, mockAuditLogs, 
-  Customer, Hub, AuditLog 
+  mockAuditLogs, 
+  Customer, Hub, AuditLog, Invoice 
 } from "@/lib/data";
 import { 
-  subscribeCustomers, subscribeHubs, subscribeAuditLogs 
+  subscribeCustomers, subscribeHubs, subscribeAuditLogs, subscribeInvoices 
 } from "@/lib/firestoreService";
 
 export default function AdminDashboardPage() {
@@ -21,6 +21,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [hubs, setHubs] = useState<Hub[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   useEffect(() => {
@@ -39,6 +40,10 @@ export default function AdminDashboardPage() {
       setHubs(data);
     });
 
+    const unsubInvoices = subscribeInvoices((data) => {
+      setInvoices(data);
+    });
+
     const unsubLogs = subscribeAuditLogs((data) => {
       setAuditLogs(data);
     });
@@ -46,6 +51,7 @@ export default function AdminDashboardPage() {
     return () => {
       unsubCustomers();
       unsubHubs();
+      unsubInvoices();
       unsubLogs();
     };
   }, [router]);
@@ -62,9 +68,9 @@ export default function AdminDashboardPage() {
   }
 
   const activeHubsCount = hubs.filter(h => h.status === "ACTIVE").length;
-  const pendingInvoices = mockInvoices.filter(i => i.status === "PENDING" || i.status === "PARTIAL");
+  const pendingInvoices = invoices.filter(i => i.status === "PENDING" || i.status === "PARTIAL");
   const pendingAmount = pendingInvoices.reduce((acc, inv) => acc + (inv.total - inv.amountPaid), 0);
-  const totalRevenue = mockInvoices.reduce((acc, inv) => acc + inv.amountPaid, 0);
+  const totalRevenue = invoices.reduce((acc, inv) => acc + inv.amountPaid, 0);
 
   const displayLogs = auditLogs.length > 0 ? auditLogs : mockAuditLogs;
 
@@ -309,45 +315,52 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="space-y-2.5">
-          {mockInvoices.slice(0, 3).map((inv) => {
-            const customer = customers.find((c: Customer) => c.id === inv.customerId);
-            return (
-              <div 
-                key={inv.id}
-                className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-tapsh-black font-mono">
-                      {inv.invoiceNumber}
-                    </span>
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                      inv.status === "PAID" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                      inv.status === "PARTIAL" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                      "bg-amber-50 text-amber-700 border-amber-200"
-                    }`}>
-                      {inv.status}
-                    </span>
+          {invoices.length === 0 ? (
+            <div className="p-6 text-center text-xs text-tapsh-charcoal bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/10">
+              No tax invoices created yet. Go to Billing to issue an invoice.
+            </div>
+          ) : (
+            invoices.slice(0, 3).map((inv) => {
+              const customer = customers.find((c: Customer) => c.id === inv.customerId);
+              const clientName = inv.customerDetails?.businessName || customer?.businessName || inv.customerName || "Enterprise Account";
+              return (
+                <div 
+                  key={inv.id}
+                  className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-tapsh-black font-mono">
+                        {inv.invoiceNumber}
+                      </span>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                        inv.status === "PAID" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        inv.status === "PARTIAL" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
+                        {inv.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-tapsh-charcoal mt-1 truncate">
+                      {clientName} • ₹{inv.total.toLocaleString()}
+                    </p>
                   </div>
-                  <p className="text-xs text-tapsh-charcoal mt-1 truncate">
-                    {customer?.businessName} • ₹{inv.total.toLocaleString()}
-                  </p>
-                </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-tapsh-charcoal/10">
-                  <span className="text-xs font-bold text-tapsh-black sm:hidden">
-                    Balance: ₹{(inv.total - inv.amountPaid).toLocaleString()}
-                  </span>
-                  <Link 
-                    href={`/admin/invoices/${inv.id}`}
-                    className="py-1.5 px-3 rounded-xl bg-white border border-tapsh-charcoal/20 text-xs font-bold text-tapsh-black hover:border-tapsh-soft-green transition-all"
-                  >
-                    View Invoice
-                  </Link>
+                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-tapsh-charcoal/10">
+                    <span className="text-xs font-bold text-tapsh-black sm:hidden">
+                      Balance: ₹{(inv.total - inv.amountPaid).toLocaleString()}
+                    </span>
+                    <Link 
+                      href={`/admin/invoices/${inv.id}`}
+                      className="py-1.5 px-3 rounded-xl bg-white border border-tapsh-charcoal/20 text-xs font-bold text-tapsh-black hover:border-tapsh-soft-green transition-all"
+                    >
+                      View Invoice
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 

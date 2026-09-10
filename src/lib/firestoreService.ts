@@ -3,15 +3,17 @@ import {
   deleteDoc, onSnapshot, query, where 
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Customer, Hub, AuditLog } from "./data";
+import { Customer, Hub, AuditLog, Invoice } from "./data";
 
 const CUSTOMERS_COLLECTION = "customers";
 const HUBS_COLLECTION = "hubs";
 const AUDIT_LOGS_COLLECTION = "auditLogs";
+const INVOICES_COLLECTION = "invoices";
 
 const LS_CUSTOMERS_KEY = "tapsh_cached_customers";
 const LS_HUBS_KEY = "tapsh_cached_hubs";
 const LS_LOGS_KEY = "tapsh_cached_audit_logs";
+const LS_INVOICES_KEY = "tapsh_cached_invoices";
 
 // Status flag for Firestore permissions
 let firestorePermissionDenied = false;
@@ -96,6 +98,33 @@ function saveLocalLogs(list: AuditLog[]) {
   try {
     localStorage.setItem(LS_LOGS_KEY, JSON.stringify(list));
     window.dispatchEvent(new CustomEvent("tapsh_logs_updated", { detail: list }));
+  } catch (e) {
+    console.warn("Could not save to localStorage:", e);
+  }
+}
+
+function getLocalInvoices(): Invoice[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(LS_INVOICES_KEY);
+    if (!stored) return [];
+    const parsed: Invoice[] = JSON.parse(stored);
+    // Filter out old placeholder invoices (inv_2026_0341 to inv_2026_0345)
+    const cleaned = parsed.filter(i => !["inv_2026_0341", "inv_2026_0342", "inv_2026_0343", "inv_2026_0344", "inv_2026_0345"].includes(i.id));
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(LS_INVOICES_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalInvoices(list: Invoice[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LS_INVOICES_KEY, JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent("tapsh_invoices_updated", { detail: list }));
   } catch (e) {
     console.warn("Could not save to localStorage:", e);
   }
@@ -573,3 +602,150 @@ export async function logAudit(data: Omit<AuditLog, "id" | "timestamp">): Promis
     // Silently fall back to local log
   }
 }
+
+// ----------------------------------------------------
+// INVOICES CRUD & REAL-TIME SUBSCRIPTIONS
+// ----------------------------------------------------
+
+export function subscribeInvoices(callback: (invoices: Invoice[]) => void) {
+  const localList = getLocalInvoices();
+  callback(localList);
+
+  const handleLocalUpdate = (e: any) => {
+    callback(e.detail || getLocalInvoices());
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("tapsh_invoices_updated", handleLocalUpdate);
+  }
+
+  let unsubFirestore: (() => void) | null = null;
+  try {
+    const colRef = collection(db, INVOICES_COLLECTION);
+    unsubFirestore = onSnapshot(colRef, (snapshot) => {
+      notifyPermissionDenied(false);
+      const list: Invoice[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() } as Invoice);
+      });
+      list.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+      
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LS_INVOICES_KEY, JSON.stringify(list));
+      }
+      callback(list);
+    }, (error) => {
+      if (error?.code === "permission-denied") {
+        notifyPermissionDenied(true);
+      }
+      callback(getLocalInvoices());
+    });
+  } catch (err: any) {
+    console.warn("Firestore invoices snapshot error:", err);
+  }
+
+  return () => {
+    if (typeof window !== "undefined") {
+      window.removeEventListener("tapsh_invoices_updated", handleLocalUpdate);
+    }
+    if (unsubFirestore) unsubFirestore();
+  };
+}
+
+export async function getInvoiceById(id: string): Promise<Invoice | null> {
+  const local = getLocalInvoices().find(i => i.id === id);
+  try {
+    const docRef = doc(db, INVOICES_COLLECTION, id);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() } as Invoice;
+    }
+  } catch (err) {
+    // Fall back to local
+  }
+  return local || null;
+}
+
+export async function createInvoice(data: Omit<Invoice, "id"> & { id?: string }): Promise<Invoice> {
+  const id = data.id || `inv_${Date.now()}`;
+  const invoice: Invoice = {
+    ...data,
+    id,
+    createdAt: data.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const current = getLocalInvoices();
+  saveLocalInvoices([invoice, ...current]);
+
+  try {
+    await setDoc(doc(db, INVOICES_COLLECTION, id), invoice);
+    notifyPermissionDenied(false);
+  } catch (err: any) {
+    if (err?.code === "permission-denied") {
+      notifyPermissionDenied(true);
+    }
+  }
+
+  await logAudit({
+    entityType: "INVOICE",
+    entityId: id,
+    field: "creation",
+    oldValue: "None",
+    newValue: `Created Invoice ${invoice.invoiceNumber} for ₹${invoice.total.toLocaleString()}`,
+    changedBy: "tapsh.support@gmail.com"
+  });
+
+  return invoice;
+}
+
+export async function updateInvoice(id: string, data: Partial<Invoice>): Promise<void> {
+  const current = getLocalInvoices();
+  const updated = current.map(inv => inv.id === id ? { ...inv, ...data, updatedAt: new Date().toISOString() } : inv);
+  saveLocalInvoices(updated);
+
+  try {
+    const docRef = doc(db, INVOICES_COLLECTION, id);
+    await updateDoc(docRef, { ...data, updatedAt: new Date().toISOString() });
+    notifyPermissionDenied(false);
+  } catch (err: any) {
+    if (err?.code === "permission-denied") {
+      notifyPermissionDenied(true);
+    }
+  }
+
+  await logAudit({
+    entityType: "INVOICE",
+    entityId: id,
+    field: "status_or_details",
+    oldValue: "Updated invoice",
+    newValue: JSON.stringify(data),
+    changedBy: "tapsh.support@gmail.com"
+  });
+}
+
+export async function deleteInvoice(id: string): Promise<void> {
+  const current = getLocalInvoices();
+  const target = current.find(i => i.id === id);
+  const updated = current.filter(inv => inv.id !== id);
+  saveLocalInvoices(updated);
+
+  try {
+    const docRef = doc(db, INVOICES_COLLECTION, id);
+    await deleteDoc(docRef);
+    notifyPermissionDenied(false);
+  } catch (err: any) {
+    if (err?.code === "permission-denied") {
+      notifyPermissionDenied(true);
+    }
+  }
+
+  await logAudit({
+    entityType: "INVOICE",
+    entityId: id,
+    field: "status",
+    oldValue: target?.invoiceNumber || id,
+    newValue: "DELETED",
+    changedBy: "tapsh.support@gmail.com"
+  });
+}
+

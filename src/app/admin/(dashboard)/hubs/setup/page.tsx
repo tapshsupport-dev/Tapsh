@@ -5,7 +5,8 @@ import {
   Check, ChevronRight, Upload, Plus, Trash2, 
   Building2, Coffee, Scissors, PlusCircle, ShoppingBag, Briefcase, 
   ChevronDown, ChevronUp, Copy, QrCode, Download, ExternalLink, User,
-  Sparkles, ArrowLeft, ArrowRight, Loader2, Smartphone, Tablet
+  Sparkles, ArrowLeft, ArrowRight, Loader2, Smartphone, Tablet,
+  Lock, Zap, Wifi
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import HubView from "@/components/HubView";
@@ -22,6 +23,24 @@ const BUSINESS_TYPES = [
   { id: "Office", icon: Briefcase },
   { id: "Homestay", icon: Building2 },
   { id: "Other", icon: ShoppingBag }
+];
+
+export const WIFI_AUTH_OPTIONS = [
+  "Open",
+  "WPA-Personal",
+  "Shared",
+  "WPA-Enterprise",
+  "WPA2-Enterprise",
+  "WPA2-Personal",
+  "WPA/WPA2-Personal"
+];
+
+export const WIFI_ENCRYPTION_OPTIONS = [
+  "None",
+  "WEP",
+  "TKIP",
+  "AES",
+  "AES/TKIP"
 ];
 
 const LINK_TEMPLATES = {
@@ -93,6 +112,10 @@ export default function HubSetupWizard() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"iphone" | "tablet">("iphone");
 
+  // Wi-Fi Configuration Screen State (Screenshots 2, 3, 4)
+  const [editingWifiAuth, setEditingWifiAuth] = useState(false);
+  const [editingWifiEncryption, setEditingWifiEncryption] = useState(false);
+
   // WhatsApp phone number auto-formatting to https://wa.me/...
   const formatWhatsAppUrl = (input: string) => {
     if (!input || !input.trim()) return "";
@@ -126,7 +149,55 @@ export default function HubSetupWizard() {
     coverImage: "",
     greetingMessage: "Thank you for visiting ♡",
     links: [] as any[],
+    wifi: {
+      ssid: "",
+      password: "",
+      authType: "WPA/WPA2-Personal",
+      encryption: "AES"
+    }
   });
+
+  const handleWifiChange = (updates: Partial<{ ssid: string; password: string; authType: string; encryption: string }>) => {
+    setData(prev => {
+      const newWifi = {
+        ...prev.wifi,
+        ...updates
+      };
+
+      let wifiAuth = "WPA";
+      if (newWifi.authType === "Open" || newWifi.encryption === "None") {
+        wifiAuth = "nopass";
+      } else if (newWifi.encryption === "WEP") {
+        wifiAuth = "WEP";
+      }
+
+      const wifiUri = `WIFI:S:${newWifi.ssid};T:${wifiAuth};P:${newWifi.password};;`;
+      const withoutWifi = prev.links.filter(l => l.category !== "wifi");
+
+      const updatedLinks = newWifi.ssid.trim()
+        ? [
+            ...withoutWifi,
+            {
+              id: "link_wifi",
+              category: "wifi",
+              title: `Connect to Wi-Fi (${newWifi.ssid})`,
+              url: wifiUri,
+              icon: "wifi",
+              ssid: newWifi.ssid,
+              password: newWifi.password,
+              authType: newWifi.authType,
+              encryption: newWifi.encryption
+            }
+          ]
+        : withoutWifi;
+
+      return {
+        ...prev,
+        wifi: newWifi,
+        links: updatedLinks
+      };
+    });
+  };
 
   const nextStep = () => setStep(s => Math.min(s + 1, 4));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
@@ -489,6 +560,177 @@ export default function HubSetupWizard() {
               />
             </div>
           ))}
+        </AccordionItem>
+
+        {/* 5. WI-FI NETWORK (AS REQUESTED) */}
+        <AccordionItem id="wifi" title="📶 Wi-Fi Network">
+          {editingWifiAuth ? (
+            /* AUTHENTICATION SELECTION SCREEN (Screenshot 4) */
+            <div className="bg-[#121214] text-white rounded-2xl p-4 sm:p-5 border border-white/10 animate-in fade-in duration-150">
+              <div className="flex items-center gap-3 pb-3 mb-3 border-b border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEditingWifiAuth(false)}
+                  className="p-1.5 rounded-full hover:bg-white/10 text-tapsh-gray hover:text-white transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <h4 className="text-sm sm:text-base font-bold text-white">Authentication</h4>
+              </div>
+
+              <div className="space-y-1 divide-y divide-white/5">
+                {WIFI_AUTH_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      handleWifiChange({ authType: opt });
+                      setEditingWifiAuth(false);
+                    }}
+                    className={`w-full flex items-center gap-3 py-3 px-2 rounded-xl text-left text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                      data.wifi.authType === opt
+                        ? "bg-white/10 text-white font-bold"
+                        : "text-white/80 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-md bg-white/15 flex items-center justify-center shrink-0 text-white">
+                      <Zap className="w-3.5 h-3.5 fill-white" />
+                    </div>
+                    <span className="flex-1">{opt}</span>
+                    {data.wifi.authType === opt && (
+                      <Check className="w-4 h-4 text-[#FF9500]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : editingWifiEncryption ? (
+            /* ENCRYPTION SELECTION SCREEN (Screenshot 3) */
+            <div className="bg-[#121214] text-white rounded-2xl p-4 sm:p-5 border border-white/10 animate-in fade-in duration-150">
+              <div className="flex items-center gap-3 pb-3 mb-3 border-b border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setEditingWifiEncryption(false)}
+                  className="p-1.5 rounded-full hover:bg-white/10 text-tapsh-gray hover:text-white transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <h4 className="text-sm sm:text-base font-bold text-white">Encryption</h4>
+              </div>
+
+              <div className="space-y-1 divide-y divide-white/5">
+                {WIFI_ENCRYPTION_OPTIONS.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      handleWifiChange({ encryption: opt });
+                      setEditingWifiEncryption(false);
+                    }}
+                    className={`w-full flex items-center gap-3 py-3 px-2 rounded-xl text-left text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
+                      data.wifi.encryption === opt
+                        ? "bg-white/10 text-white font-bold"
+                        : "text-white/80 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-md bg-white/15 flex items-center justify-center shrink-0 text-white">
+                      <Lock className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="flex-1">{opt}</span>
+                    {data.wifi.encryption === opt && (
+                      <Check className="w-4 h-4 text-[#FF9500]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* MAIN WI-FI NETWORK CONFIG SCREEN (Screenshot 2) */
+            <div className="bg-[#121214] text-white rounded-2xl p-4 sm:p-5 border border-white/10 space-y-4">
+              <div className="flex items-center gap-3 pb-3 border-b border-white/10">
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-white">
+                  <Wifi className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm sm:text-base font-bold text-white">Wi-Fi network</h4>
+                  <p className="text-[11px] text-tapsh-gray">Configure a Wi-Fi network</p>
+                </div>
+              </div>
+
+              {/* Authentication */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-tapsh-gray block">
+                  Authentication :
+                </label>
+                <div className="flex items-stretch rounded-xl overflow-hidden bg-[#242428] border border-white/10">
+                  <div className="flex-1 px-4 py-3 text-xs sm:text-sm font-medium text-white flex items-center">
+                    {data.wifi.authType}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingWifiAuth(true)}
+                    className="px-5 py-3 bg-[#FF9500] hover:bg-[#E08500] active:scale-95 text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shrink-0"
+                  >
+                    EDIT
+                  </button>
+                </div>
+              </div>
+
+              {/* Encryption */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-tapsh-gray block">
+                  Encryption :
+                </label>
+                <div className="flex items-stretch rounded-xl overflow-hidden bg-[#242428] border border-white/10">
+                  <div className="flex-1 px-4 py-3 text-xs sm:text-sm font-medium text-white flex items-center">
+                    {data.wifi.encryption}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingWifiEncryption(true)}
+                    className="px-5 py-3 bg-[#FF9500] hover:bg-[#E08500] active:scale-95 text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shrink-0"
+                  >
+                    EDIT
+                  </button>
+                </div>
+              </div>
+
+              {/* SSID */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-tapsh-gray block">
+                  SSID :
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your SSID"
+                  value={data.wifi.ssid}
+                  onChange={(e) => handleWifiChange({ ssid: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-[#242428] border border-white/10 text-xs sm:text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#FF9500] font-medium"
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-tapsh-gray block">
+                  Password :
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your password"
+                  value={data.wifi.password}
+                  onChange={(e) => handleWifiChange({ password: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl bg-[#242428] border border-white/10 text-xs sm:text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#FF9500] font-medium"
+                />
+              </div>
+
+              {data.wifi.ssid && (
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-[11px] text-tapsh-gray flex items-center justify-between">
+                  <span>Guest Wi-Fi network ready in Hub</span>
+                  <span className="text-tapsh-soft-green font-bold">Active</span>
+                </div>
+              )}
+            </div>
+          )}
         </AccordionItem>
       </div>
     );

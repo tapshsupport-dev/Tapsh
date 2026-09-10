@@ -82,86 +82,8 @@ export type Hub = {
 // ORIGINAL ENTERPRISE CLIENTS & HUBS DATABASE
 // --------------------------------------------------
 
-export const mockCustomers: Customer[] = [
-  {
-    id: "cus_tamara_coorg",
-    businessName: "The Tamara Coorg",
-    contactPerson: "Ananya Rao (General Manager)",
-    phone: "+91 82722 80000",
-    email: "reservations@thetamara.com",
-    address: "Kabbinakad Estate, Napoklu Nad, Madikeri",
-    city: "Coorg, Karnataka",
-    businessType: "Resort / Hotel",
-    notes: "Equipped with 56 luxury cottage NFC stands and reception review docks.",
-    status: "ACTIVE",
-    createdAt: "2026-01-15T10:30:00.000Z"
-  },
-  {
-    id: "cus_subko_coffee",
-    businessName: "Subko Coffee Roasters & Bakehouse",
-    contactPerson: "Rahul Sharma (Operations Lead)",
-    phone: "+91 91360 12340",
-    email: "hello@subko.coffee",
-    address: "21A, Chapel Road, Ranwar, Bandra West",
-    city: "Mumbai, Maharashtra",
-    businessType: "Restaurant / Café",
-    notes: "Deploying NFC discs across all barista counters and outdoor patio seating.",
-    status: "ACTIVE",
-    createdAt: "2026-02-01T14:15:00.000Z"
-  },
-  {
-    id: "cus_truefitt_hill",
-    businessName: "Truefitt & Hill Gentlemen's Grooming",
-    contactPerson: "Vikramaditya Singh (Franchise Partner)",
-    phone: "+91 80 4125 5566",
-    email: "bangalore@truefittandhill.in",
-    address: "100ft Road, HAL 2nd Stage, Indiranagar",
-    city: "Bengaluru, Karnataka",
-    businessType: "Salon / Spa",
-    notes: "NFC mirror-mount cards for direct Google 5-star feedback and stylist tipping.",
-    status: "ACTIVE",
-    createdAt: "2026-02-14T11:00:00.000Z"
-  },
-  {
-    id: "cus_dr_vaidya",
-    businessName: "Dr. Vaidya's Aesthetic & Dental Studio",
-    contactPerson: "Dr. Sneha Vaidya (Lead Consultant)",
-    phone: "+91 98450 11223",
-    email: "clinic@drvaidya.com",
-    address: "80 Feet Road, 4th Block, Koramangala",
-    city: "Bengaluru, Karnataka",
-    businessType: "Clinic",
-    notes: "Reception NFC card for Google patient reviews and instant WhatsApp appointments.",
-    status: "ACTIVE",
-    createdAt: "2026-02-20T09:45:00.000Z"
-  },
-  {
-    id: "cus_blue_tokai",
-    businessName: "Blue Tokai Coffee Roasters",
-    contactPerson: "Preeti Reddy (Regional Store Manager)",
-    phone: "+91 98850 44332",
-    email: "jubilee@bluetokai.com",
-    address: "Road No. 36, CBI Colony, Jubilee Hills",
-    city: "Hyderabad, Telangana",
-    businessType: "Restaurant / Café",
-    notes: "Automated Wi-Fi one-tap connect plus Google feedback on table tents.",
-    status: "ACTIVE",
-    createdAt: "2026-03-02T16:20:00.000Z"
-  },
-  {
-    id: "cus_fabindia_cp",
-    businessName: "Fabindia Experience Centre",
-    contactPerson: "Rajesh Mehta (Store Director)",
-    phone: "+91 11 4300 5500",
-    email: "cp.delhi@fabindia.net",
-    address: "Block A, Inner Circle, Connaught Place",
-    city: "New Delhi, Delhi",
-    businessType: "Retail",
-    notes: "Billing counter smart discs for loyalty signup and Google store ratings.",
-    status: "ACTIVE",
-    createdAt: "2026-03-05T12:00:00.000Z"
-  }
-];
+export const mockCustomers: Customer[] = [];
+
 
 export const mockHubs: Hub[] = [
   {
@@ -487,3 +409,36 @@ export function createCustomerAndHub(data: any): Hub {
 
   return hub;
 }
+
+export function deleteAuditLog(id: string): boolean {
+  const index = mockAuditLogs.findIndex(l => l.id === id);
+  if (index !== -1) {
+    mockAuditLogs.splice(index, 1);
+    return true;
+  }
+  return false;
+}
+
+export function updateAuditLog(id: string, field: string, newValue: string): boolean {
+  const log = mockAuditLogs.find(l => l.id === id);
+  if (log) {
+    log.field = field;
+    log.newValue = newValue;
+    log.timestamp = new Date().toISOString();
+    return true;
+  }
+  return false;
+}
+
+export function deleteCustomer(id: string): boolean {
+  const cIndex = mockCustomers.findIndex(c => c.id === id);
+  if (cIndex !== -1) {
+    mockCustomers.splice(cIndex, 1);
+    // Also remove associated hub
+    const hIndex = mockHubs.findIndex(h => h.customerId === id);
+    if (hIndex !== -1) mockHubs.splice(hIndex, 1);
+    return true;
+  }
+  return false;
+}
+

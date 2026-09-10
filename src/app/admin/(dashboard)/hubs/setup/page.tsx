@@ -5,11 +5,11 @@ import {
   Check, ChevronRight, Upload, Plus, Trash2, 
   Building2, Coffee, Scissors, PlusCircle, ShoppingBag, Briefcase, 
   ChevronDown, ChevronUp, Copy, QrCode, Download, ExternalLink, User,
-  Sparkles, ArrowLeft, ArrowRight
+  Sparkles, ArrowLeft, ArrowRight, Loader2
 } from "lucide-react";
 import HubView from "@/components/HubView";
 import Link from "next/link";
-import { createCustomerAndHub } from "@/lib/data";
+import { createCustomer, createHub } from "@/lib/firestoreService";
 
 const BUSINESS_TYPES = [
   { id: "Resort / Hotel", icon: Building2 },
@@ -68,10 +68,52 @@ export default function HubSetupWizard() {
   const nextStep = () => setStep(s => Math.min(s + 1, 4));
   const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
-  const handleSaveAndCreate = () => {
-    const hub = createCustomerAndHub(data);
-    setCreatedHub(hub);
-    setIsSuccess(true);
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  const handleSaveAndCreate = async () => {
+    setIsDeploying(true);
+    try {
+      const customerId = `cus_${Date.now()}`;
+      const hubId = `hub_${Date.now()}`;
+      const slug = (data.businessName || "hub").toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+      const customer = await createCustomer({
+        id: customerId,
+        businessName: data.businessName,
+        contactPerson: "Primary Business Contact",
+        phone: data.phone || "+91 99000 00000",
+        email: `contact@${slug}.com`,
+        address: "Commercial Premises",
+        city: "India",
+        businessType: data.businessType as any || "Other",
+        notes: data.description || "Created via TAPSH Admin Setup Wizard.",
+        status: "ACTIVE"
+      });
+
+      const hub = await createHub({
+        id: hubId,
+        customerId,
+        slug,
+        businessName: data.businessName,
+        businessType: data.businessType || "Other",
+        shortDescription: data.description || "Welcome to our space.",
+        logoUrl: data.logo || "",
+        coverUrl: data.coverImage || "",
+        accentColor: "#554940",
+        greetingMessage: data.greetingMessage || "Thank you ♡",
+        phone: data.phone || "",
+        whatsapp: (data.whatsapp || "").replace(/[^0-9]/g, ""),
+        status: "ACTIVE",
+        links: data.links || []
+      });
+
+      setCreatedHub(hub);
+      setIsSuccess(true);
+    } catch (err: any) {
+      alert("Error deploying hub to Firestore: " + err.message);
+    } finally {
+      setIsDeploying(false);
+    }
   };
 
   const handleUpdateLink = (category: string, title: string, url: string, icon?: string) => {
@@ -467,10 +509,12 @@ export default function HubSetupWizard() {
           ) : (
             <button
               type="button"
+              disabled={isDeploying}
               onClick={handleSaveAndCreate}
-              className="py-2.5 px-6 bg-tapsh-black text-tapsh-beige rounded-xl text-xs sm:text-sm font-bold shadow-md hover:bg-tapsh-taupe active:scale-95 transition-all flex items-center gap-2"
+              className="py-2.5 px-6 bg-tapsh-black text-tapsh-beige rounded-xl text-xs sm:text-sm font-bold shadow-md hover:bg-tapsh-taupe active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" /> Deploy Hub
+              {isDeploying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isDeploying ? "Deploying to Firestore..." : "Deploy Hub"}
             </button>
           )}
         </div>

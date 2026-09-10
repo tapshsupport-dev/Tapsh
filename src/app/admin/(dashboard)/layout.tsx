@@ -7,7 +7,7 @@ import { useState } from "react";
 import { 
   LayoutDashboard, Users, Receipt, CreditCard, PlusCircle, 
   Menu, X, ExternalLink, LogOut, ShieldCheck, ChevronRight,
-  Sparkles
+  Sparkles, History
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Customers", href: "/admin/customers", icon: Users, exact: false },
     { name: "Hubs", href: "/admin/hubs/setup", icon: PlusCircle, exact: false },
     { name: "Invoices", href: "/admin/invoices", icon: Receipt, exact: false },
-    { name: "Payments", href: "/admin/payments", icon: CreditCard, exact: false },
+    { name: "History", href: "/admin/history", icon: History, exact: false },
   ];
 
   const isActive = (item: typeof navItems[0]) => {

@@ -9,48 +9,77 @@ import {
   TrendingUp, Plus
 } from "lucide-react";
 import { 
-  mockCustomers, mockHubs, mockInvoices, mockAuditLogs, 
-  getDashboardMetrics 
+  mockInvoices, mockAuditLogs, 
+  Customer, Hub, AuditLog 
 } from "@/lib/data";
+import { 
+  subscribeCustomers, subscribeHubs, subscribeAuditLogs 
+} from "@/lib/firestoreService";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState<any>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [hubs, setHubs] = useState<Hub[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
   useEffect(() => {
     // Quick auth check
     if (!document.cookie.includes("tapsh_admin_session")) {
       router.push("/admin/login");
-    } else {
-      setMetrics(getDashboardMetrics());
-      setLoading(false);
+      return;
     }
+
+    const unsubCustomers = subscribeCustomers((data) => {
+      setCustomers(data);
+      setLoading(false);
+    });
+
+    const unsubHubs = subscribeHubs((data) => {
+      setHubs(data);
+    });
+
+    const unsubLogs = subscribeAuditLogs((data) => {
+      setAuditLogs(data);
+    });
+
+    return () => {
+      unsubCustomers();
+      unsubHubs();
+      unsubLogs();
+    };
   }, [router]);
 
-  if (loading || !metrics) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-tapsh-soft-green border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal">Loading Live Data...</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal">Syncing Live Firestore Data...</p>
         </div>
       </div>
     );
   }
 
+  const activeHubsCount = hubs.filter(h => h.status === "ACTIVE").length;
+  const pendingInvoices = mockInvoices.filter(i => i.status === "PENDING" || i.status === "PARTIAL");
+  const pendingAmount = pendingInvoices.reduce((acc, inv) => acc + (inv.total - inv.amountPaid), 0);
+  const totalRevenue = mockInvoices.reduce((acc, inv) => acc + inv.amountPaid, 0);
+
+  const displayLogs = auditLogs.length > 0 ? auditLogs : mockAuditLogs;
+
   const statCards = [
     {
       label: "Active Hubs",
-      value: metrics.activeHubs.toString(),
-      subtext: `${mockCustomers.length} Verified Businesses`,
+      value: activeHubsCount.toString(),
+      subtext: `${customers.length} Verified Businesses`,
       icon: LayoutGrid,
       color: "text-tapsh-soft-green",
       bgColor: "bg-tapsh-soft-green/10"
     },
     {
       label: "Total Revenue",
-      value: `₹${(metrics.totalRevenue / 1000).toFixed(1)}k`,
+      value: `₹${(totalRevenue / 1000).toFixed(1)}k`,
       subtext: "Collected Payments",
       icon: IndianRupee,
       color: "text-emerald-600",
@@ -58,15 +87,15 @@ export default function AdminDashboardPage() {
     },
     {
       label: "Pending Invoices",
-      value: metrics.pendingInvoicesCount.toString(),
-      subtext: `₹${metrics.pendingAmount.toLocaleString()} to collect`,
+      value: pendingInvoices.length.toString(),
+      subtext: `₹${pendingAmount.toLocaleString()} to collect`,
       icon: Receipt,
       color: "text-amber-600",
       bgColor: "bg-amber-50"
     },
     {
       label: "Client Fleet",
-      value: metrics.totalCustomers.toString(),
+      value: customers.length.toString(),
       subtext: "Enterprise accounts",
       icon: Users,
       color: "text-blue-600",
@@ -157,11 +186,11 @@ export default function AdminDashboardPage() {
             <span className="text-xs font-bold text-tapsh-black">Invoices</span>
           </Link>
           <Link 
-            href="/admin/payments"
+            href="/admin/history"
             className="p-3.5 rounded-2xl bg-tapsh-pale-blue/30 border border-tapsh-charcoal/15 hover:border-tapsh-soft-green hover:bg-tapsh-pale-blue/50 flex flex-col items-center justify-center text-center transition-all active:scale-95 group"
           >
-            <IndianRupee className="w-5 h-5 text-emerald-600 mb-1.5 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-bold text-tapsh-black">Record UPI</span>
+            <Clock className="w-5 h-5 text-emerald-600 mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold text-tapsh-black">History</span>
           </Link>
         </div>
       </div>
@@ -185,34 +214,38 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="space-y-2.5">
-            {mockHubs.slice(0, 4).map((hub) => (
-              <div 
-                key={hub.id} 
-                className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/10 flex items-center justify-between hover:border-tapsh-soft-green/40 transition-colors"
-              >
-                <div className="min-w-0 flex-1 pr-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-tapsh-soft-green"></span>
-                    <h3 className="text-xs sm:text-sm font-bold text-tapsh-black truncate">
-                      {hub.businessName}
-                    </h3>
+            {hubs.length === 0 ? (
+              <p className="text-xs text-tapsh-charcoal py-4 text-center">No active hubs deployed in Firestore.</p>
+            ) : (
+              hubs.slice(0, 4).map((hub) => (
+                <div 
+                  key={hub.id} 
+                  className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/10 flex items-center justify-between hover:border-tapsh-soft-green/40 transition-colors"
+                >
+                  <div className="min-w-0 flex-1 pr-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-tapsh-soft-green"></span>
+                      <h3 className="text-xs sm:text-sm font-bold text-tapsh-black truncate">
+                        {hub.businessName}
+                      </h3>
+                    </div>
+                    <p className="text-[11px] text-tapsh-charcoal mt-0.5 truncate">
+                      tapsh.in/h/<span className="font-semibold text-tapsh-black">{hub.slug}</span>
+                    </p>
                   </div>
-                  <p className="text-[11px] text-tapsh-charcoal mt-0.5 truncate">
-                    tapsh.in/h/<span className="font-semibold text-tapsh-black">{hub.slug}</span>
-                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a 
+                      href={`/h/${hub.slug}`} 
+                      target="_blank" 
+                      className="p-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black hover:text-tapsh-soft-green text-xs font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Open</span>
+                    </a>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <a 
-                    href={`/h/${hub.slug}`} 
-                    target="_blank" 
-                    className="p-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black hover:text-tapsh-soft-green text-xs font-bold shadow-2xs active:scale-95 transition-all flex items-center gap-1"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Open</span>
-                  </a>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -229,7 +262,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {mockAuditLogs.slice(0, 4).map((log) => (
+            {displayLogs.slice(0, 4).map((log) => (
               <div 
                 key={log.id} 
                 className="flex items-start gap-3 p-3 rounded-2xl border border-tapsh-charcoal/10 bg-[#FAF8F5]"
@@ -277,7 +310,7 @@ export default function AdminDashboardPage() {
 
         <div className="space-y-2.5">
           {mockInvoices.slice(0, 3).map((inv) => {
-            const customer = mockCustomers.find(c => c.id === inv.customerId);
+            const customer = customers.find((c: Customer) => c.id === inv.customerId);
             return (
               <div 
                 key={inv.id}

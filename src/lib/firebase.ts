@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, isSupported, Analytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBeiNr2YIaLPZVB2ZYGPwxv3Cr_3B0eQ0Y",
@@ -13,6 +14,7 @@ const firebaseConfig = {
 
 // Initialize Firebase (singleton pattern for Next.js SSR)
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 let analytics: Analytics | null = null;
 
@@ -24,4 +26,5 @@ if (typeof window !== "undefined") {
   });
 }
 
-export { app, analytics };
+export { app, analytics, db };
+

@@ -1,15 +1,20 @@
 import { mockHubs } from "@/lib/data";
+import { getHubBySlug } from "@/lib/firestoreService";
 import { notFound } from "next/navigation";
 import HubView from "@/components/HubView";
 
 export default async function PublicHubPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  // Find the hub data based on slug
-  const hubData = mockHubs.find(h => h.slug === slug);
+  // Look up hub in Firestore first, fall back to mockHubs
+  let hubData = await getHubBySlug(slug);
+  if (!hubData) {
+    hubData = mockHubs.find(h => h.slug === slug) || null;
+  }
 
   if (!hubData) {
     notFound();
   }
+
 
   if (hubData.status === "SUSPENDED") {
     return (

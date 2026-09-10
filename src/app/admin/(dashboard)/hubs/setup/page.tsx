@@ -5,10 +5,11 @@ import {
   Check, ChevronRight, Upload, Plus, Trash2, 
   Building2, Coffee, Scissors, PlusCircle, ShoppingBag, Briefcase, 
   ChevronDown, ChevronUp, Copy, QrCode, Download, ExternalLink, User,
-  Sparkles, ArrowLeft, ArrowRight, Loader2
+  Sparkles, ArrowLeft, ArrowRight, Loader2, Smartphone, Tablet
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import HubView from "@/components/HubView";
+import { getTouchpointIcon } from "@/components/TouchpointIcons";
 import Link from "next/link";
 import { createCustomer, createHub } from "@/lib/firestoreService";
 
@@ -25,25 +26,62 @@ const BUSINESS_TYPES = [
 
 const LINK_TEMPLATES = {
   reviews: [
-    { title: "Google Reviews", icon: "google" },
-    { title: "TripAdvisor", icon: "tripadvisor" },
-    { title: "MakeMyTrip", icon: "mmt" },
-    { title: "Booking.com", icon: "booking" }
-  ],
-  social: [
-    { title: "Instagram Profile", icon: "instagram" },
-    { title: "Facebook Page", icon: "facebook" },
-    { title: "YouTube Channel", icon: "youtube" }
+    { 
+      title: "Google Reviews", 
+      icon: "google", 
+      placeholder: "https://g.page/r/.../review or Google Maps Review Link" 
+    }
   ],
   contact: [
-    { title: "WhatsApp Direct", icon: "whatsapp" },
-    { title: "Call Reception", icon: "phone" },
-    { title: "Google Maps Location", icon: "map" },
-    { title: "Official Email", icon: "mail" }
+    { 
+      title: "WhatsApp Direct", 
+      icon: "whatsapp", 
+      placeholder: "Enter WhatsApp phone number (e.g. 7977469926)" 
+    },
+    { 
+      title: "Call Reception", 
+      icon: "phone", 
+      placeholder: "+91 82722 80000" 
+    },
+    { 
+      title: "Official Email", 
+      icon: "mail", 
+      placeholder: "contact@business.com" 
+    }
+  ],
+  social: [
+    { 
+      title: "Instagram Profile", 
+      icon: "instagram", 
+      placeholder: "https://instagram.com/yourhandle" 
+    },
+    { 
+      title: "Facebook Page", 
+      icon: "facebook", 
+      placeholder: "https://facebook.com/yourpage" 
+    },
+    { 
+      title: "YouTube Channel", 
+      icon: "youtube", 
+      placeholder: "https://youtube.com/@yourchannel" 
+    },
+    { 
+      title: "X (Twitter) Profile", 
+      icon: "twitter", 
+      placeholder: "https://x.com/yourhandle" 
+    }
   ],
   website: [
-    { title: "Official Website", icon: "globe" },
-    { title: "Online Booking / Menu", icon: "calendar" }
+    { 
+      title: "Official Website", 
+      icon: "globe", 
+      placeholder: "https://yourwebsite.com" 
+    },
+    { 
+      title: "Online Booking / Menu", 
+      icon: "calendar", 
+      placeholder: "https://yourwebsite.com/menu" 
+    }
   ]
 };
 
@@ -53,6 +91,30 @@ export default function HubSetupWizard() {
   const [createdHub, setCreatedHub] = useState<any>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>("reviews");
   const [copiedLink, setCopiedLink] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"iphone" | "tablet">("iphone");
+
+  // WhatsApp phone number auto-formatting to https://wa.me/...
+  const formatWhatsAppUrl = (input: string) => {
+    if (!input || !input.trim()) return "";
+    const trimmed = input.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+    const digits = trimmed.replace(/\D/g, "");
+    if (!digits) return "";
+    const full = digits.length === 10 ? `91${digits}` : digits;
+    return `https://wa.me/${full}`;
+  };
+
+  const getWhatsAppDisplayValue = () => {
+    const currentUrl = data.links.find(l => l.category === "contact" && l.title === "WhatsApp Direct")?.url || "";
+    if (!currentUrl) return data.whatsapp || "";
+    return currentUrl.replace(/^https?:\/\/wa\.me\//, "");
+  };
+
+  const handleWhatsAppChange = (rawNumber: string) => {
+    const formattedUrl = formatWhatsAppUrl(rawNumber);
+    handleUpdateLink("contact", "WhatsApp Direct", formattedUrl, "whatsapp");
+    setData(prev => ({ ...prev, whatsapp: rawNumber.replace(/\D/g, "") }));
+  };
 
   const [data, setData] = useState({
     businessType: "Resort / Hotel",
@@ -265,17 +327,17 @@ export default function HubSetupWizard() {
     const AccordionItem = ({ id, title, children }: any) => {
       const isExpanded = expandedCategory === id;
       return (
-        <div className="border border-tapsh-charcoal/15 rounded-2xl overflow-hidden bg-[#FAF8F5] mb-2.5 transition-all">
+        <div className="border border-tapsh-charcoal/15 rounded-2xl overflow-hidden bg-[#FAF8F5] mb-2.5 transition-all shadow-xs">
           <button 
             type="button"
             onClick={() => setExpandedCategory(isExpanded ? null : id)}
-            className="w-full flex items-center justify-between p-3.5 sm:p-4 text-left font-bold text-xs sm:text-sm text-tapsh-black"
+            className="w-full flex items-center justify-between p-3.5 sm:p-4 text-left font-bold text-xs sm:text-sm text-tapsh-black hover:bg-tapsh-pale-blue/30 transition-colors"
           >
             <span>{title}</span>
             {isExpanded ? <ChevronUp className="w-4 h-4 text-tapsh-charcoal" /> : <ChevronDown className="w-4 h-4 text-tapsh-charcoal" />}
           </button>
           {isExpanded && (
-            <div className="p-3.5 sm:p-4 pt-0 border-t border-tapsh-charcoal/10 space-y-3 bg-white">
+            <div className="p-3.5 sm:p-4 pt-1 border-t border-tapsh-charcoal/10 space-y-3.5 bg-white">
               {children}
             </div>
           )}
@@ -294,43 +356,112 @@ export default function HubSetupWizard() {
           </p>
         </div>
 
+        {/* 1. CUSTOMER REVIEW LINKS (GOOGLE REVIEWS ONLY) */}
         <AccordionItem id="reviews" title="🌟 Customer Review Links">
-          {LINK_TEMPLATES.reviews.map(link => (
-            <div key={link.title}>
-              <label className="text-xs font-semibold text-tapsh-charcoal block mb-1">{link.title}</label>
-              <input 
-                type="url" 
-                placeholder={`https://...`} 
-                value={getLinkValue("reviews", link.title)}
-                onChange={(e) => handleUpdateLink("reviews", link.title, e.target.value, link.icon)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-[#FAF8F5] text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-              />
+          <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/15 space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-6 h-6 rounded-lg bg-white shadow-xs flex items-center justify-center shrink-0">
+                {getTouchpointIcon({ icon: "google" }, "sm")}
+              </div>
+              <label className="text-xs font-bold text-tapsh-black">
+                Google Reviews Page URL
+              </label>
             </div>
-          ))}
+            <input 
+              type="url" 
+              placeholder="https://g.page/r/.../review or Google Maps Review Link" 
+              value={getLinkValue("reviews", "Google Reviews")}
+              onChange={(e) => handleUpdateLink("reviews", "Google Reviews", e.target.value, "google")}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-white text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green font-mono"
+            />
+            <p className="text-[11px] text-tapsh-charcoal leading-relaxed">
+              When guests tap the TAPSH NFC hardware stand or card, it directs straight to your Google Business review page so customers can leave 5-star feedback instantly.
+            </p>
+          </div>
         </AccordionItem>
 
+        {/* 2. CONTACT & WHATSAPP (DIRECT NUMBER, NO GOOGLE MAPS) */}
         <AccordionItem id="contact" title="💬 Contact & WhatsApp">
-          {LINK_TEMPLATES.contact.map(link => (
-            <div key={link.title}>
-              <label className="text-xs font-semibold text-tapsh-charcoal block mb-1">{link.title}</label>
-              <input 
-                type="text" 
-                placeholder={link.title.includes("WhatsApp") ? "https://wa.me/91..." : "URL or phone number"} 
-                value={getLinkValue("contact", link.title)}
-                onChange={(e) => handleUpdateLink("contact", link.title, e.target.value, link.icon)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-[#FAF8F5] text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-              />
+          {/* Dedicated WhatsApp Section (Direct Phone Number) */}
+          <div className="p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200/80 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-white shadow-xs flex items-center justify-center shrink-0">
+                  {getTouchpointIcon({ icon: "whatsapp" }, "sm")}
+                </div>
+                <label className="text-xs font-bold text-tapsh-black">
+                  WhatsApp Direct Number
+                </label>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                Direct Chat
+              </span>
             </div>
-          ))}
+            <input 
+              type="tel" 
+              placeholder="Enter WhatsApp phone number (e.g. 7977469926 or +91 79774 69926)" 
+              value={getWhatsAppDisplayValue()}
+              onChange={(e) => handleWhatsAppChange(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-white text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+            />
+            <div className="flex items-center justify-between text-[11px] text-emerald-800">
+              <span>Just enter your business WhatsApp number — customers will be directed straight to chat.</span>
+            </div>
+            {getLinkValue("contact", "WhatsApp Direct") && (
+              <div className="text-[10px] text-emerald-700 bg-white/80 px-2.5 py-1 rounded-lg border border-emerald-200/60 font-mono truncate">
+                Direct Link: {getLinkValue("contact", "WhatsApp Direct")}
+              </div>
+            )}
+          </div>
+
+          {/* Call Reception */}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-5 h-5 flex items-center justify-center">
+                {getTouchpointIcon({ icon: "phone" }, "sm")}
+              </div>
+              <label className="text-xs font-semibold text-tapsh-charcoal">Call Reception</label>
+            </div>
+            <input 
+              type="text" 
+              placeholder="+91 82722 80000" 
+              value={getLinkValue("contact", "Call Reception")}
+              onChange={(e) => handleUpdateLink("contact", "Call Reception", e.target.value, "phone")}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-[#FAF8F5] text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+            />
+          </div>
+
+          {/* Official Email */}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-5 h-5 flex items-center justify-center">
+                {getTouchpointIcon({ icon: "mail" }, "sm")}
+              </div>
+              <label className="text-xs font-semibold text-tapsh-charcoal">Official Email</label>
+            </div>
+            <input 
+              type="email" 
+              placeholder="contact@business.com" 
+              value={getLinkValue("contact", "Official Email")}
+              onChange={(e) => handleUpdateLink("contact", "Official Email", e.target.value, "mail")}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-[#FAF8F5] text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+            />
+          </div>
         </AccordionItem>
 
+        {/* 3. SOCIAL CHANNELS (WITH TWITTER / X) */}
         <AccordionItem id="social" title="📸 Social Channels">
           {LINK_TEMPLATES.social.map(link => (
             <div key={link.title}>
-              <label className="text-xs font-semibold text-tapsh-charcoal block mb-1">{link.title}</label>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-5 h-5 flex items-center justify-center">
+                  {getTouchpointIcon(link, "sm")}
+                </div>
+                <label className="text-xs font-semibold text-tapsh-charcoal">{link.title}</label>
+              </div>
               <input 
                 type="url" 
-                placeholder={`https://instagram.com/...`} 
+                placeholder={link.placeholder} 
                 value={getLinkValue("social", link.title)}
                 onChange={(e) => handleUpdateLink("social", link.title, e.target.value, link.icon)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-[#FAF8F5] text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
@@ -339,13 +470,19 @@ export default function HubSetupWizard() {
           ))}
         </AccordionItem>
 
+        {/* 4. WEBSITE & BOOKING */}
         <AccordionItem id="website" title="🌐 Website & Booking">
           {LINK_TEMPLATES.website.map(link => (
             <div key={link.title}>
-              <label className="text-xs font-semibold text-tapsh-charcoal block mb-1">{link.title}</label>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-5 h-5 flex items-center justify-center">
+                  {getTouchpointIcon(link, "sm")}
+                </div>
+                <label className="text-xs font-semibold text-tapsh-charcoal">{link.title}</label>
+              </div>
               <input 
                 type="url" 
-                placeholder="https://..." 
+                placeholder={link.placeholder} 
                 value={getLinkValue("website", link.title)}
                 onChange={(e) => handleUpdateLink("website", link.title, e.target.value, link.icon)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/20 bg-[#FAF8F5] text-xs text-tapsh-black focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
@@ -357,9 +494,9 @@ export default function HubSetupWizard() {
     );
   };
 
-  // STEP 4: PREVIEW
+  // STEP 4: PREVIEW (IPHONE 17 PRO PHONE MODEL & TABLET VIEWPORT)
   const renderStep4 = () => (
-    <div className="space-y-4 max-w-xl mx-auto text-center">
+    <div className="space-y-4 max-w-2xl mx-auto text-center">
       <div>
         <h2 className="text-xl sm:text-2xl font-bold text-tapsh-black mb-1">
           Review Mobile Hub Appearance
@@ -369,19 +506,118 @@ export default function HubSetupWizard() {
         </p>
       </div>
 
-      <div className="flex justify-center bg-[#FAF8F5] rounded-3xl border border-tapsh-charcoal/15 p-2 sm:p-6 overflow-hidden">
-        <div className="w-full max-w-[320px] sm:max-w-[350px] h-[640px] sm:h-[720px] bg-white rounded-[2.5rem] border-6 sm:border-8 border-tapsh-black shadow-xl overflow-hidden relative">
-          <HubView data={{
-            businessName: data.businessName || "Business Name",
-            description: data.description || "Welcome to our space. Select an option below.",
-            greetingMessage: data.greetingMessage,
-            links: data.links.length > 0 ? data.links : [
-              { id: 1, category: "reviews", title: "Rate Us on Google", url: "#" },
-              { id: 2, category: "contact", title: "WhatsApp Front Desk", url: "#" },
-              { id: 3, category: "website", title: "Explore Services", url: "#" }
-            ]
-          }} />
+      {/* Device Viewport Selector Toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex items-center p-1 bg-white border border-tapsh-charcoal/20 rounded-2xl shadow-xs gap-1">
+          <button
+            type="button"
+            onClick={() => setPreviewDevice("iphone")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              previewDevice === "iphone"
+                ? "bg-tapsh-black text-white shadow-xs"
+                : "text-tapsh-charcoal hover:text-tapsh-black"
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>iPhone 17 Pro (Mobile)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreviewDevice("tablet")}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              previewDevice === "tablet"
+                ? "bg-tapsh-black text-white shadow-xs"
+                : "text-tapsh-charcoal hover:text-tapsh-black"
+            }`}
+          >
+            <Tablet className="w-3.5 h-3.5" />
+            <span>Tablet / iPad</span>
+          </button>
         </div>
+      </div>
+
+      {/* Phone / Tablet Mockup Container */}
+      <div className="flex justify-center bg-[#FAF8F5] rounded-3xl border border-tapsh-charcoal/15 p-2 sm:p-6 overflow-hidden">
+        {previewDevice === "iphone" ? (
+          /* IPHONE 17 PRO MODEL */
+          <div className="relative w-full max-w-[360px] sm:max-w-[393px] h-[720px] sm:h-[820px] transition-all">
+            
+            {/* Realistic Physical Side Buttons on Titanium Chassis */}
+            <div className="hidden sm:block absolute -left-[14px] top-24 w-[3px] h-7 bg-[#2E2E33] rounded-l-md shadow-xs"></div>
+            <div className="hidden sm:block absolute -left-[14px] top-36 w-[3px] h-12 bg-[#2E2E33] rounded-l-md shadow-xs"></div>
+            <div className="hidden sm:block absolute -left-[14px] top-52 w-[3px] h-12 bg-[#2E2E33] rounded-l-md shadow-xs"></div>
+            <div className="hidden sm:block absolute -right-[14px] top-36 w-[3px] h-16 bg-[#2E2E33] rounded-r-md shadow-xs"></div>
+
+            {/* Titanium Outer Rim */}
+            <div className="w-full h-full p-2.5 sm:p-3 bg-[#1C1C1F] rounded-[3.6rem] border-[3px] border-[#2E2E35] shadow-2xl relative ring-1 ring-black/40 overflow-hidden">
+              
+              {/* Inner Screen Bezel */}
+              <div className="w-full h-full bg-white rounded-[3rem] overflow-hidden relative shadow-inner flex flex-col">
+                
+                {/* Dynamic Island (iPhone 17 Pro Signature) */}
+                <div className="absolute top-2.5 inset-x-0 z-30 flex justify-center pointer-events-none">
+                  <div className="w-28 h-7 bg-black rounded-full flex items-center justify-between px-3 shadow-md">
+                    {/* Front Camera Lens Reflection */}
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#181820] border border-[#2b2b36] flex items-center justify-center">
+                      <div className="w-1 h-1 rounded-full bg-[#3e456b]/90"></div>
+                    </div>
+                    {/* FaceID Sensor Dot */}
+                    <div className="w-2 h-2 rounded-full bg-[#0a0a0f]"></div>
+                  </div>
+                </div>
+
+                {/* Hub View Content */}
+                <div className="flex-1 w-full h-full overflow-hidden">
+                  <HubView data={{
+                    businessName: data.businessName || "Business Name",
+                    description: data.description || "Welcome to our space. Select an option below.",
+                    greetingMessage: data.greetingMessage,
+                    links: data.links.length > 0 ? data.links : [
+                      { id: 1, category: "reviews", title: "Rate Us on Google", url: "#", icon: "google" },
+                      { id: 2, category: "contact", title: "WhatsApp Direct", url: "#", icon: "whatsapp" },
+                      { id: 3, category: "website", title: "Official Website", url: "#", icon: "globe" }
+                    ]
+                  }} />
+                </div>
+
+                {/* Home Indicator Bar */}
+                <div className="absolute bottom-1.5 inset-x-0 z-30 flex justify-center pointer-events-none">
+                  <div className="w-32 h-1 bg-black/40 rounded-full"></div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* TABLET / IPAD MODEL */
+          <div className="relative w-full max-w-[560px] sm:max-w-[620px] h-[700px] sm:h-[780px] transition-all">
+            <div className="w-full h-full p-3 sm:p-4 bg-[#1C1C1F] rounded-[2.5rem] border-[3px] border-[#2E2E35] shadow-2xl relative ring-1 ring-black/40 overflow-hidden flex flex-col">
+              
+              {/* Tablet Top Camera Dot */}
+              <div className="absolute top-2 inset-x-0 z-30 flex justify-center pointer-events-none">
+                <div className="w-2.5 h-2.5 rounded-full bg-black border border-[#2b2b36] shadow-sm"></div>
+              </div>
+
+              {/* Tablet Inner Screen */}
+              <div className="w-full h-full bg-white rounded-[2rem] overflow-hidden relative shadow-inner flex-1">
+                <HubView data={{
+                  businessName: data.businessName || "Business Name",
+                  description: data.description || "Welcome to our space. Select an option below.",
+                  greetingMessage: data.greetingMessage,
+                  links: data.links.length > 0 ? data.links : [
+                    { id: 1, category: "reviews", title: "Rate Us on Google", url: "#", icon: "google" },
+                    { id: 2, category: "contact", title: "WhatsApp Direct", url: "#", icon: "whatsapp" },
+                    { id: 3, category: "website", title: "Official Website", url: "#", icon: "globe" }
+                  ]
+                }} />
+                {/* Home Indicator Bar */}
+                <div className="absolute bottom-1.5 inset-x-0 z-30 flex justify-center pointer-events-none">
+                  <div className="w-36 h-1 bg-black/40 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

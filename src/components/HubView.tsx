@@ -1,21 +1,9 @@
 "use client";
 
-import { Star, Wifi, Phone, MapPin, Globe, Camera, MessageCircle, Link as LinkIcon } from "lucide-react";
+import { Star } from "lucide-react";
 import Image from "next/image";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
-
-// Helper to map category to correct icon
-const getIconForCategory = (category: string) => {
-  switch (category) {
-    case "reviews": return <Star className="w-5 h-5" />;
-    case "wifi": return <Wifi className="w-5 h-5" />;
-    case "contact": return <Phone className="w-5 h-5" />;
-    case "website": return <Globe className="w-5 h-5" />;
-    case "social": return <Camera className="w-5 h-5" />;
-    case "whatsapp": return <MessageCircle className="w-5 h-5" />;
-    default: return <LinkIcon className="w-5 h-5" />;
-  }
-};
+import { getTouchpointIcon } from "@/components/TouchpointIcons";
 
 export default function HubView({ data }: { data: any }) {
   const { getAsset } = useSiteAssets();
@@ -75,10 +63,12 @@ export default function HubView({ data }: { data: any }) {
                     key={i}
                     href={link.url}
                     target="_blank"
-                    className="flex items-center justify-center gap-3 w-full py-4 bg-tapsh-taupe text-tapsh-beige rounded-2xl font-bold text-lg hover:bg-tapsh-black transition-colors active:scale-95 shadow-lg"
+                    className="flex items-center justify-center gap-3 w-full py-4 bg-tapsh-taupe text-tapsh-beige rounded-2xl font-bold text-base sm:text-lg hover:bg-tapsh-black transition-colors active:scale-95 shadow-lg group"
                   >
-                    <Star className="w-6 h-6 fill-tapsh-beige" />
-                    {link.title}
+                    <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      {getTouchpointIcon(link, "md")}
+                    </div>
+                    <span>{link.title || "Rate Us on Google"}</span>
                   </a>
                 ))}
               </div>
@@ -87,18 +77,18 @@ export default function HubView({ data }: { data: any }) {
 
           {/* Action Grid */}
           {actionLinks.length > 0 && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {actionLinks.map((link: any, i: number) => (
                 <a 
                   key={i}
                   href={link.url}
                   target="_blank"
-                  className="flex flex-col items-center justify-center p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group"
+                  className="flex flex-col items-center justify-center p-5 sm:p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group"
                 >
-                  <div className="w-14 h-14 rounded-[1.2rem] bg-tapsh-beige/30 flex items-center justify-center mb-4 text-tapsh-taupe border border-tapsh-charcoal/10 shadow-inner group-hover:bg-tapsh-taupe group-hover:text-tapsh-beige transition-colors">
-                    {getIconForCategory(link.category)}
+                  <div className="w-14 h-14 rounded-[1.2rem] bg-tapsh-beige/25 flex items-center justify-center mb-3 sm:mb-4 border border-tapsh-charcoal/10 shadow-inner group-hover:scale-110 group-hover:bg-white group-hover:shadow-md transition-all">
+                    {getTouchpointIcon(link, "md")}
                   </div>
-                  <span className="font-bold text-sm text-center line-clamp-2">
+                  <span className="font-bold text-xs sm:text-sm text-center line-clamp-2">
                     {link.title}
                   </span>
                 </a>

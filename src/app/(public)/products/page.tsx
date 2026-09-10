@@ -52,23 +52,23 @@ export default function ProductsPage() {
     <div className="pt-20 min-h-screen bg-tapsh-pale-blue">
       
       {/* Header */}
-      <div className="bg-tapsh-black py-20 text-center">
+      <div className="bg-tapsh-black py-14 sm:py-20 text-center">
         <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-tapsh-pale-blue mb-6">Our Products</h1>
-          <p className="text-xl text-tapsh-pale-blue/70 max-w-2xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-tapsh-pale-blue mb-4 sm:mb-6">Our Products</h1>
+          <p className="text-lg sm:text-xl text-tapsh-pale-blue/70 max-w-2xl mx-auto">
             Premium NFC & QR solutions designed to connect your physical space to the digital world.
           </p>
         </FadeIn>
       </div>
 
       {/* Product Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {PRODUCTS.map((product) => (
             <StaggerItem key={product.slug} id={product.slug} className="scroll-mt-32 bg-white rounded-3xl border border-tapsh-charcoal/20 overflow-hidden hover:shadow-2xl hover:border-tapsh-charcoal/50 hover:-translate-y-1 transition-all group flex flex-col shadow-sm">
               
               {/* Image Placeholder */}
-              <div className="h-64 bg-tapsh-pale-blue flex items-center justify-center relative overflow-hidden transition-colors border-b border-tapsh-charcoal/20 group-hover:bg-[#E9E4D3]">
+              <div className="h-56 sm:h-64 bg-tapsh-pale-blue flex items-center justify-center relative overflow-hidden transition-colors border-b border-tapsh-charcoal/20 group-hover:bg-[#E9E4D3]">
                 <product.icon className="w-20 h-20 text-tapsh-charcoal/50 absolute group-hover:scale-110 transition-transform duration-500" />
                 <span className="relative z-10 font-bold tracking-widest text-tapsh-black text-sm">
                   [ PRODUCT IMAGE ]
@@ -76,9 +76,9 @@ export default function ProductsPage() {
               </div>
               
               {/* Content */}
-              <div className="p-8 flex flex-col flex-1">
+              <div className="p-6 sm:p-8 flex flex-col flex-1">
                 <h2 className="text-2xl font-bold text-tapsh-black mb-2">{product.name}</h2>
-                <p className="text-tapsh-charcoal mb-6 h-12">{product.description}</p>
+                <p className="text-tapsh-charcoal mb-6 min-h-[3rem]">{product.description}</p>
                 
                 <div className="bg-tapsh-pale-blue/50 rounded-xl p-4 mb-8 border border-tapsh-charcoal/20">
                   <p className="text-sm font-medium text-tapsh-black">

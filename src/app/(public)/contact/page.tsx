@@ -32,18 +32,18 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen pt-20 bg-tapsh-pale-blue text-tapsh-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
           
           {/* Information Side */}
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold text-tapsh-black mb-6">Contact TAPSH</h1>
-            <p className="text-xl text-tapsh-charcoal mb-12 max-w-md">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-tapsh-black mb-6">Contact TAPSH</h1>
+            <p className="text-lg sm:text-xl text-tapsh-charcoal mb-8 sm:mb-12 max-w-md">
               We're currently onboarding select businesses. Get in touch to see how TAPSH can connect your physical space to the digital world.
             </p>
 
-            <div className="bg-white p-8 rounded-3xl border border-tapsh-charcoal/20 shadow-lg mb-8">
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-tapsh-charcoal/20 shadow-lg mb-8">
               <h3 className="font-bold text-xl text-tapsh-black mb-4">Fastest way to reach us</h3>
               <p className="text-tapsh-charcoal mb-6">Send us a direct message on WhatsApp for immediate assistance.</p>
               <Link 
@@ -69,9 +69,9 @@ export default function ContactPage() {
           </div>
 
           {/* Form Side */}
-          <div className="bg-white p-8 md:p-12 rounded-3xl border border-tapsh-charcoal/20 shadow-xl">
+          <div className="bg-white p-6 sm:p-8 md:p-12 rounded-3xl border border-tapsh-charcoal/20 shadow-xl">
             <form onSubmit={handleSubmit} className="space-y-6">
-                <h3 className="text-2xl font-bold text-tapsh-black mb-8">Want TAPSH for your business?</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-tapsh-black mb-6 sm:mb-8">Want TAPSH for your business?</h3>
                 
                 {error && (
                   <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium">

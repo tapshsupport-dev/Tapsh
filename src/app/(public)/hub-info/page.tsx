@@ -7,22 +7,22 @@ export default function HubInfoPage() {
     <div className="pt-20 min-h-screen bg-tapsh-pale-blue text-tapsh-black">
       
       {/* Hero */}
-      <section className="bg-tapsh-black py-24 text-center border-b border-tapsh-charcoal/30">
+      <section className="bg-tapsh-black py-14 sm:py-20 md:py-24 text-center border-b border-tapsh-charcoal/30">
         <div className="max-w-4xl mx-auto px-4">
-          <h1 className="text-5xl md:text-6xl font-bold text-tapsh-pale-blue mb-6 tracking-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-tapsh-pale-blue mb-4 sm:mb-6 tracking-tight">
             One Tap. One Scan. One Hub.
           </h1>
-          <p className="text-xl text-tapsh-pale-blue/80 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl text-tapsh-pale-blue/80 max-w-2xl mx-auto leading-relaxed">
             TAPSH Hub brings the important links of a business into one simple, beautiful mobile experience.
           </p>
         </div>
       </section>
 
       {/* Feature Explanation */}
-      <section className="py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+      <section className="py-12 sm:py-20 md:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
           <div>
-            <h2 className="text-3xl font-bold text-tapsh-black mb-6">Designed for Simplicity</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-tapsh-black mb-4 sm:mb-6">Designed for Simplicity</h2>
             <p className="text-lg text-tapsh-charcoal mb-8 leading-relaxed">
               We built TAPSH Hub to be frictionless. Customers don't want to download an app or navigate a complex 10-page website just to find the Wi-Fi password or leave a review.
             </p>
@@ -72,10 +72,10 @@ export default function HubInfoPage() {
       </section>
 
       {/* Examples Grid */}
-      <section className="py-24 bg-white border-y border-tapsh-charcoal/20 shadow-sm">
+      <section className="py-12 sm:py-20 md:py-24 bg-white border-y border-tapsh-charcoal/20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-tapsh-black mb-4">Tailored to Your Industry</h2>
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-2xl sm:text-3xl font-bold text-tapsh-black mb-4">Tailored to Your Industry</h2>
             <p className="text-tapsh-charcoal max-w-2xl mx-auto">
               The business type determines the suggested structure and default modules, ensuring the Hub perfectly matches guest expectations.
             </p>

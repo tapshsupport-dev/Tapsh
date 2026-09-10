@@ -1,6 +1,6 @@
 export default function AboutPage() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 md:pt-36 pb-20 md:pb-32">
       <div className="text-center mb-16">
         <h1 className="text-4xl md:text-5xl font-bold text-tapsh-black mb-6">About TAPSH</h1>
       </div>

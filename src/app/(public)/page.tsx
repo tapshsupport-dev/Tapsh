@@ -30,12 +30,12 @@ export default function HomePage() {
               <h2 className="text-tapsh-taupe font-bold tracking-widest uppercase text-sm mb-4">Tap. Connect. Grow.</h2>
             </FadeIn>
             <SlideUp delay={0.1}>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-tapsh-black">
+              <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 text-tapsh-black">
                 Smart NFC, QR & Digital Solutions for Businesses.
               </h1>
             </SlideUp>
             <SlideUp delay={0.2}>
-              <p className="text-xl md:text-2xl text-tapsh-charcoal font-medium mb-10 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-lg sm:text-xl md:text-2xl text-tapsh-charcoal font-medium mb-10 max-w-2xl mx-auto leading-relaxed">
                 Turn physical customer touchpoints into simple digital experiences.
               </p>
             </SlideUp>
@@ -97,7 +97,7 @@ export default function HomePage() {
             </SlideUp>
             
             <FadeIn delay={0.2} className="relative h-full flex items-center justify-center">
-              <div className="aspect-square w-full max-w-xl mx-auto bg-tapsh-black rounded-[3rem] border-8 border-tapsh-beige/30 shadow-2xl overflow-hidden relative group">
+              <div className="aspect-square w-full max-w-xl mx-auto bg-tapsh-black rounded-3xl sm:rounded-[3rem] border-4 sm:border-8 border-tapsh-beige/30 shadow-2xl overflow-hidden relative group">
                 <img 
                   src="/images/tapsh_lifestyle.png" 
                   alt="TAPSH Lifestyle NFC Card" 
@@ -159,10 +159,10 @@ export default function HomePage() {
       </section>
 
       {/* FINAL CTA */}
-      <section className="py-24 bg-tapsh-black text-center">
+      <section className="py-20 md:py-24 bg-tapsh-black text-center">
         <SlideUp className="max-w-3xl mx-auto px-4">
-          <h2 className="text-4xl font-bold mb-6 text-tapsh-pale-blue">Ready to upgrade your customer experience?</h2>
-          <p className="text-tapsh-pale-blue/70 mb-10 text-lg">Join the businesses using TAPSH to bridge the physical and digital divide.</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-tapsh-pale-blue">Ready to upgrade your customer experience?</h2>
+          <p className="text-tapsh-pale-blue/70 mb-10 text-base sm:text-lg">Join the businesses using TAPSH to bridge the physical and digital divide.</p>
           <Link 
             href="/contact" 
             className="inline-flex items-center gap-2 px-8 py-4 bg-tapsh-pale-blue text-tapsh-black rounded-full font-bold hover:bg-white transition-colors shadow-xl"

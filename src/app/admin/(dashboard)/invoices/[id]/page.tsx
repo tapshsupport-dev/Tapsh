@@ -2,8 +2,9 @@ import Link from "next/link";
 import { mockInvoices, mockCustomers } from "@/lib/data";
 import { Printer, Download, CreditCard } from "lucide-react";
 
-export default function InvoiceDetailPage({ params }: { params: { id: string } }) {
-  const invoice = mockInvoices.find(i => i.id === params.id);
+export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const invoice = mockInvoices.find(i => i.id === id);
   const customer = mockCustomers.find(c => c.id === invoice?.customerId);
 
   if (!invoice || !customer) {

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { mockCustomers, mockHubs, mockAuditLogs } from "@/lib/data";
 
-export default async function CustomerProfilePage({ params }: { params: { id: string } }) {
-  const customer = mockCustomers.find(c => c.id === params.id);
-  const hub = mockHubs.find(h => h.customerId === params.id);
+export default async function CustomerProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const customer = mockCustomers.find(c => c.id === id);
+  const hub = mockHubs.find(h => h.customerId === id);
 
   if (!customer) {
     return <div className="text-tapsh-black">Customer not found.</div>;

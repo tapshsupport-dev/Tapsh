@@ -3,10 +3,21 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileMenuOpen]);
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -62,6 +73,7 @@ export default function Navbar() {
           <div className="lg:hidden flex items-center z-50 relative">
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle navigation menu"
               className="p-2 rounded-md text-tapsh-black hover:bg-tapsh-charcoal/20 transition-colors"
             >
               {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -72,7 +84,7 @@ export default function Navbar() {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 top-0 left-0 w-full h-screen bg-tapsh-bg-warm z-40 flex flex-col pt-24 px-6 pb-6 overflow-y-auto lg:hidden">
+        <div className="fixed inset-0 top-0 left-0 w-full h-[100dvh] bg-tapsh-bg-warm z-40 flex flex-col pt-24 px-6 pb-8 overflow-y-auto lg:hidden">
           <div className="flex flex-col space-y-6">
             {navLinks.map((link) => (
               <Link

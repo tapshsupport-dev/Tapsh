@@ -1,12 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { Smartphone, Wifi, Star, MessageCircle, Globe, Camera } from "lucide-react";
 import Image from "next/image";
 
 export default function HowItWorksAnimation() {
   // Animation variants
-  const container = {
+  const container: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -17,16 +17,16 @@ export default function HowItWorksAnimation() {
     }
   };
 
-  const item = {
+  const item: Variants = {
     hidden: { opacity: 0, y: 20 },
     show: { 
       opacity: 1, 
       y: 0,
-      transition: { duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] }
+      transition: { duration: 0.8, ease: [0.21, 0.47, 0.32, 0.98] as const }
     }
   };
 
-  const pulse = {
+  const pulse: Variants = {
     hidden: { scale: 0.8, opacity: 0 },
     show: { 
       scale: 1.5, 

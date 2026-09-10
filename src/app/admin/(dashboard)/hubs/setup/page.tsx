@@ -324,9 +324,9 @@ export default function HubSetupWizard() {
         <p className="text-tapsh-charcoal font-medium text-lg">See exactly how your Hub will look.</p>
       </div>
 
-      <div className="flex justify-center bg-tapsh-pale-blue rounded-[3rem] border border-tapsh-charcoal/30 p-8 md:p-12 shadow-inner">
+      <div className="flex justify-center bg-tapsh-pale-blue rounded-3xl sm:rounded-[3rem] border border-tapsh-charcoal/30 p-2 sm:p-8 md:p-12 shadow-inner overflow-hidden">
         {/* Mobile Device Frame Mockup */}
-        <div className="w-full max-w-[375px] h-[812px] bg-white rounded-[3rem] border-[12px] border-tapsh-black shadow-2xl overflow-hidden relative origin-top scale-90 sm:scale-100">
+        <div className="w-full max-w-[340px] sm:max-w-[375px] h-[750px] sm:h-[812px] bg-white rounded-[2.5rem] sm:rounded-[3rem] border-8 sm:border-[12px] border-tapsh-black shadow-2xl overflow-hidden relative origin-top">
           <HubView data={{
             ...data,
             businessName: data.businessName || "Your Business Name",
@@ -441,7 +441,7 @@ export default function HubSetupWizard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="bg-white rounded-[2.5rem] p-6 sm:p-12 min-h-[600px] border border-tapsh-charcoal/20 shadow-xl relative pb-32">
+      <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-12 min-h-[600px] border border-tapsh-charcoal/20 shadow-xl relative pb-32">
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
@@ -449,7 +449,7 @@ export default function HubSetupWizard() {
 
         {/* Navigation Footer */}
         {step < 4 && (
-          <div className="absolute bottom-0 left-0 right-0 p-8 border-t border-tapsh-charcoal/10 flex justify-between bg-white/80 backdrop-blur-md rounded-b-[2.5rem]">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 border-t border-tapsh-charcoal/10 flex justify-between bg-white/80 backdrop-blur-md rounded-b-[2rem] sm:rounded-b-[2.5rem]">
             <button 
               onClick={prevStep}
               disabled={step === 1}
@@ -474,7 +474,7 @@ export default function HubSetupWizard() {
         )}
         
         {step === 4 && (
-          <div className="absolute bottom-0 left-0 right-0 p-8 border-t border-tapsh-charcoal/10 flex justify-between bg-white/80 backdrop-blur-md rounded-b-[2.5rem]">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 border-t border-tapsh-charcoal/10 flex justify-between bg-white/80 backdrop-blur-md rounded-b-[2rem] sm:rounded-b-[2.5rem]">
             <button 
               onClick={prevStep}
               className="px-8 py-4 rounded-2xl font-bold bg-white text-tapsh-black border-2 border-tapsh-charcoal/30 hover:border-tapsh-soft-green hover:bg-tapsh-pale-blue/30 transition-all shadow-sm"

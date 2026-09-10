@@ -2,9 +2,10 @@ import { mockHubs } from "@/lib/data";
 import { notFound } from "next/navigation";
 import HubView from "@/components/HubView";
 
-export default function PublicHubPage({ params }: { params: { slug: string } }) {
+export default async function PublicHubPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   // Find the hub data based on slug
-  const hubData = mockHubs.find(h => h.slug === params.slug);
+  const hubData = mockHubs.find(h => h.slug === slug);
 
   if (!hubData) {
     notFound();
@@ -12,7 +13,7 @@ export default function PublicHubPage({ params }: { params: { slug: string } }) 
 
   if (hubData.status === "SUSPENDED") {
     return (
-      <div className="min-h-screen bg-tapsh-pale-blue flex items-center justify-center p-6">
+      <div className="min-h-screen min-h-[100dvh] bg-tapsh-pale-blue flex items-center justify-center p-6">
         <div className="bg-white p-8 rounded-3xl border border-tapsh-charcoal/20 shadow-xl max-w-sm w-full text-center">
           <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100 shadow-sm">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -29,9 +30,9 @@ export default function PublicHubPage({ params }: { params: { slug: string } }) 
   }
 
   return (
-    <div className="min-h-screen bg-tapsh-taupe flex justify-center">
+    <div className="min-h-screen min-h-[100dvh] bg-tapsh-taupe flex justify-center">
       {/* We constrain the max-width to simulate the mobile phone experience even on desktop */}
-      <div className="w-full max-w-md bg-tapsh-pale-blue h-screen overflow-hidden shadow-2xl relative border-x border-tapsh-black">
+      <div className="w-full max-w-md bg-tapsh-pale-blue min-h-screen min-h-[100dvh] md:h-screen md:max-h-[920px] overflow-hidden shadow-2xl relative border-x border-tapsh-black">
         <HubView data={{
           businessName: hubData.slug.replace("-", " ").toUpperCase(),
           description: "Welcome to our digital hub.",

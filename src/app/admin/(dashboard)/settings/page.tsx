@@ -9,7 +9,7 @@ import {
   ShieldCheck, Database, RefreshCw, X, CheckCircle2, Globe, User,
   Package, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Star,
   Wifi, MessageCircle, Camera, LayoutGrid, Layers, ArrowUpRight,
-  ArrowLeft, SlidersHorizontal
+  ArrowLeft, SlidersHorizontal, Moon, Sun
 } from "lucide-react";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
 import { 
@@ -66,6 +66,32 @@ export default function AdminSettingsPage() {
       return () => window.removeEventListener("popstate", handlePopState);
     }
   }, []);
+
+  // Dark Mode State & Toggle
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isDark = 
+        document.documentElement.classList.contains("dark") || 
+        localStorage.getItem("tapsh_theme") === "dark";
+      setIsDarkMode(isDark);
+    }
+  }, []);
+
+  const handleToggleDarkMode = () => {
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    if (typeof window !== "undefined") {
+      if (nextMode) {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("tapsh_theme", "dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("tapsh_theme", "light");
+      }
+    }
+  };
   
   // Category filter for Media Assets
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
@@ -369,93 +395,20 @@ export default function AdminSettingsPage() {
           </div>
 
           {/* LIST OF SETTING SECTIONS */}
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
             
-            {/* ITEM 1: CONTENT & MEDIA ASSETS */}
-            <div
-              onClick={() => navigateToSection("content")}
-              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
-            >
-              <div className="flex items-center gap-4 sm:gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                  <ImageIcon className="w-7 h-7 text-tapsh-soft-green" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
-                      Content & Media Assets
-                    </h2>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
-                      {MEDIA_ASSET_REGISTRY.length} Assets
-                    </span>
-                    {customCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-black text-white">
-                        {customCount} Custom
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                    Website dark/white logos, brand favicon, homepage hero backdrop, lifestyle card, and industry hub mockups.
-                  </p>
-                </div>
-              </div>
-
-              <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
-                <ChevronRight className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* ITEM 2: PRODUCTS & HARDWARE */}
-            <div
-              onClick={() => navigateToSection("products")}
-              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
-            >
-              <div className="flex items-center gap-4 sm:gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                  <Package className="w-7 h-7 text-tapsh-soft-green" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
-                      Products & Hardware Catalog
-                    </h2>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-soft-green/15 text-tapsh-soft-green">
-                      {products.length} Products
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                    Add new products, upload multiple showcase images that auto-slideshow on the website, edit titles & benefits, or delete items.
-                  </p>
-                </div>
-              </div>
-
-              <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
-                <ChevronRight className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* ITEM 3: ADMIN IDENTITY & PROFILE */}
+            {/* 1. ADMIN PROFILE */}
             <div
               onClick={() => navigateToSection("identity")}
-              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
             >
               <div className="flex items-center gap-4 sm:gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                  <User className="w-7 h-7 text-tapsh-taupe" />
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <User className="w-6 h-6 text-tapsh-soft-green" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
-                      Admin Identity & Profile
-                    </h2>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tapsh-pale-blue text-tapsh-black">
-                      Superadmin
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                    Custom administrator avatar photo shown in desktop/mobile headers and console display name.
-                  </p>
-                </div>
+                <h2 className="text-base sm:text-lg font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                  Admin Profile
+                </h2>
               </div>
 
               <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
@@ -463,29 +416,78 @@ export default function AdminSettingsPage() {
               </div>
             </div>
 
-            {/* ITEM 4: FIREBASE CLOUD SYNC & ARCHITECTURE */}
+            {/* 2. DARK MODE (TOGGLE ON/OFF) */}
             <div
-              onClick={() => navigateToSection("system")}
-              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-5 sm:p-6 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+              onClick={handleToggleDarkMode}
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
             >
               <div className="flex items-center gap-4 sm:gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
-                  <Database className="w-7 h-7 text-tapsh-soft-green" />
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  {isDarkMode ? (
+                    <Moon className="w-6 h-6 text-tapsh-soft-green" />
+                  ) : (
+                    <Sun className="w-6 h-6 text-tapsh-soft-green" />
+                  )}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-lg sm:text-xl font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
-                      Firebase Cloud Sync & Architecture
-                    </h2>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold text-tapsh-soft-green bg-tapsh-soft-green/15">
-                      <span className="w-1.5 h-1.5 rounded-full bg-tapsh-soft-green animate-pulse"></span>
-                      Live Connected
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-                    Dual-layer persistent storage status, real-time Firestore synchronization, and asset delivery pipeline.
-                  </p>
+                <h2 className="text-base sm:text-lg font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                  Dark Mode
+                </h2>
+              </div>
+
+              <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                <span className="text-xs font-bold text-tapsh-charcoal uppercase tracking-wider hidden sm:inline-block">
+                  {isDarkMode ? "On" : "Off"}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isDarkMode}
+                  onClick={handleToggleDarkMode}
+                  className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isDarkMode ? "bg-tapsh-soft-green" : "bg-tapsh-charcoal/30"
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      isDarkMode ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* 3. PRODUCTS CATALOG */}
+            <div
+              onClick={() => navigateToSection("products")}
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+            >
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <Package className="w-6 h-6 text-tapsh-soft-green" />
                 </div>
+                <h2 className="text-base sm:text-lg font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                  Products Catalog
+                </h2>
+              </div>
+
+              <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* 4. CONTENT & MEDIA ASSETS */}
+            <div
+              onClick={() => navigateToSection("content")}
+              className="bg-white rounded-3xl border border-tapsh-charcoal/20 p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-tapsh-soft-green transition-all flex items-center justify-between gap-4 cursor-pointer group"
+            >
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-12 h-12 rounded-2xl bg-tapsh-black text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <ImageIcon className="w-6 h-6 text-tapsh-soft-green" />
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-tapsh-black group-hover:text-tapsh-soft-green transition-colors">
+                  Content & Media Assets
+                </h2>
               </div>
 
               <div className="w-10 h-10 rounded-2xl bg-tapsh-pale-blue/60 group-hover:bg-tapsh-soft-green group-hover:text-white flex items-center justify-center text-tapsh-black shrink-0 transition-all">
@@ -515,9 +517,9 @@ export default function AdminSettingsPage() {
                 <span>Settings</span>
                 <span>/</span>
                 <span className="font-bold text-tapsh-black uppercase tracking-wider">
+                  {currentSection === "identity" && "Admin Profile"}
+                  {currentSection === "products" && "Products Catalog"}
                   {currentSection === "content" && "Content & Media Assets"}
-                  {currentSection === "products" && "Products & Hardware"}
-                  {currentSection === "identity" && "Admin Identity"}
                   {currentSection === "system" && "Firebase Cloud Sync"}
                 </span>
               </div>
@@ -906,7 +908,7 @@ export default function AdminSettingsPage() {
                   <User className="w-6 h-6 text-tapsh-soft-green" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-tapsh-black">Admin Identity & Presence</h2>
+                  <h2 className="text-xl font-bold text-tapsh-black">Admin Profile</h2>
                   <p className="text-xs text-tapsh-charcoal">Manage how your admin credentials appear in headers and consoles.</p>
                 </div>
               </div>

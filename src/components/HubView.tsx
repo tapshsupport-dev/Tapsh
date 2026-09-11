@@ -304,15 +304,53 @@ export default function HubView({ data }: { data: any }) {
           </p>
           <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-slate-300 to-transparent mx-auto mt-1 mb-8" />
 
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-1.5">
-              Powered By
+          {/* Subtle Powered by TAPSH Attribution & Discovery Area */}
+          <footer className="flex flex-col items-center pt-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400 mb-2">
+              POWERED BY
             </span>
-            <img src={logoDark} alt="TAPSH" className="w-auto h-4 object-contain opacity-75" />
-            <span className="text-[9px] font-medium text-slate-400/80 mt-1">
-              Smart NFC Touchpoint System
-            </span>
-          </div>
+            
+            <a 
+              href="/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-block transition-opacity hover:opacity-80 active:scale-98"
+              title="TAPSH - Tap. Connect. Grow."
+            >
+              <img src={logoDark} alt="TAPSH" className="h-5 sm:h-5.5 w-auto object-contain opacity-90" />
+            </a>
+
+            <p className="text-[11px] italic font-medium text-slate-500 tracking-wide mt-1.5">
+              Tap. Connect. Grow.
+            </p>
+
+            <p className="text-[11px] font-medium text-slate-500/90 mt-0.5">
+              Smart NFC &amp; QR Solutions for Businesses
+            </p>
+
+            {/* Small Premium Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mt-3.5">
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold bg-white border border-slate-200/90 text-slate-700 hover:text-slate-950 hover:bg-slate-50 hover:border-slate-300 shadow-xs active:scale-95 transition-all"
+              >
+                <Globe className="w-3.5 h-3.5 text-slate-400" />
+                <span>Explore TAPSH</span>
+              </a>
+
+              <a
+                href="https://wa.me/917977469926?text=Hi%20TAPSH%20%F0%9F%91%8B%20I'm%20interested%20in%20TAPSH%20solutions%20for%20my%20business."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold bg-[#25D366]/10 border border-[#25D366]/25 text-emerald-800 hover:bg-[#25D366]/20 hover:border-[#25D366]/40 shadow-xs active:scale-95 transition-all"
+              >
+                <WhatsAppIcon className="w-3.5 h-3.5 fill-[#25D366]" />
+                <span>WhatsApp Us</span>
+              </a>
+            </div>
+          </footer>
         </div>
 
       </div>

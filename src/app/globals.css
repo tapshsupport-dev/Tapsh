@@ -272,6 +272,26 @@
     print-color-adjust: exact !important;
   }
 
+  /* Force all text in print-card to 100% solid black for physical printers */
+  .print-card,
+  .print-card *,
+  .print-card p,
+  .print-card span,
+  .print-card h1,
+  .print-card h2,
+  .print-card div,
+  .print-card strong {
+    color: #000000 !important;
+    text-shadow: none !important;
+  }
+
+  .print-card .border,
+  .print-card .border-b,
+  .print-card .border-t,
+  .print-card .divide-y > * {
+    border-color: #CBD5E1 !important;
+  }
+
   /* Clear dark mode during printing */
   .admin-dark,
   .admin-dark * {

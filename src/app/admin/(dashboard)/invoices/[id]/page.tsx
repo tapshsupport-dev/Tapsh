@@ -11,7 +11,7 @@ import { Invoice, Customer, InvoiceItem } from "@/lib/data";
 import { 
   getInvoiceById, getCustomerById, updateInvoice, deleteInvoice 
 } from "@/lib/firestoreService";
-import { downloadInvoicePdf } from "@/lib/invoicePdf";
+import { downloadInvoicePdf, printInvoicePdf } from "@/lib/invoicePdf";
 
 export default function InvoiceDetailPage() {
   const params = useParams();
@@ -63,7 +63,8 @@ export default function InvoiceDetailPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!invoice) return;
+    printInvoicePdf(invoice, customer);
   };
 
   const handleDownload = () => {

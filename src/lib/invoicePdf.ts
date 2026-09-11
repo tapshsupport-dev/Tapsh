@@ -14,23 +14,21 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   const margin = 16;
   let y = margin;
 
-  // Curated Color Palette
-  const softGreen: [number, number, number] = [135, 154, 119];  // #879A77 Brand Sage Green
-  const deepGreen: [number, number, number] = [22, 163, 74];    // #16A34A Emerald for Paid
-  const charcoal: [number, number, number] = [90, 95, 100];     // #5A5F64 Subtext
-  const lightGray: [number, number, number] = [226, 232, 240];  // #E2E8F0 Card Borders
-  const dividerGray: [number, number, number] = [210, 215, 222];// Subtle Dividers
-  const black: [number, number, number] = [17, 24, 39];         // #111827 Text Primary
-  const cardBg: [number, number, number] = [250, 249, 246];     // #FAF9F6 Warm Beige Card
+  // Printer-First Solid Black & High-Contrast Monochrome Palette
+  // Words are 100% black ([0,0,0]) to guarantee physical printers output crisp, dark, smudge-free text without dithering
+  const black: [number, number, number] = [0, 0, 0];
+  const borderGray: [number, number, number] = [190, 195, 202];
+  const cardBg: [number, number, number] = [255, 255, 255];
+  const tableHeadBg: [number, number, number] = [242, 244, 246];
 
-  // Format currency with standard Helvetica-safe "Rs. " prefix (eliminates mangled characters)
+  // Format currency with standard Helvetica-safe "Rs. " prefix
   const formatRs = (num: number) => `Rs. ${num.toLocaleString("en-IN")}`;
 
-  // 1. Sleek Top Accent Banner
-  doc.setFillColor(...softGreen);
-  doc.rect(0, 0, pageWidth, 4, "F");
+  // 1. Sleek Top Accent Banner (Solid Black)
+  doc.setFillColor(...black);
+  doc.rect(0, 0, pageWidth, 3, "F");
 
-  y += 5;
+  y += 4;
 
   // 2. Company Brand & Info (Left Column)
   doc.setFont("helvetica", "bold");
@@ -40,15 +38,15 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
-  doc.setTextColor(...softGreen);
+  doc.setTextColor(...black);
   doc.text("TAP. CONNECT. GROW.", margin, y + 5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(...charcoal);
-  doc.text("TAPSH Technologies Private Limited", margin, y + 11.5);
-  doc.text("Email: tapsh.support@gmail.com  |  WhatsApp: +91 7977469926", margin, y + 16.5);
-  doc.text("Location: Kanyakumari, Tamil Nadu, India", margin, y + 21.5);
+  doc.setTextColor(...black);
+  doc.text("TAPSH Technologies Private Limited", margin, y + 11);
+  doc.text("Email: tapsh.support@gmail.com  |  WhatsApp: +91 7977469926", margin, y + 16);
+  doc.text("Location: Kanyakumari, Tamil Nadu, India", margin, y + 21);
 
   // 3. Invoice Meta Header (Right Column) - STRICTLY NO DUE DATE & NO GST
   const rightX = pageWidth - margin;
@@ -59,7 +57,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(...softGreen);
+  doc.setTextColor(...black);
   doc.text(invoice.invoiceNumber, rightX, y + 6, { align: "right" });
 
   // Issue Date only
@@ -70,7 +68,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   doc.text(`Issue Date: ${issueDateStr}`, rightX, y + 12, { align: "right" });
 
   // Payment Mode
@@ -81,30 +79,22 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   doc.text(`Payment Mode: ${pMode}`, rightX, y + 17, { align: "right" });
 
   // Status Badge
-  const statusColor: [number, number, number] = 
-    invoice.status === "PAID" ? deepGreen :
-    invoice.status === "PARTIAL" ? [37, 99, 235] : [217, 119, 6];
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.setTextColor(...statusColor);
+  doc.setTextColor(...black);
   doc.text(`Status: ${invoice.status}`, rightX, y + 22, { align: "right" });
 
-  // Tapsh Hub Used Indicator
+  // Tapsh Hub Indicator
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  if (invoice.tapshHubUsed) {
-    doc.setTextColor(...deepGreen);
-    doc.text("Tapsh Hub: Deployed", rightX, y + 27, { align: "right" });
-  } else {
-    doc.setTextColor(...charcoal);
-    doc.text("Tapsh Hub: Hardware Only", rightX, y + 27, { align: "right" });
-  }
+  doc.setTextColor(...black);
+  doc.text(`Tapsh Hub: ${invoice.tapshHubUsed ? "Deployed" : "Hardware Only"}`, rightX, y + 27, { align: "right" });
 
   y += 33;
 
   // Horizontal Accent Divider
-  doc.setDrawColor(...dividerGray);
-  doc.setLineWidth(0.2);
+  doc.setDrawColor(...borderGray);
+  doc.setLineWidth(0.3);
   doc.line(margin, y, rightX, y);
   y += 5;
 
@@ -117,12 +107,12 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   const email = invoice.customerDetails?.email || customer?.email || "";
 
   doc.setFillColor(...cardBg);
-  doc.setDrawColor(...lightGray);
-  doc.roundedRect(margin, y, pageWidth - (margin * 2), 26, 2.5, 2.5, "FD");
+  doc.setDrawColor(...borderGray);
+  doc.roundedRect(margin, y, pageWidth - (margin * 2), 26, 2, 2, "FD");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   doc.text("BILLED TO CLIENT:", margin + 6, y + 6);
 
   doc.setFont("helvetica", "bold");
@@ -132,13 +122,13 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   doc.text(`Attn: ${contactPerson}  |  ${address}, ${city}`, margin + 6, y + 17);
   doc.text(`Phone: ${phone || "N/A"}  |  Email: ${email || "N/A"}`, margin + 6, y + 22);
 
   y += 32;
 
-  // 5. Line Items Table with Generous Row Spacing and Perfect Alignment
+  // 5. Line Items Table with High-Contrast Header & Clean Borders
   const tableData = invoice.items.map((item, index) => [
     (index + 1).toString(),
     item.productName,
@@ -158,19 +148,21 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
       textColor: black,
       valign: "middle",
       cellPadding: { top: 3.8, bottom: 3.8, left: 3, right: 3 },
-      lineWidth: 0.15,
-      lineColor: [225, 230, 235]
+      lineWidth: 0.2,
+      lineColor: borderGray
     },
     headStyles: {
-      fillColor: softGreen,
-      textColor: [255, 255, 255],
+      fillColor: tableHeadBg,
+      textColor: black,
       fontStyle: "bold",
       fontSize: 8.5,
       valign: "middle",
-      cellPadding: { top: 4, bottom: 4, left: 3, right: 3 }
+      cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
+      lineWidth: 0.3,
+      lineColor: borderGray
     },
     alternateRowStyles: {
-      fillColor: [253, 253, 251]
+      fillColor: [252, 252, 252]
     },
     columnStyles: {
       0: { cellWidth: 12, halign: "center" },
@@ -180,7 +172,6 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
       4: { cellWidth: 28, halign: "right", fontStyle: "bold" }
     },
     didParseCell: function (data) {
-      // Strictly match header text alignment with row data alignment below it
       if (data.section === "head") {
         if (data.column.index === 0 || data.column.index === 2) {
           data.cell.styles.halign = "center";
@@ -220,35 +211,34 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
 
   // Left Column Box 1: Payment Details Card
   doc.setFillColor(...cardBg);
-  doc.setDrawColor(...lightGray);
+  doc.setDrawColor(...borderGray);
   doc.roundedRect(margin, y, leftColWidth, 24, 2, 2, "FD");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   doc.text("PAYMENT INFORMATION", margin + 5, y + 6);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   const modeLabel = "Payment Mode: ";
   doc.text(modeLabel, margin + 5, y + 12);
   const modeLabelWidth = doc.getTextWidth(modeLabel);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...black);
   doc.text(pMode, margin + 5 + modeLabelWidth, y + 12);
 
   if (cleanNotes) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(...charcoal);
+    doc.setTextColor(...black);
     doc.text(`Notes: ${cleanNotes}`, margin + 5, y + 18, {
       maxWidth: leftColWidth - 10
     });
   } else {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.setTextColor(...charcoal);
+    doc.setTextColor(...black);
     doc.text("Transaction completed via authorized commercial channel.", margin + 5, y + 18);
   }
 
@@ -256,40 +246,39 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   const termsY = y + 28;
   const termsHeight = 28;
   doc.setFillColor(...cardBg);
-  doc.setDrawColor(...lightGray);
+  doc.setDrawColor(...borderGray);
   doc.roundedRect(margin, termsY, leftColWidth, termsHeight, 2, 2, "FD");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   doc.text("TERMS & CONDITIONS", margin + 5, termsY + 6);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   const termsMaxW = leftColWidth - 10;
   doc.text("1. All hardware includes standard TAPSH digital cloud NFC routing.", margin + 5, termsY + 11, { maxWidth: termsMaxW });
   doc.text("2. Physical products carry replacement guarantee for transit defects.", margin + 5, termsY + 16.5, { maxWidth: termsMaxW });
   doc.text("3. Contact: tapsh.support@gmail.com  |  WhatsApp: +91 7977469926", margin + 5, termsY + 22, { maxWidth: termsMaxW });
 
-  // Right Side: Beautiful Financial Breakdown Card
+  // Right Side: Financial Breakdown Card
   const rowCount = 3 + (invoice.discount > 0 ? 1 : 0) + (invoice.deliveryCharges > 0 ? 1 : 0);
   const cardHeight = rowCount * 7 + 12;
 
   doc.setFillColor(...cardBg);
-  doc.setDrawColor(...lightGray);
+  doc.setDrawColor(...borderGray);
   doc.roundedRect(totalsCardX, y, totalsCardWidth, cardHeight, 2.5, 2.5, "FD");
 
   let ty = y + 6.5;
   const labelX = totalsCardX + 5;
   const valX = totalsCardX + totalsCardWidth - 4;
 
-  const renderSummaryRow = (label: string, value: string, isBold = false, valColor = black, fontSize = 8.5) => {
+  const renderSummaryRow = (label: string, value: string, isBold = false, fontSize = 8.5) => {
     doc.setFont("helvetica", isBold ? "bold" : "normal");
     doc.setFontSize(fontSize);
-    doc.setTextColor(...charcoal);
+    doc.setTextColor(...black);
     doc.text(label, labelX, ty);
-    doc.setTextColor(...valColor);
     doc.text(value, valX, ty, { align: "right" });
     ty += 6.5;
   };
@@ -297,29 +286,28 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   renderSummaryRow("Subtotal:", formatRs(invoice.subtotal));
 
   if (invoice.discount > 0) {
-    renderSummaryRow("Discount:", `- ${formatRs(invoice.discount)}`, false, deepGreen);
+    renderSummaryRow("Discount:", `- ${formatRs(invoice.discount)}`);
   }
 
   if (invoice.deliveryCharges && invoice.deliveryCharges > 0) {
     renderSummaryRow("Delivery Charges:", formatRs(invoice.deliveryCharges));
   }
 
-  // Centered Inner Divider Line with equal padding
+  // Centered Inner Divider Line
   ty += 0.5;
-  doc.setDrawColor(...lightGray);
+  doc.setDrawColor(...borderGray);
   doc.setLineWidth(0.2);
   doc.line(labelX, ty, valX, ty);
   ty += 5;
 
-  renderSummaryRow("Total Amount:", formatRs(invoice.total), true, black, 9.5);
-  renderSummaryRow("Amount Paid:", formatRs(invoice.amountPaid), false, deepGreen, 8.5);
+  renderSummaryRow("Total Amount:", formatRs(invoice.total), true, 9.5);
+  renderSummaryRow("Amount Paid:", formatRs(invoice.amountPaid), false, 8.5);
 
   const balanceDue = invoice.total - invoice.amountPaid;
   renderSummaryRow(
     "Balance Due:", 
     formatRs(Math.max(0, balanceDue)), 
     true, 
-    balanceDue > 0 ? [220, 38, 38] : deepGreen,
     9
   );
 
@@ -330,11 +318,10 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   doc.text("For TAPSH Technologies Private Limited", sigX, sigY + 4);
 
-  // Clean, aligned signature line
-  doc.setDrawColor(...dividerGray);
+  doc.setDrawColor(...borderGray);
   doc.setLineWidth(0.3);
   doc.line(sigX, sigY + 18, sigX + sigWidth, sigY + 18);
 
@@ -345,12 +332,12 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
 
   // 7. Clean Balanced Footer Notice at Bottom of A4
   const footerY = pageHeight - 12;
-  doc.setDrawColor(...lightGray);
+  doc.setDrawColor(...borderGray);
   doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.setTextColor(...charcoal);
+  doc.setTextColor(...black);
   doc.text(
     "Thank you for your business. This is an authenticated computer-generated invoice issued by TAPSH Technologies.",
     pageWidth / 2,
@@ -359,7 +346,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   );
 
   doc.setFontSize(7);
-  doc.setTextColor(156, 163, 175);
+  doc.setTextColor(...black);
   doc.text(
     "© 2026 TAPSH Technologies Private Limited  •  Official Business Receipt  •  www.tapsh.in",
     pageWidth / 2,
@@ -374,4 +361,54 @@ export function downloadInvoicePdf(invoice: Invoice, customer?: Customer | null)
   const doc = generateInvoicePdf(invoice, customer);
   const cleanNumber = invoice.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "_");
   doc.save(`TAPSH_Invoice_${cleanNumber}.pdf`);
+}
+
+/**
+ * Directly prints the exact vector A4 PDF with solid black text.
+ * On Desktop: Uses a hidden iframe to immediately invoke the system print dialog for the PDF.
+ * On Mobile (iOS / Android): Opens the vector A4 PDF in a new tab/viewer with direct AirPrint / Print options.
+ */
+export function printInvoicePdf(invoice: Invoice, customer?: Customer | null): void {
+  const doc = generateInvoicePdf(invoice, customer);
+  doc.autoPrint();
+
+  const blob = doc.output("blob");
+  const blobUrl = URL.createObjectURL(blob);
+
+  const isMobile = typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    const win = window.open(blobUrl, "_blank");
+    if (!win) {
+      window.location.href = blobUrl;
+    }
+  } else {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.src = blobUrl;
+    document.body.appendChild(iframe);
+
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          window.open(blobUrl, "_blank");
+        } finally {
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+            URL.revokeObjectURL(blobUrl);
+          }, 60000);
+        }
+      }, 400);
+    };
+  }
 }

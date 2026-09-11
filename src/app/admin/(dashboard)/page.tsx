@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { 
   Users, LayoutGrid, Receipt, IndianRupee,
   TrendingUp, Activity, Smartphone, ShoppingBag,
-  BarChart3, PieChart, CheckCircle2, Clock, Layers, Package
+  BarChart3, PieChart, CheckCircle2, Clock, Layers, Package,
+  DollarSign, Calendar, ArrowUpRight, Table as TableIcon
 } from "lucide-react";
 import { Customer, Hub, Invoice } from "@/lib/data";
 import { 
@@ -23,6 +24,7 @@ export default function AdminDashboardPage() {
   
   // Categorization Filter: Weeks | Months | Year
   const [timeCategory, setTimeCategory] = useState<TimeCategory>("Months");
+  const [salesMetricView, setSalesMetricView] = useState<"revenue" | "units">("revenue");
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [hoveredDonutSegment, setHoveredDonutSegment] = useState<string | null>(null);
 
@@ -117,138 +119,218 @@ export default function AdminDashboardPage() {
   const topProduct = productsSalesBreakdown.length > 0 ? productsSalesBreakdown[0].name : "No product sales yet";
 
   // ----------------------------------------------------
-  // Dynamic Payment Graph Data (Weeks | Months | Year)
+  // Real Chronological Sales & Commercial Performance
+  // Calculated strictly from actual admin invoices in Firestore
   // ----------------------------------------------------
-  const paymentChartData = useMemo(() => {
-    const labels: string[] = [];
-    const paidSeries: number[] = [];
-    const pendingSeries: number[] = [];
+  const salesPeriodsData = useMemo(() => {
     const now = new Date();
+    const periods: {
+      id: string;
+      label: string;
+      sublabel: string;
+      grossSales: number;
+      collected: number;
+      pending: number;
+      unitsSold: number;
+      invoicesCount: number;
+      realizationRate: number;
+    }[] = [];
 
     if (timeCategory === "Weeks") {
-      // 6-Week timeline (Week 1 to Week 6)
+      // 6 Chronological Weeks ending with current week
       for (let i = 5; i >= 0; i--) {
+        const d = new Date(now);
+        const day = d.getDay();
+        const diffToMonday = (day === 0 ? -6 : 1) - day;
+        d.setDate(d.getDate() + diffToMonday - i * 7);
+        d.setHours(0, 0, 0, 0);
+        const startOfWeek = new Date(d);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
         const weekNum = 6 - i;
-        labels.push(`Wk ${weekNum}`);
-        
-        // Distribute or calculate real weekly collections
-        const factor = 0.55 + Math.sin(i * 1.1) * 0.4;
-        const paidVal = Math.round((totalRevenueCollected / 6) * factor);
-        const pendVal = Math.round((pendingAmount / 6) * (1 - factor * 0.3));
+        const startStr = startOfWeek.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const endStr = endOfWeek.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const label = i === 0 ? "This Wk" : `Wk ${weekNum}`;
+        const sublabel = `${startStr} – ${endStr}`;
 
-        paidSeries.push(paidVal);
-        pendingSeries.push(Math.max(0, pendVal));
-      }
-    } else if (timeCategory === "Months") {
-      // 6-Month timeline
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        labels.push(months[d.getMonth()]);
+        let grossSales = 0;
+        let collected = 0;
+        let pending = 0;
+        let unitsSold = 0;
+        let invoicesCount = 0;
 
-        // Aggregate actual invoices matching month
-        const monthInvs = invoices.filter(inv => {
+        invoices.forEach(inv => {
           const invDate = new Date(inv.date);
-          return invDate.getMonth() === d.getMonth() && invDate.getFullYear() === d.getFullYear();
+          if (invDate >= startOfWeek && invDate <= endOfWeek) {
+            invoicesCount++;
+            const tot = inv.total || 0;
+            const pd = inv.amountPaid || 0;
+            grossSales += tot;
+            collected += pd;
+            pending += Math.max(0, tot - pd);
+            unitsSold += (inv.items || []).reduce((s, it) => s + (it.quantity || 1), 0);
+          }
         });
 
-        const actualPaid = monthInvs.reduce((s, inv) => s + (inv.amountPaid || 0), 0);
-        const actualPending = monthInvs.reduce((s, inv) => s + Math.max(0, inv.total - inv.amountPaid), 0);
+        const realizationRate = grossSales > 0 ? Math.min(100, Math.round((collected / grossSales) * 100)) : 100;
 
-        if (actualPaid > 0 || actualPending > 0) {
-          paidSeries.push(actualPaid);
-          pendingSeries.push(actualPending);
-        } else {
-          // Synthetic baseline distribution for clean graphing
-          const factor = 0.4 + ((6 - i) / 6) * 0.65;
-          const paidVal = Math.round((totalRevenueCollected / 6) * factor);
-          const pendVal = Math.round((pendingAmount / 6) * 0.5);
-          paidSeries.push(paidVal);
-          pendingSeries.push(pendVal);
-        }
+        periods.push({
+          id: `week-${i}`,
+          label,
+          sublabel,
+          grossSales,
+          collected,
+          pending,
+          unitsSold,
+          invoicesCount,
+          realizationRate
+        });
+      }
+    } else if (timeCategory === "Months") {
+      // 6 Chronological Months
+      for (let i = 5; i >= 0; i--) {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth() - i, 1, 0, 0, 0, 0);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
+
+        const monthName = startOfMonth.toLocaleDateString("en-US", { month: "short" });
+        const yearStr = startOfMonth.getFullYear().toString();
+        const label = monthName;
+        const sublabel = yearStr;
+
+        let grossSales = 0;
+        let collected = 0;
+        let pending = 0;
+        let unitsSold = 0;
+        let invoicesCount = 0;
+
+        invoices.forEach(inv => {
+          const invDate = new Date(inv.date);
+          if (invDate >= startOfMonth && invDate <= endOfMonth) {
+            invoicesCount++;
+            const tot = inv.total || 0;
+            const pd = inv.amountPaid || 0;
+            grossSales += tot;
+            collected += pd;
+            pending += Math.max(0, tot - pd);
+            unitsSold += (inv.items || []).reduce((s, it) => s + (it.quantity || 1), 0);
+          }
+        });
+
+        const realizationRate = grossSales > 0 ? Math.min(100, Math.round((collected / grossSales) * 100)) : 100;
+
+        periods.push({
+          id: `month-${i}`,
+          label,
+          sublabel,
+          grossSales,
+          collected,
+          pending,
+          unitsSold,
+          invoicesCount,
+          realizationRate
+        });
       }
     } else {
-      // 3-Year timeline (2024, 2025, 2026)
+      // 3 Chronological Years
       const currentYear = now.getFullYear();
       const years = [currentYear - 2, currentYear - 1, currentYear];
-      years.forEach((yr, idx) => {
-        labels.push(yr.toString());
-        if (yr === currentYear) {
-          paidSeries.push(totalRevenueCollected);
-          pendingSeries.push(pendingAmount);
-        } else if (yr === currentYear - 1) {
-          paidSeries.push(Math.round(totalRevenueCollected * 0.6));
-          pendingSeries.push(Math.round(pendingAmount * 0.4));
-        } else {
-          paidSeries.push(Math.round(totalRevenueCollected * 0.25));
-          pendingSeries.push(Math.round(pendingAmount * 0.15));
-        }
+
+      years.forEach(yr => {
+        const startOfYear = new Date(yr, 0, 1, 0, 0, 0, 0);
+        const endOfYear = new Date(yr, 11, 31, 23, 59, 59, 999);
+
+        let grossSales = 0;
+        let collected = 0;
+        let pending = 0;
+        let unitsSold = 0;
+        let invoicesCount = 0;
+
+        invoices.forEach(inv => {
+          const invDate = new Date(inv.date);
+          if (invDate >= startOfYear && invDate <= endOfYear) {
+            invoicesCount++;
+            const tot = inv.total || 0;
+            const pd = inv.amountPaid || 0;
+            grossSales += tot;
+            collected += pd;
+            pending += Math.max(0, tot - pd);
+            unitsSold += (inv.items || []).reduce((s, it) => s + (it.quantity || 1), 0);
+          }
+        });
+
+        const realizationRate = grossSales > 0 ? Math.min(100, Math.round((collected / grossSales) * 100)) : 100;
+
+        periods.push({
+          id: `year-${yr}`,
+          label: yr.toString(),
+          sublabel: "Calendar Year",
+          grossSales,
+          collected,
+          pending,
+          unitsSold,
+          invoicesCount,
+          realizationRate
+        });
       });
     }
 
-    return { labels, paidSeries, pendingSeries };
-  }, [timeCategory, invoices, totalRevenueCollected, pendingAmount]);
+    return periods;
+  }, [timeCategory, invoices]);
 
-  // ----------------------------------------------------
-  // SVG Area & Line Calculations for Payments Graph
-  // ----------------------------------------------------
-  const chartWidth = 720;
+  // Period Aggregates
+  const periodTotalGross = useMemo(() => salesPeriodsData.reduce((s, p) => s + p.grossSales, 0), [salesPeriodsData]);
+  const periodTotalCollected = useMemo(() => salesPeriodsData.reduce((s, p) => s + p.collected, 0), [salesPeriodsData]);
+  const periodTotalPending = useMemo(() => salesPeriodsData.reduce((s, p) => s + p.pending, 0), [salesPeriodsData]);
+  const periodTotalUnits = useMemo(() => salesPeriodsData.reduce((s, p) => s + p.unitsSold, 0), [salesPeriodsData]);
+  const periodTotalInvoices = useMemo(() => salesPeriodsData.reduce((s, p) => s + p.invoicesCount, 0), [salesPeriodsData]);
+  const periodAOV = useMemo(() => (periodTotalInvoices > 0 ? Math.round(periodTotalGross / periodTotalInvoices) : 0), [periodTotalGross, periodTotalInvoices]);
+
+  // Chart Geometry & Professional Scaling
+  const chartWidth = 760;
   const chartHeight = 220;
-  const paddingX = 40;
-  const paddingTop = 25;
-  const paddingBottom = 35;
-  const plotWidth = chartWidth - paddingX * 2;
+  const paddingLeft = 55;
+  const paddingRight = 25;
+  const paddingTop = 30;
+  const paddingBottom = 40;
+  const plotWidth = chartWidth - paddingLeft - paddingRight;
   const plotHeight = chartHeight - paddingTop - paddingBottom;
 
-  const maxVal = useMemo(() => {
-    const combined = [...paymentChartData.paidSeries, ...paymentChartData.pendingSeries];
-    const peak = Math.max(...combined, 1000);
-    return Math.ceil(peak * 1.18);
-  }, [paymentChartData]);
-
-  const pointsPaid = useMemo(() => {
-    const len = paymentChartData.paidSeries.length;
-    return paymentChartData.paidSeries.map((val, idx) => {
-      const x = paddingX + (idx / (len - 1 || 1)) * plotWidth;
-      const y = paddingTop + plotHeight - (val / (maxVal || 1)) * plotHeight;
-      return { x, y, val, label: paymentChartData.labels[idx] };
-    });
-  }, [paymentChartData, plotWidth, plotHeight, maxVal]);
-
-  const pointsPending = useMemo(() => {
-    const len = paymentChartData.pendingSeries.length;
-    return paymentChartData.pendingSeries.map((val, idx) => {
-      const x = paddingX + (idx / (len - 1 || 1)) * plotWidth;
-      const y = paddingTop + plotHeight - (val / (maxVal || 1)) * plotHeight;
-      return { x, y, val, label: paymentChartData.labels[idx] };
-    });
-  }, [paymentChartData, plotWidth, plotHeight, maxVal]);
-
-  // Cubic Bézier smoothing
-  const getCurvePath = (pts: { x: number; y: number }[]) => {
-    if (pts.length === 0) return "";
-    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
-    let path = `M ${pts[0].x} ${pts[0].y}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[i];
-      const p1 = pts[i + 1];
-      const cpX = (p0.x + p1.x) / 2;
-      path += ` C ${cpX} ${p0.y}, ${cpX} ${p1.y}, ${p1.x} ${p1.y}`;
+  const chartMax = useMemo(() => {
+    if (salesMetricView === "revenue") {
+      const peak = Math.max(...salesPeriodsData.map(p => p.grossSales), 0);
+      if (peak === 0) return 10000;
+      if (peak <= 5000) return 5000;
+      if (peak <= 10000) return 10000;
+      if (peak <= 25000) return 25000;
+      if (peak <= 50000) return 50000;
+      if (peak <= 100000) return 100000;
+      if (peak <= 250000) return 250000;
+      if (peak <= 500000) return 500000;
+      const mag = Math.pow(10, Math.floor(Math.log10(peak)));
+      return Math.ceil((peak * 1.15) / mag) * mag;
+    } else {
+      const peak = Math.max(...salesPeriodsData.map(p => p.unitsSold), 0);
+      if (peak === 0) return 10;
+      if (peak <= 5) return 5;
+      if (peak <= 10) return 10;
+      if (peak <= 20) return 20;
+      if (peak <= 50) return 50;
+      return Math.ceil(peak * 1.25);
     }
-    return path;
-  };
+  }, [salesPeriodsData, salesMetricView]);
 
-  const areaPaidPath = useMemo(() => {
-    if (pointsPaid.length === 0) return "";
-    const curve = getCurvePath(pointsPaid);
-    const bottomY = paddingTop + plotHeight;
-    const firstX = pointsPaid[0].x;
-    const lastX = pointsPaid[pointsPaid.length - 1].x;
-    return `${curve} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
-  }, [pointsPaid, plotHeight]);
-
-  const linePaidPath = useMemo(() => getCurvePath(pointsPaid), [pointsPaid]);
-  const linePendingPath = useMemo(() => getCurvePath(pointsPending), [pointsPending]);
+  const yTicks = useMemo(() => {
+    return [
+      chartMax,
+      Math.round(chartMax * 0.75),
+      Math.round(chartMax * 0.5),
+      Math.round(chartMax * 0.25),
+      0
+    ];
+  }, [chartMax]);
 
   // ----------------------------------------------------
   // Payment Channels Breakdown (Donut Chart)
@@ -467,212 +549,412 @@ export default function AdminDashboardPage() {
 
       </div>
 
-      {/* 3. Primary Payments Analytics Graph (Categorized in Weeks, Months, Year) */}
-      <div className="bg-white p-5 sm:p-7 rounded-3xl border border-tapsh-charcoal/15 shadow-xs relative">
+      {/* 3. Primary Commercial Sales Analytics: High-Performance Column Chart & Data Ledger */}
+      <div className="bg-white p-5 sm:p-7 rounded-3xl border border-tapsh-charcoal/15 shadow-xs relative space-y-6">
         
-        {/* Chart Header & Legend */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        {/* Top Controls: Title, View Switcher & Timeframe Tabs */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-tapsh-soft-green" />
+              <BarChart3 className="w-5 h-5 text-emerald-600" />
               <h2 className="text-base sm:text-lg font-bold text-tapsh-black">
-                Payments Analytics ({timeCategory})
+                Commercial Sales & Revenue Velocity
               </h2>
             </div>
             <p className="text-xs text-tapsh-charcoal mt-0.5">
-              Live tracking of payments received (Paid) versus outstanding balances (Pending / Partial)
+              Strictly aggregated from live customer invoices and physical hardware shipments
             </p>
           </div>
 
-          {/* Series Legend */}
-          <div className="flex items-center gap-4 text-xs font-bold">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-              <span className="text-tapsh-black">Payments Collected (Paid)</span>
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Metric Mode Switcher: Revenue (₹) vs Units Sold */}
+            <div className="flex items-center p-1 bg-[#FAF8F5] border border-tapsh-charcoal/15 rounded-xl text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setSalesMetricView("revenue")}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  salesMetricView === "revenue"
+                    ? "bg-tapsh-black text-white shadow-xs"
+                    : "text-tapsh-charcoal hover:text-tapsh-black"
+                }`}
+              >
+                <IndianRupee className="w-3.5 h-3.5" />
+                <span>Revenue (₹)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSalesMetricView("units")}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  salesMetricView === "units"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-tapsh-charcoal hover:text-tapsh-black"
+                }`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span>Units Sold</span>
+              </button>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-1 border-t-2 border-dashed border-amber-500"></span>
-              <span className="text-amber-700">Pending Due Balance</span>
+
+            {/* Timeframe Selector */}
+            <div className="flex items-center p-1 bg-[#FAF8F5] border border-tapsh-charcoal/15 rounded-xl text-xs font-bold">
+              {(["Weeks", "Months", "Year"] as TimeCategory[]).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setTimeCategory(cat)}
+                  className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    timeCategory === cat
+                      ? "bg-tapsh-black text-white shadow-xs"
+                      : "text-tapsh-charcoal hover:text-tapsh-black"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Responsive SVG Area Chart */}
+        {/* Live Commercial Sales Metrics Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+          <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/10">
+            <span className="text-[10px] uppercase font-bold text-tapsh-charcoal block">Gross Invoiced Sales</span>
+            <span className="text-base sm:text-lg font-black text-tapsh-black">{formatRs(periodTotalGross)}</span>
+          </div>
+          <div className="p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200/60">
+            <span className="text-[10px] uppercase font-bold text-emerald-700 block">Realized Cashflow</span>
+            <span className="text-base sm:text-lg font-black text-emerald-700">{formatRs(periodTotalCollected)}</span>
+          </div>
+          <div className="p-3.5 bg-amber-50/50 rounded-2xl border border-amber-200/60">
+            <span className="text-[10px] uppercase font-bold text-amber-700 block">Pending Receivables</span>
+            <span className="text-base sm:text-lg font-black text-amber-700">{formatRs(periodTotalPending)}</span>
+          </div>
+          <div className="p-3.5 bg-blue-50/50 rounded-2xl border border-blue-200/60">
+            <span className="text-[10px] uppercase font-bold text-blue-700 block">Deals / Hardware Units</span>
+            <span className="text-base sm:text-lg font-black text-blue-700">{periodTotalInvoices} inv • {periodTotalUnits} units</span>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-between text-xs font-bold pt-1 border-t border-tapsh-charcoal/10">
+          <span className="text-[11px] text-tapsh-charcoal font-semibold">
+            {timeCategory} Commercial Timeline ({salesPeriodsData.length} periods evaluated)
+          </span>
+          <div className="flex items-center gap-4">
+            {salesMetricView === "revenue" ? (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-md bg-emerald-500"></span>
+                  <span className="text-tapsh-black">Realized Sales (Paid)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-md bg-amber-500"></span>
+                  <span className="text-amber-700">Pending Receivables (Due)</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md bg-blue-600"></span>
+                <span className="text-blue-700">Physical Hardware Units Sold</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* The SVG Column Bar Chart */}
         <div className="w-full overflow-x-auto">
-          <div className="min-w-[600px] relative">
+          <div className="min-w-[650px] relative">
             <svg 
               viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
               className="w-full h-auto overflow-visible select-none"
             >
               <defs>
-                <linearGradient id="paymentPaidGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" stopOpacity="0.32" />
-                  <stop offset="65%" stopColor="#10B981" stopOpacity="0.08" />
-                  <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                <linearGradient id="barCollectedGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10B981" />
+                  <stop offset="100%" stopColor="#059669" />
                 </linearGradient>
-
-                <filter id="paymentGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="glow" />
-                  <feComposite in="SourceGraphic" in2="glow" operator="over" />
-                </filter>
+                <linearGradient id="barPendingGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F59E0B" />
+                  <stop offset="100%" stopColor="#D97706" />
+                </linearGradient>
+                <linearGradient id="barUnitsGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3B82F6" />
+                  <stop offset="100%" stopColor="#2563EB" />
+                </linearGradient>
               </defs>
 
-              {/* Horizontal Subtle Dotted Gridlines & Y-Axis Labels */}
-              {[0, 0.33, 0.66, 1].map((ratio, i) => {
+              {/* Horizontal Standard Gridlines & Clean Ticks */}
+              {yTicks.map((tickVal, i) => {
+                const ratio = chartMax > 0 ? tickVal / chartMax : 0;
                 const y = paddingTop + plotHeight * (1 - ratio);
-                const labelVal = Math.round(maxVal * ratio);
                 return (
                   <g key={i}>
                     <line 
-                      x1={paddingX} 
+                      x1={paddingLeft} 
                       y1={y} 
-                      x2={chartWidth - paddingX} 
+                      x2={chartWidth - paddingRight} 
                       y2={y} 
                       stroke="#E5E7EB" 
                       strokeDasharray="4 4" 
                       strokeWidth="1"
                     />
                     <text 
-                      x={paddingX - 8} 
-                      y={y + 4} 
+                      x={paddingLeft - 10} 
+                      y={y + 3.5} 
                       textAnchor="end" 
-                      className="fill-tapsh-charcoal text-[10px] font-mono"
+                      className="fill-tapsh-charcoal text-[10px] font-mono font-medium"
                     >
-                      {formatRsCompact(labelVal)}
+                      {salesMetricView === "revenue" ? formatRsCompact(tickVal) : `${tickVal} u`}
                     </text>
                   </g>
                 );
               })}
 
-              {/* Area Polygon for Paid Payments */}
-              <path 
-                d={areaPaidPath} 
-                fill="url(#paymentPaidGrad)" 
-                className="transition-all duration-500 ease-out"
-              />
+              {/* Column Bars & Interactive Slots */}
+              {salesPeriodsData.map((period, idx) => {
+                const slotWidth = plotWidth / salesPeriodsData.length;
+                const barWidth = timeCategory === "Year" ? 56 : 38;
+                const cx = paddingLeft + (idx + 0.5) * slotWidth;
+                const bx = cx - barWidth / 2;
+                const by = paddingTop + plotHeight;
+                const isHovered = hoveredPointIndex === idx;
 
-              {/* Pending Balance Line (Dashed Amber) */}
-              <path 
-                d={linePendingPath} 
-                fill="none" 
-                stroke="#F59E0B" 
-                strokeWidth="2.5" 
-                strokeDasharray="5 5" 
-                strokeLinecap="round"
-                className="transition-all duration-500 ease-out"
-              />
+                if (salesMetricView === "revenue") {
+                  const paidHeight = chartMax > 0 ? Math.round((period.collected / chartMax) * plotHeight) : 0;
+                  const pendHeight = chartMax > 0 ? Math.round((period.pending / chartMax) * plotHeight) : 0;
+                  const totalBarHeight = paidHeight + pendHeight;
 
-              {/* Paid Payments Line (Solid Emerald) */}
-              <path 
-                d={linePaidPath} 
-                fill="none" 
-                stroke="#10B981" 
-                strokeWidth="3" 
-                strokeLinecap="round" 
-                filter="url(#paymentGlow)"
-                className="transition-all duration-500 ease-out"
-              />
+                  return (
+                    <g key={period.id} className="cursor-pointer">
+                      {/* Hover Slot Highlight */}
+                      {isHovered && (
+                        <rect 
+                          x={cx - slotWidth * 0.46} 
+                          y={paddingTop - 12} 
+                          width={slotWidth * 0.92} 
+                          height={plotHeight + 35} 
+                          rx="14" 
+                          fill="rgba(16, 185, 129, 0.05)" 
+                          stroke="rgba(16, 185, 129, 0.25)"
+                          strokeWidth="1.5"
+                        />
+                      )}
 
-              {/* Hover Indicator Crosshair */}
-              {hoveredPointIndex !== null && pointsPaid[hoveredPointIndex] && (
-                <g>
-                  <line 
-                    x1={pointsPaid[hoveredPointIndex].x} 
-                    y1={paddingTop} 
-                    x2={pointsPaid[hoveredPointIndex].x} 
-                    y2={paddingTop + plotHeight} 
-                    stroke="#111827" 
-                    strokeWidth="1.5" 
-                    strokeDasharray="3 3"
-                    className="opacity-40"
-                  />
-                  {/* Point on Pending */}
-                  <circle 
-                    cx={pointsPending[hoveredPointIndex].x} 
-                    cy={pointsPending[hoveredPointIndex].y} 
-                    r="4.5" 
-                    fill="#FFFFFF" 
-                    stroke="#F59E0B" 
-                    strokeWidth="2.5" 
-                  />
-                  {/* Point on Paid */}
-                  <circle 
-                    cx={pointsPaid[hoveredPointIndex].x} 
-                    cy={pointsPaid[hoveredPointIndex].y} 
-                    r="6" 
-                    fill="#10B981" 
-                    stroke="#FFFFFF" 
-                    strokeWidth="2.5" 
-                  />
-                </g>
-              )}
+                      {/* Zero baseline indicator if 0 sales */}
+                      {totalBarHeight === 0 && (
+                        <line 
+                          x1={cx - 14} 
+                          y1={by} 
+                          x2={cx + 14} 
+                          y2={by} 
+                          stroke="#D1D5DB" 
+                          strokeWidth="2.5" 
+                          strokeLinecap="round"
+                        />
+                      )}
 
-              {/* Data Nodes & Invisible Hover Hitboxes */}
-              {pointsPaid.map((pt, idx) => (
-                <g key={idx} className="cursor-pointer">
-                  {/* Outer circle marker */}
-                  <circle 
-                    cx={pt.x} 
-                    cy={pt.y} 
-                    r={hoveredPointIndex === idx ? "5" : "3.5"} 
-                    fill="#FFFFFF" 
-                    stroke="#10B981" 
-                    strokeWidth="2" 
-                    className="transition-all"
-                  />
+                      {/* Collected Revenue Bar (Base) */}
+                      {paidHeight > 0 && (
+                        <rect 
+                          x={bx} 
+                          y={by - paidHeight} 
+                          width={barWidth} 
+                          height={paidHeight} 
+                          fill="url(#barCollectedGrad)"
+                          rx={pendHeight === 0 ? 6 : 0}
+                          className="transition-all duration-300"
+                        />
+                      )}
 
-                  {/* X-Axis Label */}
-                  <text 
-                    x={pt.x} 
-                    y={chartHeight - 8} 
-                    textAnchor="middle" 
-                    className={`text-[11px] font-medium transition-colors ${
-                      hoveredPointIndex === idx 
-                        ? "fill-tapsh-black font-bold" 
-                        : "fill-tapsh-charcoal"
-                    }`}
-                  >
-                    {pt.label}
-                  </text>
+                      {/* Pending Receivables Bar (Stacked) */}
+                      {pendHeight > 0 && (
+                        <rect 
+                          x={bx} 
+                          y={by - paidHeight - pendHeight} 
+                          width={barWidth} 
+                          height={pendHeight} 
+                          fill="url(#barPendingGrad)"
+                          rx="6"
+                          className="transition-all duration-300"
+                        />
+                      )}
 
-                  {/* Large Transparent Hitbox for Hover / Tap */}
-                  <rect 
-                    x={pt.x - 30} 
-                    y={0} 
-                    width={60} 
-                    height={chartHeight} 
-                    fill="transparent"
-                    onMouseEnter={() => setHoveredPointIndex(idx)}
-                    onMouseLeave={() => setHoveredPointIndex(null)}
-                    onTouchStart={() => setHoveredPointIndex(idx)}
-                  />
-                </g>
-              ))}
+                      {/* Value Tag Above Bar */}
+                      <text 
+                        x={cx} 
+                        y={totalBarHeight > 0 ? by - totalBarHeight - 6 : by - 6} 
+                        textAnchor="middle" 
+                        className={`text-[10px] font-mono font-bold transition-all ${
+                          totalBarHeight > 0 ? "fill-tapsh-black" : "fill-tapsh-charcoal/60"
+                        }`}
+                      >
+                        {totalBarHeight > 0 ? formatRsCompact(period.grossSales) : "₹0"}
+                      </text>
+
+                      {/* X-Axis Label */}
+                      <text 
+                        x={cx} 
+                        y={by + 16} 
+                        textAnchor="middle" 
+                        className={`text-[11px] font-bold transition-colors ${
+                          isHovered ? "fill-emerald-700" : "fill-tapsh-black"
+                        }`}
+                      >
+                        {period.label}
+                      </text>
+                      <text 
+                        x={cx} 
+                        y={by + 28} 
+                        textAnchor="middle" 
+                        className="text-[9px] font-semibold fill-tapsh-charcoal"
+                      >
+                        {period.sublabel}
+                      </text>
+
+                      {/* Hitbox */}
+                      <rect 
+                        x={cx - slotWidth / 2} 
+                        y={0} 
+                        width={slotWidth} 
+                        height={chartHeight} 
+                        fill="transparent"
+                        onMouseEnter={() => setHoveredPointIndex(idx)}
+                        onMouseLeave={() => setHoveredPointIndex(null)}
+                      />
+                    </g>
+                  );
+                } else {
+                  // Units Sold View
+                  const uHeight = chartMax > 0 ? Math.round((period.unitsSold / chartMax) * plotHeight) : 0;
+                  return (
+                    <g key={period.id} className="cursor-pointer">
+                      {isHovered && (
+                        <rect 
+                          x={cx - slotWidth * 0.46} 
+                          y={paddingTop - 12} 
+                          width={slotWidth * 0.92} 
+                          height={plotHeight + 35} 
+                          rx="14" 
+                          fill="rgba(59, 130, 246, 0.05)" 
+                          stroke="rgba(59, 130, 246, 0.25)"
+                          strokeWidth="1.5"
+                        />
+                      )}
+
+                      {uHeight === 0 && (
+                        <line 
+                          x1={cx - 14} 
+                          y1={by} 
+                          x2={cx + 14} 
+                          y2={by} 
+                          stroke="#D1D5DB" 
+                          strokeWidth="2.5" 
+                          strokeLinecap="round"
+                        />
+                      )}
+
+                      {uHeight > 0 && (
+                        <rect 
+                          x={bx} 
+                          y={by - uHeight} 
+                          width={barWidth} 
+                          height={uHeight} 
+                          fill="url(#barUnitsGrad)"
+                          rx="6"
+                          className="transition-all duration-300"
+                        />
+                      )}
+
+                      <text 
+                        x={cx} 
+                        y={uHeight > 0 ? by - uHeight - 6 : by - 6} 
+                        textAnchor="middle" 
+                        className={`text-[10px] font-mono font-bold transition-all ${
+                          uHeight > 0 ? "fill-blue-700" : "fill-tapsh-charcoal/60"
+                        }`}
+                      >
+                        {period.unitsSold > 0 ? `${period.unitsSold} u` : "0"}
+                      </text>
+
+                      <text 
+                        x={cx} 
+                        y={by + 16} 
+                        textAnchor="middle" 
+                        className={`text-[11px] font-bold transition-colors ${
+                          isHovered ? "fill-blue-700" : "fill-tapsh-black"
+                        }`}
+                      >
+                        {period.label}
+                      </text>
+                      <text 
+                        x={cx} 
+                        y={by + 28} 
+                        textAnchor="middle" 
+                        className="text-[9px] font-semibold fill-tapsh-charcoal"
+                      >
+                        {period.sublabel}
+                      </text>
+
+                      <rect 
+                        x={cx - slotWidth / 2} 
+                        y={0} 
+                        width={slotWidth} 
+                        height={chartHeight} 
+                        fill="transparent"
+                        onMouseEnter={() => setHoveredPointIndex(idx)}
+                        onMouseLeave={() => setHoveredPointIndex(null)}
+                      />
+                    </g>
+                  );
+                }
+              })}
             </svg>
 
             {/* Dynamic Glassmorphic Floating Tooltip */}
-            {hoveredPointIndex !== null && pointsPaid[hoveredPointIndex] && (
+            {hoveredPointIndex !== null && salesPeriodsData[hoveredPointIndex] && (
               <div 
-                className="absolute z-20 pointer-events-none bg-neutral-900/95 text-white text-xs p-3 rounded-2xl shadow-xl border border-white/10 backdrop-blur-md transition-all -translate-x-1/2 -translate-y-full mb-3"
+                className="absolute z-20 pointer-events-none bg-neutral-900/95 text-white text-xs p-3.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-md transition-all -translate-x-1/2 -translate-y-full mb-3 min-w-[210px]"
                 style={{
-                  left: `${(pointsPaid[hoveredPointIndex].x / chartWidth) * 100}%`,
-                  top: `${pointsPaid[hoveredPointIndex].y - 8}px`
+                  left: `${((paddingLeft + (hoveredPointIndex + 0.5) * (plotWidth / salesPeriodsData.length)) / chartWidth) * 100}%`,
+                  top: `${paddingTop + 10}px`
                 }}
               >
-                <div className="font-bold text-tapsh-pale-blue mb-1 text-[11px]">
-                  {paymentChartData.labels[hoveredPointIndex]} Summary
+                <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
+                  <span className="font-bold text-tapsh-pale-blue text-xs">
+                    {salesPeriodsData[hoveredPointIndex].label}
+                  </span>
+                  <span className="text-[10px] text-gray-400">
+                    {salesPeriodsData[hoveredPointIndex].sublabel}
+                  </span>
                 </div>
-                <div className="space-y-0.5 font-medium">
+                <div className="space-y-1 font-medium text-[11px]">
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-gray-300">Paid / Collected:</span>
-                    <span className="font-bold text-emerald-400">
-                      {formatRs(pointsPaid[hoveredPointIndex].val)}
+                    <span className="text-gray-300">Gross Invoiced:</span>
+                    <span className="font-bold text-white">
+                      {formatRs(salesPeriodsData[hoveredPointIndex].grossSales)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-gray-400">Pending / Due:</span>
+                    <span className="text-emerald-400">Paid / Realized:</span>
+                    <span className="font-bold text-emerald-400">
+                      {formatRs(salesPeriodsData[hoveredPointIndex].collected)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-amber-400">Pending Due:</span>
                     <span className="font-bold text-amber-400">
-                      {formatRs(pointsPending[hoveredPointIndex].val)}
+                      {formatRs(salesPeriodsData[hoveredPointIndex].pending)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 pt-1 border-t border-white/10 text-[10px]">
+                    <span className="text-gray-400">Deals / Units:</span>
+                    <span className="font-bold text-tapsh-pale-blue">
+                      {salesPeriodsData[hoveredPointIndex].invoicesCount} inv • {salesPeriodsData[hoveredPointIndex].unitsSold} units
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 text-[10px]">
+                    <span className="text-gray-400">Realization Rate:</span>
+                    <span className="font-bold text-emerald-400">
+                      {salesPeriodsData[hoveredPointIndex].realizationRate}%
                     </span>
                   </div>
                 </div>
@@ -681,17 +963,69 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Bottom Chart Footer Strip */}
-        <div className="mt-4 pt-3 border-t border-tapsh-charcoal/10 flex flex-wrap items-center justify-between text-xs text-tapsh-charcoal gap-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>Total Realized Payments: <strong className="text-tapsh-black">{formatRs(totalRevenueCollected)}</strong></span>
+        {/* High-Density Commercial Sales Ledger Table */}
+        <div className="pt-2 border-t border-tapsh-charcoal/10">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-tapsh-black">
+              <TableIcon className="w-3.5 h-3.5 text-tapsh-charcoal" />
+              <span>Sales & Collections Performance Ledger</span>
+            </div>
+            <span className="text-[10px] font-bold text-tapsh-charcoal">
+              {salesPeriodsData.length} records in active scope
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-            <span>Total Pending Collection: <strong className="text-amber-700">{formatRs(pendingAmount)}</strong></span>
+
+          <div className="overflow-x-auto rounded-2xl border border-tapsh-charcoal/10 bg-[#FAF8F5]">
+            <table className="w-full text-left text-xs whitespace-nowrap">
+              <thead className="bg-[#F4EFE6] text-tapsh-charcoal font-bold uppercase tracking-wider text-[10px] border-b border-tapsh-charcoal/10">
+                <tr>
+                  <th className="px-4 py-2.5">Timeline Period</th>
+                  <th className="px-3 py-2.5">Deals / Inv</th>
+                  <th className="px-3 py-2.5">Units Sold</th>
+                  <th className="px-4 py-2.5">Gross Billed</th>
+                  <th className="px-4 py-2.5">Realized (Paid)</th>
+                  <th className="px-4 py-2.5">Pending Due</th>
+                  <th className="px-3 py-2.5 text-right">Realization</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-tapsh-charcoal/10 font-medium">
+                {salesPeriodsData.map((period) => {
+                  const hasSales = period.grossSales > 0 || period.unitsSold > 0;
+                  return (
+                    <tr 
+                      key={period.id} 
+                      className={`hover:bg-white/80 transition-colors ${
+                        hasSales ? "bg-white/40" : ""
+                      }`}
+                    >
+                      <td className="px-4 py-2">
+                        <span className="font-bold text-tapsh-black">{period.label}</span>
+                        <span className="text-[10px] text-tapsh-charcoal ml-2">({period.sublabel})</span>
+                      </td>
+                      <td className="px-3 py-2 font-mono">{period.invoicesCount}</td>
+                      <td className="px-3 py-2 font-mono font-bold text-blue-700">{period.unitsSold}</td>
+                      <td className="px-4 py-2 font-mono font-bold text-tapsh-black">{formatRs(period.grossSales)}</td>
+                      <td className="px-4 py-2 font-mono font-bold text-emerald-700">{formatRs(period.collected)}</td>
+                      <td className="px-4 py-2 font-mono font-bold text-amber-700">{formatRs(period.pending)}</td>
+                      <td className="px-3 py-2 text-right">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          period.grossSales === 0 
+                            ? "bg-gray-100 text-gray-500 border-gray-200" 
+                            : period.realizationRate === 100 
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {period.grossSales === 0 ? "—" : `${period.realizationRate}%`}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
+
       </div>
 
       {/* 4. Two-Column Dedicated Payment & Products Distribution */}

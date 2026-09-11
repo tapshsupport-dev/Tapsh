@@ -307,11 +307,36 @@ export default function InvoiceDetailPage() {
                 {invoice.paymentMethod || invoice.paymentMethods?.[0] || "UPI"}
               </span>
             </div>
-            {invoice.notes && (
-              <p className="pt-2 italic text-tapsh-black/80">
-                <strong>Notes:</strong> {invoice.notes}
-              </p>
-            )}
+            {(() => {
+              const cleanNotes = invoice.notes
+                ? invoice.notes
+                    .replace(/compliant\s+with\s+indian\s+18%\s+gst\s+taxation\s+regulations\.?/gi, "")
+                    .replace(/18%\s*gst/gi, "")
+                    .replace(/\bgst\b/gi, "")
+                    .replace(/\btaxation\b/gi, "")
+                    .trim()
+                : "";
+              return cleanNotes ? (
+                <p className="pt-2 italic text-tapsh-black/80">
+                  <strong>Notes:</strong> {cleanNotes}
+                </p>
+              ) : null;
+            })()}
+
+            {/* Terms & Conditions (Print balanced layout) */}
+            <div className="mt-4 pt-3 border-t border-tapsh-charcoal/10 space-y-1 text-[11px] text-tapsh-charcoal">
+              <p className="font-bold text-[10px] uppercase text-tapsh-black tracking-wider">Terms & Conditions</p>
+              <p>• All hardware includes standard TAPSH digital cloud NFC routing.</p>
+              <p>• Physical products carry instant replacement guarantee for transit defects.</p>
+              <p>• For assistance, contact tapsh.support@gmail.com or WhatsApp +91 7977469926.</p>
+            </div>
+
+            {/* Authorized Signatory */}
+            <div className="mt-6 pt-3">
+              <div className="w-48 border-b border-tapsh-charcoal/20 pb-1 mb-1"></div>
+              <p className="font-bold text-xs text-tapsh-black">Authorized Signatory</p>
+              <p className="text-[10px] text-tapsh-charcoal">TAPSH Technologies Private Limited</p>
+            </div>
           </div>
 
           {/* Right: Calculation Breakdown */}

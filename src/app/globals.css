@@ -69,6 +69,8 @@
   color-scheme: dark;
   background-color: #0F1012 !important;
   color: #FFFFFF !important;
+  --color-tapsh-charcoal: #94A3B8;
+  --color-tapsh-taupe: #D6C7BC;
 }
 
 .admin-dark .bg-\[\#F7F7F8\],
@@ -77,72 +79,248 @@
   background-color: #0F1012 !important;
 }
 
-.admin-dark .bg-white {
+/* Cards & Containers - except print-card and hub-preview */
+.admin-dark .bg-white:not(.print-card):not(.print-card *):not(.hub-preview-isolated):not(.hub-preview-isolated *) {
   background-color: #1A1B1F !important;
   color: #FFFFFF !important;
 }
 
-.admin-dark .bg-\[\#FAF8F5\] {
-  background-color: #151619 !important;
-}
-
-.admin-dark .text-tapsh-black {
+.admin-dark .bg-\[\#FAF8F5\]:not(.print-card):not(.print-card *):not(.hub-preview-isolated):not(.hub-preview-isolated *) {
+  background-color: #141518 !important;
   color: #FFFFFF !important;
 }
 
-.admin-dark .text-tapsh-charcoal {
-  color: #A0A5AA !important;
+/* Gray Chips, Badges & Neutral Backgrounds */
+.admin-dark .bg-gray-50:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-gray-100:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-gray-200:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-slate-50:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-slate-100:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-neutral-100:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: #23252B !important;
+  color: #E2E8F0 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
+.admin-dark .hover\:bg-gray-100:hover:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .hover\:bg-gray-200:hover:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .hover\:bg-gray-50:hover:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: #2D3038 !important;
+}
+
+/* ---------------------------------------------------- */
+/* HIGH-CONTRAST TEXT OVERRIDES IN DARK MODE            */
+/* ---------------------------------------------------- */
+
+/* Primary Headings & Bold Text */
+.admin-dark .text-tapsh-black:not(.print-card):not(.print-card *):not(.hub-preview-isolated):not(.hub-preview-isolated *) {
+  color: #FFFFFF !important;
+}
+
+.admin-dark .text-black:not(.print-card):not(.print-card *):not(.hub-preview-isolated):not(.hub-preview-isolated *) {
+  color: #FFFFFF !important;
+}
+
+.admin-dark .text-gray-900:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-gray-800:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-slate-900:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-slate-800:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-neutral-900:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-neutral-800:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #F8FAFC !important;
+}
+
+/* Secondary & Muted Labels */
+.admin-dark .text-tapsh-charcoal:not(.print-card):not(.print-card *):not(.hub-preview-isolated):not(.hub-preview-isolated *),
+.admin-dark [class*="text-tapsh-charcoal"]:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #94A3B8 !important;
+}
+
+.admin-dark .text-gray-700:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-gray-600:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-slate-700:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-slate-600:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #CBD5E1 !important;
+}
+
+.admin-dark .text-gray-500:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-gray-400:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-slate-500:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-slate-400:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #94A3B8 !important;
+}
+
+.admin-dark .text-tapsh-taupe:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #D6C7BC !important;
+}
+
+/* ---------------------------------------------------- */
+/* STATUS BADGES & ACCENT COLORS IN DARK MODE          */
+/* ---------------------------------------------------- */
+
+/* Emerald / Confirmed */
+.admin-dark .bg-emerald-50:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: rgba(16, 185, 129, 0.16) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  color: #34D399 !important;
+}
+.admin-dark .text-emerald-700:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-emerald-800:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #34D399 !important;
+}
+.admin-dark .text-emerald-600:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #6EE7B7 !important;
+}
+
+/* Blue / Info */
+.admin-dark .bg-blue-50:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: rgba(59, 130, 246, 0.16) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  color: #60A5FA !important;
+}
+.admin-dark .text-blue-700:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-blue-800:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #60A5FA !important;
+}
+.admin-dark .text-blue-600:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #93C5FD !important;
+}
+
+/* Amber / Warning / Pending */
+.admin-dark .bg-amber-50:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: rgba(245, 158, 11, 0.16) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  color: #FBBF24 !important;
+}
+.admin-dark .text-amber-700:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-amber-800:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-amber-950:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #FBBF24 !important;
+}
+.admin-dark .text-amber-600:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #FCD34D !important;
+}
+
+/* Red / Danger */
+.admin-dark .bg-red-50:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-red-100:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-red-50\/50:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: rgba(239, 68, 68, 0.16) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  color: #F87171 !important;
+}
+.admin-dark .text-red-700:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .text-red-800:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #F87171 !important;
+}
+.admin-dark .text-red-600:not(.print-card *):not(.hub-preview-isolated *) {
+  color: #FCA5A5 !important;
+}
+
+/* ---------------------------------------------------- */
+/* CHROME, HEADERS, NAV & SIDEBAR                       */
+/* ---------------------------------------------------- */
 .admin-dark header.bg-white,
 .admin-dark header.bg-white\/95,
 .admin-dark header {
-  background-color: rgba(26, 27, 31, 0.95) !important;
+  background-color: rgba(26, 27, 31, 0.96) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 .admin-dark nav.bg-white\/95,
 .admin-dark nav.bg-white,
 .admin-dark nav.border-t {
-  background-color: rgba(26, 27, 31, 0.95) !important;
+  background-color: rgba(26, 27, 31, 0.96) !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-.admin-dark .border-tapsh-charcoal\/20,
-.admin-dark .border-tapsh-charcoal\/15,
-.admin-dark .border-tapsh-charcoal\/30,
-.admin-dark .border-tapsh-charcoal\/40 {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-}
-
-.admin-dark .bg-tapsh-pale-blue\/60,
-.admin-dark .bg-tapsh-pale-blue\/40,
-.admin-dark .bg-tapsh-pale-blue\/30,
-.admin-dark .bg-tapsh-pale-blue\/20 {
-  background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 .admin-dark aside {
-  background-color: #141517 !important;
+  background-color: #121316 !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-.admin-dark input:not([type="checkbox"]):not([type="radio"]),
-.admin-dark textarea,
-.admin-dark select {
-  background-color: #151619 !important;
+/* ---------------------------------------------------- */
+/* BORDERS & DIVIDERS IN DARK MODE                      */
+/* ---------------------------------------------------- */
+.admin-dark .border-tapsh-charcoal\/10:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-tapsh-charcoal\/15:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-tapsh-charcoal\/20:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-tapsh-charcoal\/25:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-tapsh-charcoal\/30:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-tapsh-charcoal\/40:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-gray-100:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-gray-200:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .border-gray-300:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .divide-tapsh-charcoal\/10:not(.print-card *) > *,
+.admin-dark .divide-tapsh-charcoal\/15:not(.print-card *) > * {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ---------------------------------------------------- */
+/* BUTTONS & ACCENT SURFACES                            */
+/* ---------------------------------------------------- */
+.admin-dark button.bg-tapsh-black:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark a.bg-tapsh-black:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: #2A2C32 !important;
   color: #FFFFFF !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.admin-dark button.bg-tapsh-black:hover:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark a.bg-tapsh-black:hover:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: #353840 !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.admin-dark .bg-tapsh-pale-blue:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: #23252B !important;
+  color: #FFFFFF !important;
+}
+
+.admin-dark .bg-tapsh-pale-blue\/60:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-tapsh-pale-blue\/40:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-tapsh-pale-blue\/30:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .bg-tapsh-pale-blue\/20:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.admin-dark .hover\:bg-tapsh-charcoal\/10:hover:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .hover\:bg-tapsh-pale-blue:hover:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .hover\:bg-tapsh-pale-blue\/30:hover:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark .hover\:bg-tapsh-pale-blue\/40:hover:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+/* ---------------------------------------------------- */
+/* INPUTS, SELECTS, TEXTAREAS & DIALOGS                 */
+/* ---------------------------------------------------- */
+.admin-dark input:not([type="checkbox"]):not([type="radio"]):not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark textarea:not(.print-card *):not(.hub-preview-isolated *),
+.admin-dark select:not(.print-card *):not(.hub-preview-isolated *) {
+  background-color: #141518 !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
 .admin-dark input::placeholder,
 .admin-dark textarea::placeholder {
-  color: #6C7278 !important;
+  color: #8E959E !important;
 }
 
-.admin-dark table thead th {
-  background-color: #151619 !important;
-  color: #A0A5AA !important;
+.admin-dark select option {
+  background-color: #1A1B1F !important;
+  color: #FFFFFF !important;
+}
+
+/* ---------------------------------------------------- */
+/* TABLES & ROWS                                        */
+/* ---------------------------------------------------- */
+.admin-dark table thead,
+.admin-dark table thead th,
+.admin-dark table thead tr {
+  background-color: #141518 !important;
+  color: #94A3B8 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
 .admin-dark table tbody tr {
@@ -151,6 +329,10 @@
 
 .admin-dark table tbody tr:hover {
   background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.admin-dark table tbody td {
+  color: #E2E8F0 !important;
 }
 
 /* Commercial Sales Analytics Dark Mode Overrides */
@@ -227,8 +409,7 @@
 }
 
 /* ==================================================== */
-/* ISOLATE CLIENT HUB PREVIEW FROM ADMIN DARK MODE */
-
+/* ISOLATE CLIENT HUB PREVIEW FROM ADMIN DARK MODE      */
 /* (Hub preview represents the public client landing page) */
 /* ==================================================== */
 .admin-dark .hub-preview-isolated,
@@ -262,6 +443,124 @@
 .admin-dark .hub-preview-isolated input {
   background-color: #FFFFFF !important;
   color: #000000 !important;
+}
+
+/* ==================================================== */
+/* ISOLATE INVOICE A4 PAPER & PRINT CARD FROM DARK MODE */
+/* (Invoice PDF and on-screen A4 paper are ALWAYS normal)*/
+/* ==================================================== */
+.admin-dark .print-card,
+.admin-dark .print-card.bg-white,
+.admin-dark .print-card .bg-white {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border-color: #E2E8F0 !important;
+}
+
+.admin-dark .print-card .bg-\[\#FAF8F5\],
+.admin-dark .print-card [class*="bg-[#FAF8F5]"] {
+  background-color: #FAF8F5 !important;
+  color: #000000 !important;
+}
+
+.admin-dark .print-card .text-tapsh-black,
+.admin-dark .print-card strong,
+.admin-dark .print-card h1,
+.admin-dark .print-card h2,
+.admin-dark .print-card h3,
+.admin-dark .print-card p,
+.admin-dark .print-card span,
+.admin-dark .print-card div {
+  color: #000000;
+}
+
+.admin-dark .print-card .text-tapsh-black,
+.admin-dark .print-card strong.text-tapsh-black,
+.admin-dark .print-card span.text-tapsh-black,
+.admin-dark .print-card p.text-tapsh-black,
+.admin-dark .print-card div.text-tapsh-black,
+.admin-dark .print-card h1.text-tapsh-black,
+.admin-dark .print-card h2.text-tapsh-black {
+  color: #000000 !important;
+}
+
+.admin-dark .print-card .text-tapsh-charcoal,
+.admin-dark .print-card [class*="text-tapsh-charcoal"] {
+  color: #55595D !important;
+}
+
+.admin-dark .print-card .text-tapsh-soft-green {
+  color: #5F7350 !important;
+}
+
+.admin-dark .print-card .border-tapsh-charcoal\/15,
+.admin-dark .print-card .border-tapsh-charcoal\/10,
+.admin-dark .print-card .border-tapsh-charcoal\/20,
+.admin-dark .print-card .border-tapsh-charcoal\/30,
+.admin-dark .print-card .divide-tapsh-charcoal\/10 > *,
+.admin-dark .print-card .divide-tapsh-charcoal\/15 > * {
+  border-color: #E2E8F0 !important;
+}
+
+.admin-dark .print-card .bg-emerald-50 {
+  background-color: #ECFDF5 !important;
+  border-color: #A7F3D0 !important;
+  color: #047857 !important;
+}
+
+.admin-dark .print-card .text-emerald-700 {
+  color: #047857 !important;
+}
+
+.admin-dark .print-card .bg-blue-50 {
+  background-color: #EFF6FF !important;
+  border-color: #BFDBFE !important;
+  color: #1D4ED8 !important;
+}
+
+.admin-dark .print-card .text-blue-700 {
+  color: #1D4ED8 !important;
+}
+
+.admin-dark .print-card .bg-amber-50 {
+  background-color: #FFFBEB !important;
+  border-color: #FDE68A !important;
+  color: #B45309 !important;
+}
+
+.admin-dark .print-card .text-amber-700 {
+  color: #B45309 !important;
+}
+
+.admin-dark .print-card .bg-gray-100 {
+  background-color: #F3F4F6 !important;
+  border-color: #E5E7EB !important;
+  color: #374151 !important;
+}
+
+.admin-dark .print-card .text-gray-700,
+.admin-dark .print-card .text-gray-600 {
+  color: #374151 !important;
+}
+
+.admin-dark .print-card .text-red-600 {
+  color: #DC2626 !important;
+}
+
+.admin-dark .print-card .border-red-200 {
+  border-color: #FECACA !important;
+}
+
+.admin-dark .print-card .border-emerald-200 {
+  border-color: #A7F3D0 !important;
+}
+
+.admin-dark .print-card .border-blue-200 {
+  border-color: #BFDBFE !important;
+}
+
+.admin-dark .print-card .border-amber-200 {
+  border-color: #FDE68A !important;
 }
 
 /* ==================================================== */

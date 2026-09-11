@@ -155,18 +155,19 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
 ];
 
 export function getLocalCachedProducts(): ProductItem[] {
-  if (typeof window === "undefined") return DEFAULT_PRODUCTS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) {
+    if (raw === null) {
+      // First time visiting site: initialize with defaults
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DEFAULT_PRODUCTS));
       return DEFAULT_PRODUCTS;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_PRODUCTS;
+    return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
     console.warn("Failed to read local products cache:", err);
-    return DEFAULT_PRODUCTS;
+    return [];
   }
 }
 
@@ -196,18 +197,14 @@ export function subscribeToProducts(
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        if (!snapshot.empty) {
-          const items = snapshot.docs.map((d) => ({
-            ...d.data(),
-            id: d.id,
-          })) as ProductItem[];
-          setLocalCachedProducts(items);
-          callback(items);
-        } else {
-          // If Firestore collection is empty, seed with defaults
-          seedDefaultProductsToFirestore();
-          callback(local);
-        }
+        // Map actual documents live in Firestore
+        // If products are deleted by the admin, snapshot immediately reflects that deletion across the web
+        const items = snapshot.docs.map((d) => ({
+          ...d.data(),
+          id: d.id,
+        })) as ProductItem[];
+        setLocalCachedProducts(items);
+        callback(items);
       },
       (err) => {
         console.warn("Real-time products snapshot failed, using local cache:", err);
@@ -225,7 +222,7 @@ export function subscribeToProducts(
 /**
  * Seed default products to Firestore if collection is empty.
  */
-async function seedDefaultProductsToFirestore() {
+export async function seedDefaultProductsToFirestore() {
   try {
     for (const prod of DEFAULT_PRODUCTS) {
       const docRef = doc(db, PRODUCTS_COLLECTION, prod.id);

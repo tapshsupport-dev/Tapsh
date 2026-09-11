@@ -15,7 +15,7 @@ export default function ProductsPage() {
     const unsubscribe = subscribeToProducts((items) => {
       // Show only active products on the public catalog
       const activeOnly = items.filter((p) => p.status === "ACTIVE");
-      setProducts(activeOnly.length > 0 ? activeOnly : items);
+      setProducts(activeOnly);
       setIsLoaded(true);
     });
 
@@ -42,7 +42,14 @@ export default function ProductsPage() {
 
       {/* Product Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
-        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {isLoaded && products.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-tapsh-charcoal/15 max-w-lg mx-auto p-8 shadow-xs">
+            <Sparkles className="w-8 h-8 text-tapsh-soft-green mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-tapsh-black">No Products Currently Listed</h3>
+            <p className="text-xs text-tapsh-charcoal mt-1">Our hardware lineup is currently being updated. Please check back soon or contact support for customized hardware inquiries.</p>
+          </div>
+        ) : (
+          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map((product) => {
             const hasMultipleImages = product.images && product.images.length > 1;
             const waQuoteUrl = `https://wa.me/917977469926?text=${encodeURIComponent(
@@ -134,6 +141,7 @@ export default function ProductsPage() {
             );
           })}
         </StaggerContainer>
+      )}
       </div>
 
     </div>

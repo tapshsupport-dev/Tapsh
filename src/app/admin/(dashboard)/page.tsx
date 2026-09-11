@@ -95,35 +95,26 @@ export default function AdminDashboardPage() {
     }, 0);
   }, [invoices]);
 
-  // Products Breakdown by Name
+  // Products Breakdown by Name from actual admin invoices
   const productsSalesBreakdown = useMemo(() => {
     const map: Record<string, { quantity: number; revenue: number }> = {};
     invoices.forEach(inv => {
       (inv.items || []).forEach(item => {
-        const name = item.productName || "TAPSH NFC Stand";
+        const name = (item.productName || "").trim();
+        if (!name) return;
         if (!map[name]) map[name] = { quantity: 0, revenue: 0 };
         map[name].quantity += item.quantity || 1;
         map[name].revenue += item.total || 0;
       });
     });
 
-    const list = Object.entries(map).map(([name, data]) => ({
+    return Object.entries(map).map(([name, data]) => ({
       name,
       ...data
     })).sort((a, b) => b.quantity - a.quantity);
-
-    // Fallback if no invoices yet
-    if (list.length === 0) {
-      return [
-        { name: "TAPSH Matte Black NFC Stand (Brass Base)", quantity: 4, revenue: 7200 },
-        { name: "TAPSH Smart Digital Bamboo NFC Card", quantity: 2, revenue: 2400 },
-        { name: "NFC Hardware & Cloud Provisioning", quantity: 1, revenue: 1800 }
-      ];
-    }
-    return list;
   }, [invoices]);
 
-  const topProduct = productsSalesBreakdown[0]?.name || "NFC Hardware";
+  const topProduct = productsSalesBreakdown.length > 0 ? productsSalesBreakdown[0].name : "No product sales yet";
 
   // ----------------------------------------------------
   // Dynamic Payment Graph Data (Weeks | Months | Year)
@@ -275,7 +266,14 @@ export default function AdminDashboardPage() {
       else upi += amt;
     });
 
-    const total = upi + bank + cash || 1;
+    const total = upi + bank + cash;
+    if (total === 0) {
+      return [
+        { name: "UPI Digital Pay", value: 0, percent: 0, color: "#10B981" },
+        { name: "Direct Bank Acc", value: 0, percent: 0, color: "#3B82F6" },
+        { name: "Cash / Counter", value: 0, percent: 0, color: "#F59E0B" }
+      ];
+    }
     return [
       { name: "UPI Digital Pay", value: upi, percent: Math.round((upi / total) * 100), color: "#10B981" },
       { name: "Direct Bank Acc", value: bank, percent: Math.round((bank / total) * 100), color: "#3B82F6" },
@@ -420,19 +418,21 @@ export default function AdminDashboardPage() {
           <div>
             <div className="flex items-baseline gap-2">
               <p className="text-2xl sm:text-3xl font-extrabold text-tapsh-black tracking-tight">
-                {totalProductsSold || 7} Units
+                {totalProductsSold} {totalProductsSold === 1 ? "Unit" : "Units"}
               </p>
               <span className="inline-flex items-center text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md">
                 Hardware & Cards
               </span>
             </div>
             <p className="text-[11px] text-tapsh-charcoal font-medium mt-1 truncate">
-              Top: {topProduct}
+              {productsSalesBreakdown.length > 0 ? `Top: ${productsSalesBreakdown[0].name}` : "No sales recorded yet"}
             </p>
           </div>
           <div className="mt-4 pt-3 border-t border-tapsh-charcoal/10 flex items-center justify-between text-[11px] text-tapsh-charcoal">
-            <span>Product Categories</span>
-            <span className="font-bold text-tapsh-black">{productsSalesBreakdown.length} active models</span>
+            <span>Product Models</span>
+            <span className="font-bold text-tapsh-black">
+              {productsSalesBreakdown.length} {productsSalesBreakdown.length === 1 ? "model" : "models"} sold
+            </span>
           </div>
         </div>
 
@@ -809,7 +809,7 @@ export default function AdminDashboardPage() {
                 </h2>
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                {totalProductsSold || 7} Units Sold
+                {totalProductsSold} {totalProductsSold === 1 ? "Unit" : "Units"} Sold
               </span>
             </div>
             <p className="text-xs text-tapsh-charcoal mb-4">
@@ -817,43 +817,55 @@ export default function AdminDashboardPage() {
             </p>
 
             {/* List of Products Sold */}
-            <div className="space-y-3">
-              {productsSalesBreakdown.map((prod, i) => {
-                const totalUnits = totalProductsSold || 1;
-                const unitShare = Math.min(100, Math.round((prod.quantity / totalUnits) * 100));
+            {productsSalesBreakdown.length === 0 ? (
+              <div className="py-10 text-center bg-[#FAF8F5] rounded-2xl border border-dashed border-tapsh-charcoal/20">
+                <Package className="w-8 h-8 text-tapsh-charcoal/40 mx-auto mb-2" />
+                <p className="text-xs font-bold text-tapsh-black">No product sales recorded yet</p>
+                <p className="text-[11px] text-tapsh-charcoal mt-1 max-w-xs mx-auto">
+                  Sales data appears here in real-time as invoices are created in the Invoicing section.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {productsSalesBreakdown.map((prod, i) => {
+                  const totalUnits = totalProductsSold || 1;
+                  const unitShare = Math.min(100, Math.round((prod.quantity / totalUnits) * 100));
 
-                return (
-                  <div key={i} className="p-3 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/10 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-tapsh-black truncate pr-2">
-                        {prod.name}
-                      </span>
-                      <span className="font-mono font-bold text-tapsh-black shrink-0">
-                        {prod.quantity} sold
-                      </span>
-                    </div>
+                  return (
+                    <div key={i} className="p-3 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/10 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-tapsh-black truncate pr-2">
+                          {prod.name}
+                        </span>
+                        <span className="font-mono font-bold text-tapsh-black shrink-0">
+                          {prod.quantity} sold
+                        </span>
+                      </div>
 
-                    {/* Progress Bar */}
-                    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-tapsh-soft-green rounded-full transition-all duration-700"
-                        style={{ width: `${Math.max(15, unitShare)}%` }}
-                      ></div>
-                    </div>
+                      {/* Progress Bar */}
+                      <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-tapsh-soft-green rounded-full transition-all duration-700"
+                          style={{ width: `${Math.max(5, unitShare)}%` }}
+                        ></div>
+                      </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-tapsh-charcoal pt-0.5">
-                      <span>Revenue: <strong className="text-tapsh-black">{formatRs(prod.revenue)}</strong></span>
-                      <span>Share: <strong className="text-tapsh-soft-green">{unitShare}%</strong></span>
+                      <div className="flex items-center justify-between text-[11px] text-tapsh-charcoal pt-0.5">
+                        <span>Revenue: <strong className="text-tapsh-black">{formatRs(prod.revenue)}</strong></span>
+                        <span>Share: <strong className="text-tapsh-soft-green">{unitShare}%</strong></span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="mt-5 pt-3 border-t border-tapsh-charcoal/10 text-xs text-tapsh-charcoal flex justify-between">
             <span>Hardware deployment status:</span>
-            <strong className="text-tapsh-soft-green">100% Pre-Programmed & Active</strong>
+            <strong className={totalProductsSold > 0 ? "text-tapsh-soft-green" : "text-tapsh-charcoal"}>
+              {totalProductsSold > 0 ? "100% Pre-Programmed & Active" : "No active deployments"}
+            </strong>
           </div>
         </div>
 

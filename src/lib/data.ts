@@ -36,7 +36,7 @@ export type Invoice = {
   };
   tapshHubUsed: boolean;
   date: string;
-  dueDate: string;
+  dueDate?: string;
   items: InvoiceItem[];
   subtotal: number;
   discount: number;
@@ -47,6 +47,7 @@ export type Invoice = {
   amountPaid: number;
   status: "PAID" | "PARTIAL" | "PENDING" | "OVERDUE";
   paymentMethods: string[];
+  paymentMethod?: "UPI" | "Bank Acc" | "Cash" | string;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;

@@ -27,6 +27,7 @@ export default function InvoiceDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editStatus, setEditStatus] = useState<"PAID" | "PARTIAL" | "PENDING">("PAID");
+  const [editPaymentMethod, setEditPaymentMethod] = useState<"UPI" | "Bank Acc" | "Cash">("UPI");
   const [editAmountPaid, setEditAmountPaid] = useState(0);
   const [editDeliveryCharges, setEditDeliveryCharges] = useState(0);
   const [editTapshHubUsed, setEditTapshHubUsed] = useState(true);
@@ -39,6 +40,8 @@ export default function InvoiceDetailPage() {
       if (inv) {
         setInvoice(inv);
         setEditStatus(inv.status === "OVERDUE" ? "PENDING" : inv.status);
+        const resolvedMode = (inv.paymentMethod || inv.paymentMethods?.[0] || "UPI") as "UPI" | "Bank Acc" | "Cash";
+        setEditPaymentMethod(["UPI", "Bank Acc", "Cash"].includes(resolvedMode) ? resolvedMode : "UPI");
         setEditAmountPaid(inv.amountPaid || 0);
         setEditDeliveryCharges(inv.deliveryCharges || 0);
         setEditTapshHubUsed(inv.tapshHubUsed ?? true);
@@ -89,6 +92,8 @@ export default function InvoiceDetailPage() {
       const newTotal = Math.max(0, invoice.subtotal - (invoice.discount || 0) + editDeliveryCharges);
       const updatedData: Partial<Invoice> = {
         status: editStatus,
+        paymentMethod: editPaymentMethod,
+        paymentMethods: [editPaymentMethod],
         deliveryCharges: editDeliveryCharges,
         total: newTotal,
         amountPaid: editStatus === "PAID" ? newTotal : editStatus === "PENDING" ? 0 : editAmountPaid,
@@ -225,7 +230,7 @@ export default function InvoiceDetailPage() {
             </p>
             <div className="mt-2 text-xs text-tapsh-charcoal space-y-0.5">
               <p>Date: <strong className="text-tapsh-black">{new Date(invoice.date).toLocaleDateString()}</strong></p>
-              <p>Due: <strong className="text-tapsh-black">{new Date(invoice.dueDate).toLocaleDateString()}</strong></p>
+              <p>Mode: <strong className="text-tapsh-black">{invoice.paymentMethod || invoice.paymentMethods?.[0] || "UPI"}</strong></p>
               
               <div className="flex items-center sm:justify-end gap-2 mt-2">
                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
@@ -293,12 +298,15 @@ export default function InvoiceDetailPage() {
         {/* Totals Breakdown */}
         <div className="flex flex-col sm:flex-row justify-between gap-6">
           
-          {/* Left: Payment Instructions */}
-          <div className="text-xs text-tapsh-charcoal space-y-1.5 flex-1">
-            <p className="font-bold uppercase text-[10px] text-tapsh-black tracking-wider">Payment Instructions & Banking</p>
-            <p>Direct UPI VPA: <span className="font-mono font-bold text-tapsh-black">tapsh@upi</span></p>
-            <p>Bank: HDFC Bank Ltd. (Commercial Branch)</p>
-            <p>A/C: 50200088192831 • IFSC: HDFC0000128</p>
+          {/* Left: Payment Information (No bank statements) */}
+          <div className="text-xs text-tapsh-charcoal space-y-2 flex-1">
+            <p className="font-bold uppercase text-[10px] text-tapsh-black tracking-wider">Payment Information</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-tapsh-charcoal font-medium">Payment Mode:</span>
+              <span className="px-2.5 py-1 rounded-xl bg-[#FAF8F5] border border-tapsh-charcoal/15 font-bold text-xs text-tapsh-black">
+                {invoice.paymentMethod || invoice.paymentMethods?.[0] || "UPI"}
+              </span>
+            </div>
             {invoice.notes && (
               <p className="pt-2 italic text-tapsh-black/80">
                 <strong>Notes:</strong> {invoice.notes}
@@ -445,6 +453,29 @@ export default function InvoiceDetailPage() {
                       }`}
                     >
                       {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Payment Mode */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                  Payment Mode
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(["UPI", "Bank Acc", "Cash"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setEditPaymentMethod(mode)}
+                      className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        editPaymentMethod === mode
+                          ? "bg-tapsh-black text-tapsh-beige shadow-xs"
+                          : "bg-white border border-tapsh-charcoal/20 text-tapsh-charcoal"
+                      }`}
+                    >
+                      {mode}
                     </button>
                   ))}
                 </div>

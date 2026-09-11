@@ -71,7 +71,6 @@ export default function InvoicesPage() {
   const [formData, setFormData] = useState({
     invoiceNumber: "",
     date: new Date().toISOString().split("T")[0],
-    dueDate: new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
     customerName: "",
     contactPerson: "",
     phone: "",
@@ -79,6 +78,7 @@ export default function InvoicesPage() {
     address: "",
     city: "India",
     status: "PAID" as "PAID" | "PARTIAL" | "PENDING",
+    paymentMethod: "UPI" as "UPI" | "Bank Acc" | "Cash",
     discount: 0,
     deliveryCharges: 0,
     amountPaid: 0,
@@ -140,7 +140,6 @@ export default function InvoicesPage() {
     setFormData({
       invoiceNumber: nextInvNum,
       date: new Date().toISOString().split("T")[0],
-      dueDate: new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
       customerName: firstCust?.businessName || "",
       contactPerson: firstCust?.contactPerson || "",
       phone: firstCust?.phone || "",
@@ -148,6 +147,7 @@ export default function InvoicesPage() {
       address: firstCust?.address || "",
       city: firstCust?.city || "India",
       status: "PAID",
+      paymentMethod: "UPI",
       discount: 0,
       deliveryCharges: 0,
       amountPaid: 0,
@@ -176,10 +176,10 @@ export default function InvoicesPage() {
     setTapshHubUsed(inv.tapshHubUsed ?? true);
 
     const cust = customers.find(c => c.id === inv.customerId);
+    const resolvedMode = (inv.paymentMethod || inv.paymentMethods?.[0] || "UPI") as "UPI" | "Bank Acc" | "Cash";
     setFormData({
       invoiceNumber: inv.invoiceNumber,
       date: (inv.date || "").split("T")[0] || new Date().toISOString().split("T")[0],
-      dueDate: (inv.dueDate || "").split("T")[0] || new Date().toISOString().split("T")[0],
       customerName: inv.customerDetails?.businessName || cust?.businessName || inv.customerName || "",
       contactPerson: inv.customerDetails?.contactPerson || cust?.contactPerson || "",
       phone: inv.customerDetails?.phone || cust?.phone || "",
@@ -187,6 +187,7 @@ export default function InvoicesPage() {
       address: inv.customerDetails?.address || cust?.address || "",
       city: inv.customerDetails?.city || cust?.city || "India",
       status: inv.status === "OVERDUE" ? "PENDING" : inv.status,
+      paymentMethod: ["UPI", "Bank Acc", "Cash"].includes(resolvedMode) ? resolvedMode : "UPI",
       discount: inv.discount || 0,
       deliveryCharges: inv.deliveryCharges || 0,
       amountPaid: inv.amountPaid || 0,
@@ -313,7 +314,6 @@ export default function InvoicesPage() {
         },
         tapshHubUsed: tapshHubUsed,
         date: new Date(formData.date).toISOString(),
-        dueDate: new Date(formData.dueDate).toISOString(),
         items: items,
         subtotal: calculatedSubtotal,
         discount: Number(formData.discount) || 0,
@@ -321,7 +321,8 @@ export default function InvoicesPage() {
         total: calculatedTotal,
         amountPaid: formData.status === "PAID" ? calculatedTotal : Number(formData.amountPaid) || 0,
         status: formData.status,
-        paymentMethods: ["UPI", "BANK_TRANSFER"],
+        paymentMethod: formData.paymentMethod,
+        paymentMethods: [formData.paymentMethod],
         notes: formData.notes
       };
 
@@ -498,13 +499,16 @@ export default function InvoicesPage() {
                       <h3 className="font-bold text-tapsh-black text-sm mt-0.5">
                         {clientName}
                       </h3>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                           inv.tapshHubUsed 
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                             : "bg-gray-100 text-gray-600 border-gray-200"
                         }`}>
                           Hub: {inv.tapshHubUsed ? "Yes" : "No"}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FAF8F5] border border-tapsh-charcoal/15 text-tapsh-black">
+                          {inv.paymentMethod || inv.paymentMethods?.[0] || "UPI"}
                         </span>
                         {inv.deliveryCharges > 0 && (
                           <span className="text-[10px] text-tapsh-charcoal font-medium">
@@ -583,6 +587,7 @@ export default function InvoicesPage() {
                     <th className="px-6 py-4">Client Business</th>
                     <th className="px-6 py-4">Tapsh Hub</th>
                     <th className="px-6 py-4">Issue Date</th>
+                    <th className="px-6 py-4">Payment Mode</th>
                     <th className="px-6 py-4">Delivery</th>
                     <th className="px-6 py-4">Total Amount</th>
                     <th className="px-6 py-4">Amount Paid</th>
@@ -614,6 +619,11 @@ export default function InvoicesPage() {
                         </td>
                         <td className="px-6 py-4 text-xs text-tapsh-charcoal font-medium">
                           {new Date(inv.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2.5 py-1 rounded-lg bg-[#FAF8F5] border border-tapsh-charcoal/15 text-xs font-bold text-tapsh-black">
+                            {inv.paymentMethod || inv.paymentMethods?.[0] || "UPI"}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-xs text-tapsh-charcoal font-medium">
                           {inv.deliveryCharges > 0 ? `₹${inv.deliveryCharges.toLocaleString()}` : "—"}
@@ -892,27 +902,15 @@ export default function InvoicesPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs font-bold text-tapsh-charcoal mb-1">Issue Date</label>
-                      <input
-                        type="date"
-                        required
-                        value={formData.date}
-                        onChange={(e) => setFormData({...formData, date: e.target.value})}
-                        className="w-full px-3 py-1.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-xs focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-tapsh-charcoal mb-1">Due Date</label>
-                      <input
-                        type="date"
-                        required
-                        value={formData.dueDate}
-                        onChange={(e) => setFormData({...formData, dueDate: e.target.value})}
-                        className="w-full px-3 py-1.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-xs focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-bold text-tapsh-charcoal mb-1">Issue Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      className="w-full px-3 py-2 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-xs focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                    />
                   </div>
                 </div>
 
@@ -1084,6 +1082,27 @@ export default function InvoicesPage() {
                           }`}
                         >
                           {st}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Payment Mode: UPI, Bank Acc, Cash */}
+                  <div>
+                    <label className="block text-xs font-bold text-tapsh-charcoal mb-1">Payment Mode</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(["UPI", "Bank Acc", "Cash"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, paymentMethod: mode }))}
+                          className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            formData.paymentMethod === mode
+                              ? "bg-tapsh-black text-tapsh-beige shadow-xs"
+                              : "bg-white border border-tapsh-charcoal/20 text-tapsh-charcoal hover:text-tapsh-black"
+                          }`}
+                        >
+                          {mode}
                         </button>
                       ))}
                     </div>

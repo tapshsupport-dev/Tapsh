@@ -5,7 +5,12 @@ import Link from "next/link";
 import { ArrowRight, MessageCircle, Sparkles } from "lucide-react";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/ui/motion";
 import ProductSlideshow from "@/components/products/ProductSlideshow";
-import { ProductItem, subscribeToProducts, DEFAULT_PRODUCTS } from "@/lib/productsService";
+import { 
+  ProductItem, 
+  subscribeToProducts, 
+  DEFAULT_PRODUCTS,
+  getProductWhatsAppQuoteUrl 
+} from "@/lib/productsService";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<ProductItem[]>(DEFAULT_PRODUCTS);
@@ -52,9 +57,11 @@ export default function ProductsPage() {
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map((product) => {
             const hasMultipleImages = product.images && product.images.length > 1;
-            const waQuoteUrl = `https://wa.me/917977469926?text=${encodeURIComponent(
-              `Hello TAPSH, I am interested in getting a quote and details for *${product.name}*.`
-            )}`;
+            const waQuoteUrl = getProductWhatsAppQuoteUrl(product);
+            const hasDiscount = Boolean(product.price && product.salePrice && product.price > product.salePrice);
+            const discountPercent = hasDiscount 
+              ? Math.round(((product.price! - product.salePrice!) / product.price!) * 100) 
+              : 0;
 
             return (
               <StaggerItem 
@@ -71,14 +78,24 @@ export default function ProductsPage() {
                     iconType={product.iconType}
                   />
 
-                  {/* Ribbon Badge */}
-                  {product.badge && (
-                    <div className="absolute top-3 left-3 z-20">
-                      <span className="px-3 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                  {/* Top Badges / Item Code */}
+                  <div className="absolute top-3 left-3 z-20 flex items-center gap-2 flex-wrap">
+                    {product.itemCode && (
+                      <span className="px-2.5 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-[10px] font-mono font-bold tracking-wider shadow-sm">
+                        {product.itemCode}
+                      </span>
+                    )}
+                    {product.badge && (
+                      <span className="px-2.5 py-1 rounded-full bg-tapsh-soft-green text-white text-[10px] font-bold uppercase tracking-wider shadow-sm">
                         {product.badge}
                       </span>
-                    </div>
-                  )}
+                    )}
+                    {hasDiscount && (
+                      <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold uppercase shadow-sm">
+                        {discountPercent}% OFF
+                      </span>
+                    )}
+                  </div>
 
                   {/* Multi-Image Indicator Pill */}
                   {hasMultipleImages && (
@@ -101,19 +118,45 @@ export default function ProductsPage() {
                     </h2>
                   </div>
 
-                  <p className="text-tapsh-charcoal mb-6 min-h-[3rem] leading-relaxed text-sm sm:text-base">
-                    {product.description}
-                  </p>
-                  
-                  {/* Key Benefit Highlight */}
-                  {product.benefit && (
-                    <div className="bg-tapsh-pale-blue/50 rounded-2xl p-4 mb-8 border border-tapsh-charcoal/20">
-                      <p className="text-sm font-medium text-tapsh-black">
-                        <span className="block text-xs text-tapsh-soft-green font-bold uppercase tracking-wider mb-1">
-                          Key Benefit
+                  {/* Price Row */}
+                  <div className="flex items-baseline gap-2 mb-3">
+                    {product.salePrice && product.salePrice > 0 ? (
+                      <>
+                        <span className="text-2xl font-bold text-tapsh-soft-green">
+                          ₹{product.salePrice.toLocaleString("en-IN")}
                         </span>
-                        {product.benefit}
-                      </p>
+                        {product.price && product.price > product.salePrice && (
+                          <span className="text-sm text-tapsh-charcoal line-through font-medium">
+                            ₹{product.price.toLocaleString("en-IN")}
+                          </span>
+                        )}
+                      </>
+                    ) : product.price && product.price > 0 ? (
+                      <span className="text-2xl font-bold text-tapsh-black">
+                        ₹{product.price.toLocaleString("en-IN")}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {product.description && (
+                    <p className="text-tapsh-charcoal mb-4 min-h-[3rem] leading-relaxed text-sm sm:text-base line-clamp-3">
+                      {product.description}
+                    </p>
+                  )}
+                  
+                  {/* WhatsApp Catalog Link Pill if configured */}
+                  {product.link && (
+                    <div className="mb-6">
+                      <a
+                        href={product.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold border border-emerald-200 transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>View in WhatsApp Catalog</span>
+                        <ArrowRight className="w-3 h-3 ml-0.5 opacity-60" />
+                      </a>
                     </div>
                   )}
                   
@@ -123,10 +166,10 @@ export default function ProductsPage() {
                       href={waQuoteUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full sm:flex-1 py-3 px-4 text-center bg-tapsh-soft-green text-white rounded-xl font-bold hover:brightness-105 transition-all flex items-center justify-center gap-2 shadow-xs"
+                      className="w-full sm:flex-1 py-3 px-4 text-center bg-tapsh-soft-green text-white rounded-xl font-bold hover:brightness-105 transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      Get a Quote
+                      Raise a Quote
                     </a>
                     <Link
                       href={`/products/${product.slug}`}

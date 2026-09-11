@@ -211,14 +211,12 @@ export default function AdminSettingsPage() {
       id: `prod-${Date.now()}`,
       name: "",
       slug: "",
-      tagline: "",
+      price: undefined,
+      salePrice: undefined,
       description: "",
-      benefit: "",
+      link: "",
+      itemCode: "",
       images: [],
-      iconType: "sparkles",
-      category: "General",
-      badge: "",
-      features: [],
       status: "ACTIVE",
     });
     setProductUrlInput("");
@@ -226,7 +224,16 @@ export default function AdminSettingsPage() {
   };
 
   const handleOpenEditProduct = (prod: ProductItem) => {
-    setEditingProduct({ ...prod, images: [...(prod.images || [])] });
+    setEditingProduct({
+      ...prod,
+      name: prod.name || "",
+      price: prod.price,
+      salePrice: prod.salePrice,
+      description: prod.description || "",
+      link: prod.link || "",
+      itemCode: prod.itemCode || "",
+      images: [...(prod.images || [])],
+    });
     setProductUrlInput("");
     setIsProductModalOpen(true);
   };
@@ -354,10 +361,11 @@ export default function AdminSettingsPage() {
   const filteredProducts = products.filter((prod) => {
     const term = productSearch.toLowerCase();
     return (
-      prod.name.toLowerCase().includes(term) ||
-      prod.description.toLowerCase().includes(term) ||
-      prod.benefit.toLowerCase().includes(term) ||
-      (prod.category && prod.category.toLowerCase().includes(term))
+      Boolean(prod.name && prod.name.toLowerCase().includes(term)) ||
+      Boolean(prod.description && prod.description.toLowerCase().includes(term)) ||
+      Boolean(prod.itemCode && prod.itemCode.toLowerCase().includes(term)) ||
+      Boolean(prod.benefit && prod.benefit.toLowerCase().includes(term)) ||
+      Boolean(prod.category && prod.category.toLowerCase().includes(term))
     );
   });
 
@@ -863,6 +871,12 @@ export default function AdminSettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filteredProducts.map((product) => {
                   const imageCount = product.images?.length || 0;
+                  const hasDiscount = Boolean(
+                    product.price && product.salePrice && product.price > product.salePrice
+                  );
+                  const discountPercent = hasDiscount
+                    ? Math.round(((product.price! - product.salePrice!) / product.price!) * 100)
+                    : 0;
 
                   return (
                     <div
@@ -879,18 +893,18 @@ export default function AdminSettingsPage() {
                             className="h-52"
                           />
 
-                          {/* Top Badges */}
-                          <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
-                            {product.badge && (
-                              <span className="px-2.5 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                                {product.badge}
+                          {/* Top Badges / Item Code */}
+                          <div className="absolute top-3 left-3 z-20 flex items-center gap-2 flex-wrap">
+                            {product.itemCode && (
+                              <span className="px-2.5 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-[10px] font-mono font-bold tracking-wider shadow-sm">
+                                {product.itemCode}
                               </span>
                             )}
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                              product.status === "ACTIVE" ? "bg-tapsh-soft-green text-white" : "bg-tapsh-charcoal/20 text-tapsh-black"
-                            }`}>
-                              {product.status}
-                            </span>
+                            {hasDiscount && (
+                              <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold uppercase shadow-sm">
+                                {discountPercent}% OFF
+                              </span>
+                            )}
                           </div>
 
                           {/* Image count pill */}
@@ -904,30 +918,55 @@ export default function AdminSettingsPage() {
                         <div className="p-6">
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div>
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-tapsh-taupe">
-                                {product.category || "General"}
-                              </span>
-                              <h3 className="font-bold text-tapsh-black text-xl leading-tight mt-0.5">
+                              <h3 className="font-bold text-tapsh-black text-xl leading-tight">
                                 {product.name}
                               </h3>
                             </div>
                           </div>
 
-                          <p className="text-xs text-tapsh-charcoal line-clamp-2 mb-4 leading-relaxed">
-                            {product.description || "No description provided."}
-                          </p>
-
-                          {/* Key Benefit Box */}
-                          {product.benefit && (
-                            <div className="bg-tapsh-pale-blue/40 p-3 rounded-2xl border border-tapsh-charcoal/15 mb-4">
-                              <span className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-soft-green mb-0.5">
-                                Key Benefit
+                          {/* Price Display */}
+                          <div className="flex items-baseline gap-2 mb-3">
+                            {product.salePrice && product.salePrice > 0 ? (
+                              <>
+                                <span className="text-xl font-bold text-tapsh-soft-green">
+                                  ₹{product.salePrice.toLocaleString("en-IN")}
+                                </span>
+                                {product.price && product.price > product.salePrice && (
+                                  <span className="text-sm text-tapsh-charcoal line-through font-medium">
+                                    ₹{product.price.toLocaleString("en-IN")}
+                                  </span>
+                                )}
+                              </>
+                            ) : product.price && product.price > 0 ? (
+                              <span className="text-xl font-bold text-tapsh-black">
+                                ₹{product.price.toLocaleString("en-IN")}
                               </span>
-                              <p className="text-xs font-semibold text-tapsh-black line-clamp-2">
-                                {product.benefit}
-                              </p>
-                            </div>
-                          )}
+                            ) : (
+                              <span className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal/80">
+                                Quote on Request
+                              </span>
+                            )}
+                          </div>
+
+                          {product.description ? (
+                            <p className="text-xs text-tapsh-charcoal line-clamp-2 mb-4 leading-relaxed">
+                              {product.description}
+                            </p>
+                          ) : null}
+
+                          {/* WhatsApp Catalog Link Pill */}
+                          {product.link ? (
+                            <a
+                              href={product.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold border border-emerald-200 transition-colors mb-2"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>WhatsApp Catalog Link</span>
+                              <ArrowUpRight className="w-3 h-3 ml-0.5 opacity-60" />
+                            </a>
+                          ) : null}
                         </div>
                       </div>
 
@@ -950,7 +989,7 @@ export default function AdminSettingsPage() {
                         </div>
 
                         <Link
-                          href={`/products/${product.slug}`}
+                          href={`/products/${product.slug || product.id}`}
                           target="_blank"
                           className="text-[11px] font-bold text-tapsh-charcoal hover:text-tapsh-black flex items-center gap-1"
                         >
@@ -1084,206 +1123,46 @@ export default function AdminSettingsPage() {
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* MODAL: ADD / EDIT PRODUCT */}
+      {/* MODAL: ADD / EDIT PRODUCT (Matching Referral Image 2) */}
       {/* ---------------------------------------------------- */}
       {isProductModalOpen && editingProduct && (
         <div 
-          className="fixed inset-0 z-50 bg-tapsh-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
           onClick={() => setIsProductModalOpen(false)}
         >
           <div 
-            className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] flex flex-col justify-between shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+            className="bg-[#18181B] text-neutral-100 rounded-3xl p-6 sm:p-8 max-w-lg w-full max-h-[92vh] flex flex-col justify-between shadow-2xl relative border border-neutral-800 animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-tapsh-charcoal/20 pb-4 mb-6 shrink-0">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-4 mb-5 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-tapsh-black text-white flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-neutral-800 text-white flex items-center justify-center">
                   <Package className="w-4 h-4 text-tapsh-soft-green" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-tapsh-black">
-                    {editingProduct.name ? `Edit "${editingProduct.name}"` : "Add New Product"}
+                  <h3 className="text-lg font-bold text-white">
+                    {editingProduct.name ? `Edit "${editingProduct.name}"` : "Add Product"}
                   </h3>
-                  <p className="text-xs text-tapsh-charcoal">
-                    Changes will be saved to Firebase and instantly published to the website.
+                  <p className="text-[11px] text-neutral-400">
+                    Product catalog item saved to Firebase & WhatsApp quote
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={() => setIsProductModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-tapsh-pale-blue/60 hover:bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Modal Form Scrollable Area */}
-            <form onSubmit={handleSaveProduct} className="space-y-6 overflow-y-auto pr-1 flex-1">
+            <form onSubmit={handleSaveProduct} className="space-y-5 overflow-y-auto pr-1 flex-1">
               
-              {/* Product Title & Slug */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
-                    Product Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. TAPSH Smart Stand"
-                    value={editingProduct.name || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const slug = val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-                      setEditingProduct((prev) => ({ 
-                        ...prev, 
-                        name: val,
-                        slug: prev?.slug && prev.slug !== "" ? prev.slug : slug 
-                      }));
-                    }}
-                    className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
-                    URL Slug
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. tapsh-smart-stand"
-                    value={editingProduct.slug || ""}
-                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, slug: e.target.value }))}
-                    className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-mono text-tapsh-black focus:outline-none focus:border-tapsh-soft-green"
-                  />
-                </div>
-              </div>
-
-              {/* Tagline / Subtitle */}
+              {/* Top: Add Images Box (Square Camera button matching Referral Image 2) */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
-                  Tagline / Pitch
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Turn customer interactions into instant 5-star reviews."
-                  value={editingProduct.tagline || ""}
-                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, tagline: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-tapsh-soft-green"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
-                  Full Description *
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  placeholder="Explain what the product accomplishes for physical businesses..."
-                  value={editingProduct.description || ""}
-                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-tapsh-soft-green"
-                />
-              </div>
-
-              {/* Key Benefit */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-black mb-1.5">
-                  Key Benefit (Highlighted on Website Card) *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Increase your Google & TripAdvisor ratings effortlessly."
-                  value={editingProduct.benefit || ""}
-                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, benefit: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:border-tapsh-soft-green"
-                />
-              </div>
-
-              {/* Category, Badge, Status, Icon */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
-                    Category
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Reviews"
-                    value={editingProduct.category || ""}
-                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
-                    Ribbon Badge
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Popular"
-                    value={editingProduct.badge || ""}
-                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, badge: e.target.value }))}
-                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
-                    Fallback Icon
-                  </label>
-                  <select
-                    value={editingProduct.iconType || "sparkles"}
-                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, iconType: e.target.value as any }))}
-                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
-                  >
-                    <option value="star">Star (Review)</option>
-                    <option value="wifi">Wi-Fi</option>
-                    <option value="message">WhatsApp/Chat</option>
-                    <option value="camera">Instagram/Camera</option>
-                    <option value="globe">Globe/Website</option>
-                    <option value="grid">Grid (All-in-One)</option>
-                    <option value="sparkles">Sparkles (Custom)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-tapsh-black mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={editingProduct.status || "ACTIVE"}
-                    onChange={(e) => setEditingProduct((prev) => ({ ...prev, status: e.target.value as any }))}
-                    className="w-full px-3 py-2 bg-tapsh-pale-blue/30 border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
-                  >
-                    <option value="ACTIVE">Active (Live)</option>
-                    <option value="DRAFT">Draft (Hidden)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* ---------------------------------------------------- */}
-              {/* MULTIPLE IMAGES SELECTOR & GALLERY MANAGER */}
-              {/* ---------------------------------------------------- */}
-              <div className="bg-[#FAF8F5] p-5 rounded-2xl border border-tapsh-charcoal/20 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-sm text-tapsh-black flex items-center gap-1.5">
-                      <ImageIcon className="w-4 h-4 text-tapsh-soft-green" /> Product Showcase Images (Slideshow)
-                    </h4>
-                    <p className="text-[11px] text-tapsh-charcoal">
-                      Select multiple photos. These will auto-play as a slideshow on the website card and product page.
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-tapsh-black text-white">
-                    {editingProduct.images?.length || 0} Images
-                  </span>
-                </div>
-
                 <input
                   type="file"
                   ref={productFileInputRef}
@@ -1293,105 +1172,196 @@ export default function AdminSettingsPage() {
                   className="hidden"
                 />
 
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex items-center gap-3 overflow-x-auto pb-2">
+                  {/* Square "Add images" button */}
                   <button
                     type="button"
                     onClick={() => productFileInputRef.current?.click()}
                     disabled={isUploadingProductImages}
-                    className="flex-1 py-3 px-4 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="w-24 h-24 rounded-2xl bg-[#27272A] hover:bg-[#323236] border border-neutral-700 hover:border-neutral-500 text-neutral-300 hover:text-white flex flex-col items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-sm group"
                   >
                     {isUploadingProductImages ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-tapsh-soft-green" />
-                        <span>Uploading & Processing...</span>
+                        <RefreshCw className="w-5 h-5 text-tapsh-soft-green animate-spin" />
+                        <span className="text-[10px] font-semibold text-neutral-300">Uploading</span>
                       </>
                     ) : (
                       <>
-                        <Upload className="w-4 h-4" />
-                        <span>Choose Multiple Image Files</span>
+                        <Camera className="w-6 h-6 text-neutral-300 group-hover:scale-110 transition-transform" />
+                        <span className="text-[11px] font-semibold">Add images</span>
                       </>
                     )}
                   </button>
 
-                  <div className="flex flex-1 gap-2">
-                    <input
-                      type="url"
-                      placeholder="Or paste direct image URL..."
-                      value={productUrlInput}
-                      onChange={(e) => setProductUrlInput(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddProductImageUrl}
-                      disabled={!productUrlInput.trim()}
-                      className="px-3 py-2 bg-tapsh-pale-blue text-tapsh-black rounded-xl text-xs font-bold border border-tapsh-charcoal/20 hover:bg-tapsh-soft-green hover:text-white transition-colors disabled:opacity-40 cursor-pointer"
-                    >
-                      Add URL
-                    </button>
-                  </div>
-                </div>
-
-                {/* Image Thumbnails Gallery */}
-                {editingProduct.images && editingProduct.images.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                    {editingProduct.images.map((imgUrl, idx) => (
+                  {/* Uploaded / Selected images thumbnails */}
+                  {editingProduct.images && editingProduct.images.length > 0 && (
+                    editingProduct.images.map((imgUrl, idx) => (
                       <div
                         key={idx}
-                        className="relative aspect-square rounded-2xl bg-white border border-tapsh-charcoal/20 overflow-hidden group/img shadow-xs flex items-center justify-center p-2"
+                        className="relative w-24 h-24 rounded-2xl bg-black/60 border border-neutral-700 overflow-hidden shrink-0 group/img flex items-center justify-center p-1.5"
                       >
                         <img
                           src={imgUrl}
-                          alt={`Product photo ${idx + 1}`}
+                          alt={`Product thumbnail ${idx + 1}`}
                           className="max-h-full max-w-full object-contain"
                         />
 
                         {idx === 0 ? (
-                          <span className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-tapsh-soft-green text-white text-[9px] font-bold uppercase shadow-sm">
+                          <span className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-tapsh-soft-green text-white text-[8px] font-bold uppercase shadow-sm">
                             Cover
                           </span>
                         ) : (
                           <button
                             type="button"
                             onClick={() => handleMakeCoverImage(idx)}
-                            className="absolute top-1.5 left-1.5 z-10 px-1.5 py-0.5 rounded-md bg-black/60 hover:bg-tapsh-soft-green text-white text-[9px] font-bold opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer"
+                            className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-black/70 hover:bg-tapsh-soft-green text-white text-[8px] font-bold opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer"
                           >
-                            Set Cover
+                            Cover
                           </button>
                         )}
 
                         <button
                           type="button"
                           onClick={() => handleRemoveProductImage(idx)}
-                          className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity shadow-md cursor-pointer"
+                          className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity shadow-md cursor-pointer"
                           title="Remove image"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-6 rounded-xl border border-dashed border-tapsh-charcoal/30 text-center text-tapsh-charcoal text-xs">
-                    No custom images added yet. The product will use its default emblem until photos are uploaded.
-                  </div>
-                )}
+                    ))
+                  )}
+                </div>
+
+                {/* Optional quick image URL row */}
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="url"
+                    placeholder="Or paste direct image URL..."
+                    value={productUrlInput}
+                    onChange={(e) => setProductUrlInput(e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-[#27272A] border border-neutral-700 rounded-xl text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-tapsh-soft-green"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddProductImageUrl}
+                    disabled={!productUrlInput.trim()}
+                    className="px-3 py-1.5 bg-neutral-800 text-neutral-300 hover:text-white rounded-xl text-xs font-semibold border border-neutral-700 hover:border-neutral-500 transition-colors disabled:opacity-40 cursor-pointer"
+                  >
+                    Add URL
+                  </button>
+                </div>
+              </div>
+
+              {/* Field 1: Name */}
+              <div className="pt-2">
+                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter product name"
+                  value={editingProduct.name || ""}
+                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-transparent border-b border-neutral-700 focus:border-white py-2 text-sm text-white placeholder:text-neutral-600 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Field 2: Price ₹ (Recommended) */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                  Price ₹ (Recommended)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="e.g. 1999"
+                  value={editingProduct.price !== undefined && editingProduct.price !== null ? editingProduct.price : ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? undefined : Number(e.target.value);
+                    setEditingProduct((prev) => ({ ...prev, price: val }));
+                  }}
+                  className="w-full bg-transparent border-b border-neutral-700 focus:border-white py-2 text-sm text-white placeholder:text-neutral-600 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Field 3: Sale price ₹ */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                  Sale price ₹
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="e.g. 1499"
+                  value={editingProduct.salePrice !== undefined && editingProduct.salePrice !== null ? editingProduct.salePrice : ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? undefined : Number(e.target.value);
+                    setEditingProduct((prev) => ({ ...prev, salePrice: val }));
+                  }}
+                  className="w-full bg-transparent border-b border-neutral-700 focus:border-white py-2 text-sm text-white placeholder:text-neutral-600 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Field 4: Description (optional) */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                  Description (optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Enter product description..."
+                  value={editingProduct.description || ""}
+                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, description: e.target.value }))}
+                  className="w-full bg-transparent border-b border-neutral-700 focus:border-white py-2 text-sm text-white placeholder:text-neutral-600 outline-none transition-colors resize-none"
+                />
+              </div>
+
+              {/* Field 5: Link (optional) */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                  Link (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="WhatsApp Catalog link or external URL"
+                  value={editingProduct.link || ""}
+                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, link: e.target.value }))}
+                  className="w-full bg-transparent border-b border-neutral-700 focus:border-white py-2 text-sm text-white placeholder:text-neutral-600 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Field 6: Item code (optional) */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1">
+                  Item code (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. TAP-REV-01"
+                  value={editingProduct.itemCode || ""}
+                  onChange={(e) => setEditingProduct((prev) => ({ ...prev, itemCode: e.target.value }))}
+                  className="w-full bg-transparent border-b border-neutral-700 focus:border-white py-2 text-sm text-white placeholder:text-neutral-600 outline-none transition-colors"
+                />
               </div>
 
               {/* Modal Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-tapsh-charcoal/20 shrink-0">
+              <div className="flex items-center justify-end gap-3 pt-5 border-t border-neutral-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsProductModalOpen(false)}
                   disabled={isSavingProduct}
-                  className="px-5 py-2.5 rounded-xl border border-tapsh-charcoal/20 text-xs font-bold text-tapsh-charcoal hover:bg-tapsh-pale-blue transition-colors cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl border border-neutral-700 text-xs font-bold text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingProduct}
-                  className="px-6 py-2.5 bg-tapsh-soft-green hover:brightness-105 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="px-6 py-2.5 bg-tapsh-soft-green hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isSavingProduct ? (
                     <>

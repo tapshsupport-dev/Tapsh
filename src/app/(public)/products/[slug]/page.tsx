@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Smartphone, Zap, Settings, CheckCircle2, Building2, MessageCircle } from "lucide-react";
+import { ArrowRight, Smartphone, Zap, Settings, CheckCircle2, Building2, MessageCircle, ExternalLink } from "lucide-react";
 import ProductSlideshow from "@/components/products/ProductSlideshow";
-import { DEFAULT_PRODUCTS, getLocalCachedProducts, ProductItem } from "@/lib/productsService";
+import { 
+  DEFAULT_PRODUCTS, 
+  getLocalCachedProducts, 
+  ProductItem,
+  getProductWhatsAppQuoteUrl 
+} from "@/lib/productsService";
 
 const FALLBACK_SPECS: Record<string, any> = {
   "tapsh-review": {
@@ -47,8 +52,12 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     id: slug,
     slug: slug,
     name: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-    tagline: "Bridge the gap between your physical space and digital presence.",
+    price: undefined,
+    salePrice: undefined,
     description: "A premium NFC and QR smart touchpoint tailored for modern businesses.",
+    link: "",
+    itemCode: "",
+    tagline: "Bridge the gap between your physical space and digital presence.",
     benefit: "Connect customers instantly with a single tap.",
     images: [],
     iconType: "sparkles" as const,
@@ -74,9 +83,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     whoIsItFor: ["Hospitality & Resorts", "Restaurants & Cafés", "Retail & Salons", "Professional Offices"],
   };
 
-  const waOrderUrl = `https://wa.me/917977469926?text=${encodeURIComponent(
-    `Hello TAPSH, I would like to order or get a quote for *${product.name}*.`
-  )}`;
+  const waQuoteUrl = getProductWhatsAppQuoteUrl(product);
+  const hasDiscount = Boolean(product.price && product.salePrice && product.price > product.salePrice);
+  const discountPercent = hasDiscount 
+    ? Math.round(((product.price! - product.salePrice!) / product.price!) * 100) 
+    : 0;
 
   return (
     <div className="pt-20 min-h-screen bg-white text-tapsh-black">
@@ -102,27 +113,71 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 &larr; Back to All Products
               </Link>
               
-              {product.category && (
-                <div className="mb-2">
-                  <span className="text-xs uppercase tracking-widest font-bold text-tapsh-taupe">
-                    {product.category}
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                {product.itemCode && (
+                  <span className="px-3 py-1 rounded-full bg-tapsh-black text-tapsh-pale-blue text-xs font-mono font-bold tracking-wider shadow-sm">
+                    {product.itemCode}
                   </span>
-                </div>
-              )}
+                )}
+                {product.badge && (
+                  <span className="px-3 py-1 rounded-full bg-tapsh-soft-green text-white text-xs font-bold uppercase tracking-wider shadow-sm">
+                    {product.badge}
+                  </span>
+                )}
+                {hasDiscount && (
+                  <span className="px-2.5 py-1 rounded-full bg-red-500 text-white text-xs font-bold uppercase shadow-sm">
+                    {discountPercent}% OFF
+                  </span>
+                )}
+              </div>
 
               <h1 className="text-4xl md:text-5xl font-bold text-tapsh-black mb-4">
                 {product.name}
               </h1>
+
+              {/* Price Row */}
+              {(product.salePrice || product.price) && (
+                <div className="flex items-baseline gap-3 mb-5">
+                  {product.salePrice && product.salePrice > 0 ? (
+                    <>
+                      <span className="text-3xl sm:text-4xl font-bold text-tapsh-soft-green">
+                        ₹{product.salePrice.toLocaleString("en-IN")}
+                      </span>
+                      {product.price && product.price > product.salePrice && (
+                        <span className="text-lg text-tapsh-charcoal line-through font-medium">
+                          ₹{product.price.toLocaleString("en-IN")}
+                        </span>
+                      )}
+                    </>
+                  ) : product.price && product.price > 0 ? (
+                    <span className="text-3xl sm:text-4xl font-bold text-tapsh-black">
+                      ₹{product.price.toLocaleString("en-IN")}
+                    </span>
+                  ) : null}
+                </div>
+              )}
               
-              {product.tagline && (
-                <p className="text-xl text-tapsh-charcoal font-medium mb-6">
-                  {product.tagline}
+              {product.description && (
+                <p className="text-base sm:text-lg text-tapsh-black/80 mb-6 leading-relaxed">
+                  {product.description}
                 </p>
               )}
 
-              <p className="text-base sm:text-lg text-tapsh-black/80 mb-8 leading-relaxed">
-                {product.description}
-              </p>
+              {/* WhatsApp Catalog Link Pill if configured */}
+              {product.link && (
+                <div className="mb-6">
+                  <a
+                    href={product.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-sm font-semibold border border-emerald-200 transition-colors shadow-xs"
+                  >
+                    <MessageCircle className="w-4 h-4 text-emerald-600" />
+                    <span>View in WhatsApp Catalog</span>
+                    <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-70" />
+                  </a>
+                </div>
+              )}
 
               {product.benefit && (
                 <div className="bg-white p-4 rounded-2xl border border-tapsh-charcoal/20 mb-8 shadow-xs">
@@ -137,13 +192,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <a 
-                  href={waOrderUrl}
+                  href={waQuoteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-8 py-4 bg-tapsh-soft-green text-white rounded-xl font-bold hover:brightness-105 transition-all text-center flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                  className="px-8 py-4 bg-tapsh-soft-green text-white rounded-xl font-bold hover:brightness-105 transition-all text-center flex items-center justify-center gap-2 shadow-lg active:scale-95 cursor-pointer"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  Order on WhatsApp
+                  Raise a Quote on WhatsApp
                 </a>
                 <Link 
                   href="/contact"

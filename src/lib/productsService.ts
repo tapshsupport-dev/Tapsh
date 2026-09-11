@@ -9,10 +9,15 @@ export interface ProductItem {
   id: string;
   slug: string;
   name: string;
-  tagline: string;
-  description: string;
-  benefit: string;
+  price?: number; // Price ₹ (Recommended)
+  salePrice?: number; // Sale price ₹
+  description?: string; // Description (optional)
+  link?: string; // Link (optional, e.g. WhatsApp Catalog Link)
+  itemCode?: string; // Item code (optional)
   images: string[]; // Multiple image URLs or compressed Data URLs
+  // Optional / backwards-compatibility fields
+  tagline?: string;
+  benefit?: string;
   iconType?: "star" | "wifi" | "message" | "camera" | "globe" | "grid" | "sparkles";
   category?: string;
   badge?: string;
@@ -20,6 +25,38 @@ export interface ProductItem {
   status: "ACTIVE" | "DRAFT";
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Generates direct WhatsApp quote link sending message to TAPSH Business WhatsApp with selected product details.
+ */
+export function getProductWhatsAppQuoteUrl(product: ProductItem): string {
+  const businessNumber = "917977469926";
+  const lines: string[] = [
+    `Hello TAPSH, I would like to raise a quote for:`,
+    `• *Product:* ${product.name}`,
+  ];
+
+  if (product.itemCode && product.itemCode.trim()) {
+    lines.push(`• *Item Code:* ${product.itemCode.trim()}`);
+  }
+
+  if (product.salePrice && product.salePrice > 0) {
+    if (product.price && product.price > product.salePrice) {
+      lines.push(`• *Price:* ₹${product.salePrice.toLocaleString("en-IN")} (Regular: ₹${product.price.toLocaleString("en-IN")})`);
+    } else {
+      lines.push(`• *Price:* ₹${product.salePrice.toLocaleString("en-IN")}`);
+    }
+  } else if (product.price && product.price > 0) {
+    lines.push(`• *Price:* ₹${product.price.toLocaleString("en-IN")}`);
+  }
+
+  if (product.link && product.link.trim()) {
+    lines.push(`• *WhatsApp Catalog Link:* ${product.link.trim()}`);
+  }
+
+  lines.push(`\nPlease share commercial quotation, availability, and delivery options.`);
+  return `https://wa.me/${businessNumber}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
 
 const PRODUCTS_COLLECTION = "site_products";
@@ -30,8 +67,12 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     id: "prod-review",
     slug: "tapsh-review",
     name: "TAPSH Review",
-    tagline: "Make it effortless for customers to leave 5-star reviews.",
+    price: 1999,
+    salePrice: 1499,
     description: "Capture 5-star Google and TripAdvisor reviews while your customers are on-premises and engaged.",
+    link: "",
+    itemCode: "TAP-REV-01",
+    tagline: "Make it effortless for customers to leave 5-star reviews.",
     benefit: "Increase your Google & TripAdvisor ratings instantly.",
     images: [],
     iconType: "star",
@@ -51,8 +92,12 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     id: "prod-wifi",
     slug: "tapsh-wifi",
     name: "TAPSH Wi-Fi",
-    tagline: "Connect guests to your network with a single tap.",
+    price: 1499,
+    salePrice: 999,
     description: "No more printing complex passwords on paper menus or repeating Wi-Fi credentials all day.",
+    link: "",
+    itemCode: "TAP-WIFI-01",
+    tagline: "Connect guests to your network with a single tap.",
     benefit: "No more printing complex passwords.",
     images: [],
     iconType: "wifi",
@@ -72,8 +117,12 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     id: "prod-whatsapp",
     slug: "tapsh-whatsapp",
     name: "TAPSH WhatsApp",
-    tagline: "Direct customers straight to your WhatsApp business chat.",
+    price: 1499,
+    salePrice: 999,
     description: "Connect customers straight into your WhatsApp channel for instant support, bookings, or inquiries.",
+    link: "",
+    itemCode: "TAP-WA-01",
+    tagline: "Direct customers straight to your WhatsApp business chat.",
     benefit: "Capture leads and provide instant support.",
     images: [],
     iconType: "message",
@@ -93,8 +142,12 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     id: "prod-instagram",
     slug: "tapsh-instagram",
     name: "TAPSH Instagram",
-    tagline: "Grow your social following directly from your physical space.",
+    price: 1499,
+    salePrice: 999,
     description: "Transform your foot traffic into loyal online followers and social engagement effortlessly.",
+    link: "",
+    itemCode: "TAP-IG-01",
+    tagline: "Grow your social following directly from your physical space.",
     benefit: "Turn offline visitors into online followers.",
     images: [],
     iconType: "camera",
@@ -114,8 +167,12 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     id: "prod-website",
     slug: "tapsh-website",
     name: "TAPSH Website",
-    tagline: "Drive foot traffic to your online menus, booking pages, or store.",
+    price: 1799,
+    salePrice: 1299,
     description: "Seamlessly bridge your physical location to your online menu, booking engine, or website.",
+    link: "",
+    itemCode: "TAP-WEB-01",
+    tagline: "Drive foot traffic to your online menus, booking pages, or store.",
     benefit: "Seamlessly bridge physical to digital.",
     images: [],
     iconType: "globe",
@@ -135,8 +192,12 @@ export const DEFAULT_PRODUCTS: ProductItem[] = [
     id: "prod-all-in-one",
     slug: "tapsh-all-in-one",
     name: "TAPSH All-in-One",
-    tagline: "The ultimate solution powered by TAPSH Hub.",
+    price: 2499,
+    salePrice: 1999,
     description: "One single smart touchpoint that presents your custom micro-landing page with all your links.",
+    link: "",
+    itemCode: "TAP-AIO-01",
+    tagline: "The ultimate solution powered by TAPSH Hub.",
     benefit: "One tap opens a custom menu of all your digital links.",
     images: [],
     iconType: "grid",
@@ -164,7 +225,14 @@ export function getLocalCachedProducts(): ProductItem[] {
       return DEFAULT_PRODUCTS;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item: ProductItem) => {
+      const def = DEFAULT_PRODUCTS.find((p) => p.id === item.id || p.slug === item.slug);
+      return {
+        ...def,
+        ...item,
+      };
+    });
   } catch (err) {
     console.warn("Failed to read local products cache:", err);
     return [];
@@ -199,10 +267,15 @@ export function subscribeToProducts(
       (snapshot) => {
         // Map actual documents live in Firestore
         // If products are deleted by the admin, snapshot immediately reflects that deletion across the web
-        const items = snapshot.docs.map((d) => ({
-          ...d.data(),
-          id: d.id,
-        })) as ProductItem[];
+        const items = snapshot.docs.map((d) => {
+          const data = d.data() as ProductItem;
+          const def = DEFAULT_PRODUCTS.find((p) => p.id === d.id || p.slug === data.slug);
+          return {
+            ...def,
+            ...data,
+            id: d.id,
+          };
+        }) as ProductItem[];
         setLocalCachedProducts(items);
         callback(items);
       },
@@ -264,10 +337,14 @@ export async function saveProduct(product: Partial<ProductItem>): Promise<Produc
     id,
     slug,
     name: product.name || "Untitled TAPSH Product",
-    tagline: product.tagline || "",
+    price: product.price !== undefined && product.price !== null && !isNaN(Number(product.price)) ? Number(product.price) : undefined,
+    salePrice: product.salePrice !== undefined && product.salePrice !== null && !isNaN(Number(product.salePrice)) ? Number(product.salePrice) : undefined,
     description: product.description || "",
-    benefit: product.benefit || "",
+    link: product.link || "",
+    itemCode: product.itemCode || "",
     images: Array.isArray(product.images) ? product.images : [],
+    tagline: product.tagline || "",
+    benefit: product.benefit || "",
     iconType: product.iconType || "sparkles",
     category: product.category || "General",
     badge: product.badge || "",

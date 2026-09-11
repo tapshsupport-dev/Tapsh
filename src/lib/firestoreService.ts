@@ -406,8 +406,14 @@ export async function getHubBySlug(slug: string): Promise<Hub | null> {
     const q = query(collection(db, HUBS_COLLECTION), where("slug", "==", slug));
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
-      const docSnap = snapshot.docs[0];
-      return { id: docSnap.id, ...docSnap.data() } as Hub;
+      // Sort all matching documents by latest updatedAt or createdAt
+      const docs = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Hub));
+      docs.sort((a, b) => {
+        const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+      return docs[0];
     }
   } catch (error: any) {
     if (error?.code === "permission-denied") {
@@ -415,7 +421,16 @@ export async function getHubBySlug(slug: string): Promise<Hub | null> {
     }
   }
   const local = getLocalHubs();
-  return local.find(h => h.slug === slug) || null;
+  const matching = local.filter(h => h.slug === slug);
+  if (matching.length > 0) {
+    matching.sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+    return matching[0];
+  }
+  return null;
 }
 
 export async function getHubByCustomerId(customerId: string): Promise<Hub | null> {
@@ -423,8 +438,13 @@ export async function getHubByCustomerId(customerId: string): Promise<Hub | null
     const q = query(collection(db, HUBS_COLLECTION), where("customerId", "==", customerId));
     const snapshot = await getDocs(q);
     if (!snapshot.empty) {
-      const docSnap = snapshot.docs[0];
-      return { id: docSnap.id, ...docSnap.data() } as Hub;
+      const docs = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Hub));
+      docs.sort((a, b) => {
+        const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+      return docs[0];
     }
   } catch (error: any) {
     if (error?.code === "permission-denied") {
@@ -432,17 +452,30 @@ export async function getHubByCustomerId(customerId: string): Promise<Hub | null
     }
   }
   const local = getLocalHubs();
-  return local.find(h => h.customerId === customerId) || null;
+  const matching = local.filter(h => h.customerId === customerId);
+  if (matching.length > 0) {
+    matching.sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+    return matching[0];
+  }
+  return null;
 }
 
 export async function createHub(data: Partial<Hub>): Promise<Hub> {
-  const id = data.id || `hub_${Date.now()}`;
-  const now = new Date().toISOString();
   const slug = data.slug || (data.businessName || "hub").toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const now = new Date().toISOString();
+
+  // If a hub already exists for this slug or customerId, reuse its ID to prevent duplicate orphaned docs
+  const current = getLocalHubs();
+  const existingLocal = current.find(h => (data.customerId && h.customerId === data.customerId) || h.slug === slug);
+  const id = data.id || existingLocal?.id || `hub_${Date.now()}`;
 
   const hub: Hub = {
     id,
-    customerId: data.customerId || `cus_${Date.now()}`,
+    customerId: data.customerId || existingLocal?.customerId || `cus_${Date.now()}`,
     slug,
     businessName: data.businessName || "TAPSH Hub",
     businessType: data.businessType || "Other",
@@ -455,12 +488,12 @@ export async function createHub(data: Partial<Hub>): Promise<Hub> {
     whatsapp: data.whatsapp || "",
     status: data.status || "ACTIVE",
     links: data.links || [],
-    createdAt: data.createdAt || now
+    createdAt: data.createdAt || existingLocal?.createdAt || now,
+    updatedAt: now
   };
 
   // 1. Immediately persist locally & in memory
-  const current = getLocalHubs();
-  const updated = [hub, ...current.filter(h => h.id !== id)];
+  const updated = [hub, ...current.filter(h => h.id !== id && h.slug !== slug)];
   saveLocalHubs(updated);
 
   const mIdx = mockHubs.findIndex(h => h.id === id || h.slug === slug);
@@ -495,27 +528,45 @@ export async function createHub(data: Partial<Hub>): Promise<Hub> {
 }
 
 export async function updateHub(id: string, data: Partial<Hub>): Promise<void> {
+  const now = new Date().toISOString();
+  const payload = { ...data, updatedAt: now };
+
   // 1. Update in local storage
   const current = getLocalHubs();
-  const exists = current.some(h => h.id === id || (data.slug && h.slug === data.slug));
+  const exists = current.some(h => h.id === id || (payload.slug && h.slug === payload.slug));
   const updated = exists
-    ? current.map(h => (h.id === id || (data.slug && h.slug === data.slug)) ? { ...h, ...data } : h)
-    : [{ id, ...data } as Hub, ...current];
+    ? current.map(h => (h.id === id || (payload.slug && h.slug === payload.slug)) ? { ...h, ...payload } : h)
+    : [{ id, ...payload } as Hub, ...current];
   saveLocalHubs(updated);
 
   // 2. Also update in-memory mockHubs so server components or fallbacks have it immediately
-  const mIndex = mockHubs.findIndex(h => h.id === id || (data.slug && h.slug === data.slug));
+  const mIndex = mockHubs.findIndex(h => h.id === id || (payload.slug && h.slug === payload.slug));
   if (mIndex !== -1) {
-    mockHubs[mIndex] = { ...mockHubs[mIndex], ...data };
-  } else if (data.slug) {
-    mockHubs.unshift({ id, ...data } as Hub);
+    mockHubs[mIndex] = { ...mockHubs[mIndex], ...payload };
+  } else if (payload.slug) {
+    mockHubs.unshift({ id, ...payload } as Hub);
   }
 
   // 3. Upsert into Firestore using setDoc with merge: true so it never throws "No document to update"
   try {
     const docRef = doc(db, HUBS_COLLECTION, id);
-    await setDoc(docRef, { ...data }, { merge: true });
+    await setDoc(docRef, payload, { merge: true });
     notifyPermissionDenied(false);
+
+    // If slug is provided, also sync any duplicate docs that might exist in Firestore for this slug
+    if (payload.slug) {
+      const q = query(collection(db, HUBS_COLLECTION), where("slug", "==", payload.slug));
+      const snapshot = await getDocs(q);
+      snapshot.forEach(async (docSnap) => {
+        if (docSnap.id !== id) {
+          try {
+            await setDoc(docSnap.ref, payload, { merge: true });
+          } catch {
+            // ignore
+          }
+        }
+      });
+    }
   } catch (err: any) {
     if (err?.code === "permission-denied") {
       notifyPermissionDenied(true);

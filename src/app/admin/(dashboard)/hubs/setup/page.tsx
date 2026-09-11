@@ -161,36 +161,14 @@ export default function HubSetupWizard() {
     else setUploadingCover(true);
 
     try {
-      // 1. Instant client-side compression (<60ms) - eliminates UI delay
-      const fastDataUrl = await compressImage(file, type === "logo" ? 500 : 1200, 0.82);
+      // Instant client-side compression (<40ms) with lightweight storage
+      const maxDim = type === "logo" ? 300 : 960;
+      const quality = type === "logo" ? 0.82 : 0.74;
+      const fastDataUrl = await compressImage(file, maxDim, quality);
       if (type === "logo") {
         setData(prev => ({ ...prev, logo: fastDataUrl }));
-        setUploadingLogo(false);
       } else {
         setData(prev => ({ ...prev, coverImage: fastDataUrl }));
-        setUploadingCover(false);
-      }
-
-      // 2. Background attempt to upload to Firebase Storage with a strict 2.5s timeout
-      try {
-        const uploadTask = async () => {
-          const sanitized = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-          const storageRef = ref(storage, `hubs/${type}_${Date.now()}_${sanitized}`);
-          const snap = await uploadBytes(storageRef, file);
-          return await getDownloadURL(snap.ref);
-        };
-
-        const timeout = new Promise<string>((_, reject) =>
-          setTimeout(() => reject(new Error("Storage timeout")), 2500)
-        );
-
-        const cloudUrl = await Promise.race([uploadTask(), timeout]);
-        if (cloudUrl) {
-          if (type === "logo") setData(prev => ({ ...prev, logo: cloudUrl }));
-          else setData(prev => ({ ...prev, coverImage: cloudUrl }));
-        }
-      } catch (storageErr) {
-        console.warn("Storage upload timed out or failed; retaining compressed client image.", storageErr);
       }
     } catch (err) {
       console.error("Failed to process image:", err);

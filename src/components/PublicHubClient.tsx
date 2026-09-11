@@ -27,18 +27,35 @@ export default function PublicHubClient({ slug, initialHub }: PublicHubClientPro
 
     syncFreshData();
 
-    // 2. Listen for real-time updates when admin saves changes in the dashboard
+    // 2. Listen for custom real-time events dispatched within the same tab
     const handleHubsUpdated = (e: any) => {
       const list = e.detail || [];
-      const updated = list.find((h: any) => h.slug === slug || h.id === hubData?.id);
+      const updated = list.find((h: any) => h.slug === slug || (hubData?.id && h.id === hubData.id));
       if (updated) {
         setHubData(updated);
       }
     };
 
+    // 3. Listen for cross-tab storage updates when admin saves from another browser tab
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "tapsh_hubs" && e.newValue) {
+        try {
+          const list = JSON.parse(e.newValue);
+          const updated = list.find((h: any) => h.slug === slug || (hubData?.id && h.id === hubData.id));
+          if (updated) {
+            setHubData(updated);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    };
+
     window.addEventListener("tapsh_hubs_updated", handleHubsUpdated);
+    window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener("tapsh_hubs_updated", handleHubsUpdated);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [slug, hubData?.id]);
 

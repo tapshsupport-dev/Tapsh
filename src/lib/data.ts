@@ -91,6 +91,7 @@ export type Hub = {
   status: "ACTIVE" | "SUSPENDED" | "CANCELLED";
   links: HubLink[];
   createdAt: string;
+  updatedAt?: string;
 };
 
 // --------------------------------------------------

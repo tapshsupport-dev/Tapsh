@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { 
   LayoutDashboard, Users, Receipt, PlusCircle, 
   Menu, X, ExternalLink, LogOut, ShieldCheck, ChevronRight,
-  Sparkles, History, Settings
+  Sparkles, Settings
 } from "lucide-react";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
 
@@ -52,7 +52,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Customers", href: "/admin/customers", icon: Users, exact: false },
     { name: "Hubs", href: "/admin/hubs/setup", icon: PlusCircle, exact: false },
     { name: "Invoices", href: "/admin/invoices", icon: Receipt, exact: false },
-    { name: "History", href: "/admin/history", icon: History, exact: false },
     { name: "Settings", href: "/admin/settings", icon: Settings, exact: false },
   ];
 

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { 
   Users, LayoutGrid, Receipt, IndianRupee, ArrowUpRight, 
   ExternalLink, Sparkles, Clock, CheckCircle2, ChevronRight,
-  TrendingUp, Plus
+  TrendingUp, Plus, Settings
 } from "lucide-react";
 import { 
   mockAuditLogs, 
@@ -192,11 +192,11 @@ export default function AdminDashboardPage() {
             <span className="text-xs font-bold text-tapsh-black">Invoices</span>
           </Link>
           <Link 
-            href="/admin/history"
+            href="/admin/settings"
             className="p-3.5 rounded-2xl bg-tapsh-pale-blue/30 border border-tapsh-charcoal/15 hover:border-tapsh-soft-green hover:bg-tapsh-pale-blue/50 flex flex-col items-center justify-center text-center transition-all active:scale-95 group"
           >
-            <Clock className="w-5 h-5 text-emerald-600 mb-1.5 group-hover:scale-110 transition-transform" />
-            <span className="text-xs font-bold text-tapsh-black">History</span>
+            <Settings className="w-5 h-5 text-tapsh-charcoal mb-1.5 group-hover:scale-110 transition-transform" />
+            <span className="text-xs font-bold text-tapsh-black">Settings</span>
           </Link>
         </div>
       </div>

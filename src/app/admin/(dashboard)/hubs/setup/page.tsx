@@ -6,13 +6,16 @@ import {
   Building2, Coffee, Scissors, PlusCircle, ShoppingBag, Briefcase, 
   ChevronDown, ChevronUp, Copy, QrCode, Download, ExternalLink, User,
   Sparkles, ArrowLeft, ArrowRight, Loader2,
-  Lock, Zap, Wifi
+  Lock, Zap, Wifi, Image as ImageIcon
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import HubView from "@/components/HubView";
 import { getTouchpointIcon, resolveTouchpointUrl } from "@/components/TouchpointIcons";
 import Link from "next/link";
 import { createCustomer, createHub } from "@/lib/firestoreService";
+import { compressImage } from "@/lib/assetsService";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const BUSINESS_TYPES = [
   { id: "Resort / Hotel", icon: Building2 },
@@ -148,6 +151,39 @@ export default function HubSetupWizard() {
   // Wi-Fi Configuration Screen State (Screenshots 2, 3, 4)
   const [editingWifiAuth, setEditingWifiAuth] = useState(false);
   const [editingWifiEncryption, setEditingWifiEncryption] = useState(false);
+
+  // Shop Logo & Shop Backdrop Upload States
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  const handleImageUpload = async (file: File, type: "logo" | "cover") => {
+    if (type === "logo") setUploadingLogo(true);
+    else setUploadingCover(true);
+
+    try {
+      let finalUrl = "";
+      try {
+        const sanitized = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+        const storageRef = ref(storage, `hubs/${type}_${Date.now()}_${sanitized}`);
+        const snap = await uploadBytes(storageRef, file);
+        finalUrl = await getDownloadURL(snap.ref);
+      } catch (storageErr) {
+        console.warn("Storage upload failed or restricted, falling back to compressed Data URL:", storageErr);
+        finalUrl = await compressImage(file, type === "logo" ? 800 : 1400, 0.85);
+      }
+
+      if (type === "logo") {
+        setData(prev => ({ ...prev, logo: finalUrl }));
+      } else {
+        setData(prev => ({ ...prev, coverImage: finalUrl }));
+      }
+    } catch (err) {
+      console.error("Failed to process image:", err);
+    } finally {
+      if (type === "logo") setUploadingLogo(false);
+      else setUploadingCover(false);
+    }
+  };
 
   // WhatsApp phone number auto-formatting to https://wa.me/...
   const formatWhatsAppUrl = (input: string) => {
@@ -447,6 +483,198 @@ export default function HubSetupWizard() {
           className="w-full px-4 py-3 rounded-2xl border border-tapsh-charcoal/30 bg-[#FAF8F5] text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
           placeholder="Thank you for visiting ♡"
         />
+      </div>
+
+      {/* Visual Branding Assets (Optional) */}
+      <div className="pt-4 border-t border-tapsh-charcoal/15 space-y-4">
+        <div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-tapsh-soft-green" />
+              Branding & Visual Media
+            </label>
+            <span className="text-[11px] font-semibold text-tapsh-soft-green bg-tapsh-soft-green/10 px-2.5 py-0.5 rounded-full border border-tapsh-soft-green/20">
+              Optional
+            </span>
+          </div>
+          <p className="text-xs text-tapsh-charcoal/70 mt-1">
+            Upload your shop logo and backdrop banner to personalize the digital tap experience.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* 1. Shop Logo (Optional) */}
+          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-tapsh-black uppercase tracking-wider">
+                Shop Logo
+              </label>
+              <span className="text-[10px] text-tapsh-charcoal/70 font-medium">Optional</span>
+            </div>
+
+            {data.logo ? (
+              <div className="flex items-center gap-3.5 bg-white p-3 rounded-xl border border-tapsh-charcoal/10 shadow-xs">
+                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-tapsh-soft-green/40 shadow-sm shrink-0 bg-neutral-100 flex items-center justify-center">
+                  <img src={data.logo} alt="Shop Logo" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <p className="text-xs font-bold text-tapsh-black truncate">Logo Uploaded</p>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-bold text-tapsh-soft-green hover:underline cursor-pointer">
+                      Change
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        disabled={uploadingLogo}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, "logo");
+                        }} 
+                      />
+                    </label>
+                    <span className="text-tapsh-charcoal/30">•</span>
+                    <button
+                      type="button"
+                      onClick={() => setData(prev => ({ ...prev, logo: "" }))}
+                      className="text-[11px] font-bold text-red-500 hover:underline cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <label className={`w-full flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                  uploadingLogo ? "border-tapsh-soft-green bg-tapsh-soft-green/5" : "border-tapsh-charcoal/20 hover:border-tapsh-soft-green/60 hover:bg-white bg-white/60"
+                }`}>
+                  {uploadingLogo ? (
+                    <div className="flex flex-col items-center gap-2 text-tapsh-soft-green">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span className="text-xs font-bold">Uploading logo...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-tapsh-soft-green/10 text-tapsh-soft-green flex items-center justify-center mb-1.5">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-tapsh-black">Upload Shop Logo</span>
+                      <span className="text-[10px] text-tapsh-charcoal text-center mt-0.5">Square / Circle (500×500 PNG / JPG)</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    disabled={uploadingLogo}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file, "logo");
+                    }} 
+                  />
+                </label>
+                
+                <input
+                  type="url"
+                  placeholder="Or paste image URL"
+                  value={data.logo}
+                  onChange={(e) => setData(prev => ({ ...prev, logo: e.target.value }))}
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black placeholder-tapsh-charcoal/40 focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 2. Shop Backdrop (Optional) */}
+          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-tapsh-black uppercase tracking-wider">
+                Shop Backdrop
+              </label>
+              <span className="text-[10px] text-tapsh-charcoal/70 font-medium">Optional</span>
+            </div>
+
+            {data.coverImage ? (
+              <div className="space-y-2">
+                <div className="w-full h-24 rounded-xl overflow-hidden border border-tapsh-charcoal/20 shadow-xs relative bg-neutral-900 group">
+                  <img src={data.coverImage} alt="Shop Backdrop" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <label className="px-2.5 py-1 bg-white/90 hover:bg-white text-tapsh-black rounded-lg text-xs font-bold cursor-pointer shadow-xs">
+                      Change
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        disabled={uploadingCover}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, "cover");
+                        }} 
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setData(prev => ({ ...prev, coverImage: "" }))}
+                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer shadow-xs"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-medium text-tapsh-charcoal">Backdrop Banner Attached</span>
+                  <button
+                    type="button"
+                    onClick={() => setData(prev => ({ ...prev, coverImage: "" }))}
+                    className="font-bold text-red-500 hover:underline cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                <label className={`w-full flex flex-col items-center justify-center p-5 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                  uploadingCover ? "border-tapsh-soft-green bg-tapsh-soft-green/5" : "border-tapsh-charcoal/20 hover:border-tapsh-soft-green/60 hover:bg-white bg-white/60"
+                }`}>
+                  {uploadingCover ? (
+                    <div className="flex flex-col items-center gap-2 text-tapsh-soft-green">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span className="text-xs font-bold">Uploading backdrop...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-tapsh-soft-green/10 text-tapsh-soft-green flex items-center justify-center mb-1.5">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-tapsh-black">Upload Shop Backdrop</span>
+                      <span className="text-[10px] text-tapsh-charcoal text-center mt-0.5">Panoramic banner (16:9 1200×675)</span>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    disabled={uploadingCover}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file, "cover");
+                    }} 
+                  />
+                </label>
+                
+                <input
+                  type="url"
+                  placeholder="Or paste backdrop image URL"
+                  value={data.coverImage}
+                  onChange={(e) => setData(prev => ({ ...prev, coverImage: e.target.value }))}
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black placeholder-tapsh-charcoal/40 focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -829,6 +1057,7 @@ export default function HubSetupWizard() {
               businessName: data.businessName || "Business Name",
               description: data.description || "Welcome to our space. Select an option below.",
               greetingMessage: data.greetingMessage,
+              logoUrl: data.logo,
               coverUrl: data.coverImage,
               links: data.links.length > 0 ? data.links : [
                 { id: 1, category: "reviews", title: "Rate Us on Google", url: "#", icon: "google" },
@@ -883,6 +1112,66 @@ export default function HubSetupWizard() {
           <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
             Permanent digital routing is provisioned for <strong className="text-tapsh-black">{createdHub?.businessName}</strong>.
           </p>
+        </div>
+
+        {/* Visual Brand Confirmation Card */}
+        <div className="bg-[#FAF8F5] rounded-3xl border border-tapsh-charcoal/15 overflow-hidden shadow-xs text-left">
+          <div className="w-full h-24 sm:h-28 bg-gradient-to-r from-slate-900 to-tapsh-black relative overflow-hidden">
+            {createdHub?.coverUrl ? (
+              <img 
+                src={createdHub.coverUrl} 
+                alt="Shop Backdrop" 
+                className="w-full h-full object-cover opacity-90"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white/30 text-xs font-medium">
+                <span>Default Brand Gradient Backdrop</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            <div className="absolute top-2.5 right-2.5">
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/90 text-white backdrop-blur-xs flex items-center gap-1 shadow-xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> Live Deployed
+              </span>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 pt-0 relative">
+            <div className="flex items-end gap-3.5 -mt-8 mb-3">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-white border-2 border-white shadow-md shrink-0 flex items-center justify-center">
+                {createdHub?.logoUrl ? (
+                  <img src={createdHub.logoUrl} alt="Shop Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-tapsh-soft-green/15 text-tapsh-soft-green flex items-center justify-center font-bold text-lg">
+                    {createdHub?.businessName?.charAt(0) || "T"}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 pb-1">
+                <h3 className="text-base sm:text-lg font-bold text-tapsh-black truncate">
+                  {createdHub?.businessName}
+                </h3>
+                <p className="text-xs text-tapsh-charcoal truncate">
+                  {createdHub?.businessType} • {createdHub?.links?.length || 0} Connected Touchpoints
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs text-tapsh-charcoal bg-white p-2.5 rounded-xl border border-tapsh-charcoal/10">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-tapsh-charcoal/60 block">Shop Logo</span>
+                <span className="font-semibold text-tapsh-black text-[11px] truncate block">
+                  {createdHub?.logoUrl ? "✓ Custom Logo Attached" : "Default TAPSH Emblem"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-tapsh-charcoal/60 block">Shop Backdrop</span>
+                <span className="font-semibold text-tapsh-black text-[11px] truncate block">
+                  {createdHub?.coverUrl ? "✓ Custom Backdrop Active" : "Default Gradient Cover"}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Custom QR Code Card & Download */}

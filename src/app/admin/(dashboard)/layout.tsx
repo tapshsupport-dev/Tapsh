@@ -61,7 +61,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className={`flex min-h-[100dvh] bg-[#F7F7F8] text-tapsh-black relative selection:bg-tapsh-soft-green selection:text-white transition-colors duration-200 ${isAdminDark ? "admin-dark dark" : ""}`}>
+    <div className={`flex min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-[#F7F7F8] text-tapsh-black relative selection:bg-tapsh-soft-green selection:text-white transition-colors duration-200 ${isAdminDark ? "admin-dark dark" : ""}`}>
       
       {/* ---------------------------------------------------- */}
       {/* DESKTOP SIDEBAR (Visible on lg: and larger) */}
@@ -205,7 +205,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* ---------------------------------------------------- */}
       {/* MAIN VIEWPORT CONTAINER */}
       {/* ---------------------------------------------------- */}
-      <div className="flex-1 flex flex-col min-w-0 pb-20 lg:pb-0">
+      <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden pb-20 lg:pb-0">
         
         {/* MOBILE TOP BAR (Fixed/Sticky on Mobile) */}
         <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-tapsh-charcoal/20 px-4 py-3 flex items-center justify-between shadow-xs">
@@ -275,7 +275,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* MAIN PAGE BODY */}
-        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-3 sm:p-6 md:p-8 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
           {children}
         </main>
       </div>

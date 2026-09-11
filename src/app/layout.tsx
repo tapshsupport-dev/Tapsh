@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { SiteAssetsProvider } from "@/context/SiteAssetsContext";
@@ -7,6 +7,12 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: "TAPSH | Tap. Connect. Grow.",
@@ -17,9 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full antialiased`}
+      className={`${inter.variable} h-full w-full max-w-full overflow-x-hidden antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-tapsh-pale-blue text-tapsh-black">
+      <body className="min-h-full w-full max-w-full overflow-x-hidden flex flex-col font-sans bg-tapsh-pale-blue text-tapsh-black">
         <SiteAssetsProvider>
           {children}
         </SiteAssetsProvider>
@@ -27,4 +33,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

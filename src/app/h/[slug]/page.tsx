@@ -1,53 +1,24 @@
 import { mockHubs } from "@/lib/data";
 import { getHubBySlug } from "@/lib/firestoreService";
-import { notFound } from "next/navigation";
-import HubView from "@/components/HubView";
+import PublicHubClient from "@/components/PublicHubClient";
+
+export const dynamic = "force-dynamic";
 
 export default async function PublicHubPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  
   // Look up hub in Firestore first, fall back to mockHubs
   let hubData = await getHubBySlug(slug);
   if (!hubData) {
     hubData = mockHubs.find(h => h.slug === slug) || null;
   }
 
-  if (!hubData) {
-    notFound();
-  }
+  // If not found yet on server (e.g. freshly created in browser local storage),
+  // pass a stub with the slug so the client-side component immediately resolves it from local storage
+  const initial = hubData || { 
+    slug, 
+    businessName: slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') 
+  };
 
-
-  if (hubData.status === "SUSPENDED") {
-    return (
-      <div className="min-h-screen min-h-[100dvh] bg-tapsh-pale-blue flex items-center justify-center p-6">
-        <div className="bg-white p-8 rounded-3xl border border-tapsh-charcoal/20 shadow-xl max-w-sm w-full text-center">
-          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-100 shadow-sm">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-tapsh-black mb-2">Service Suspended</h2>
-          <p className="text-tapsh-charcoal font-medium text-sm leading-relaxed">
-            This TAPSH Hub is currently unavailable. Please contact the business administrator.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen min-h-[100dvh] bg-[#221F1C] md:py-6 flex items-center justify-center">
-      {/* Mobile container: Edge-to-edge on real phones, elegant device frame on desktop */}
-      <div className="w-full max-w-[420px] h-screen h-[100dvh] md:h-[860px] md:max-h-[94vh] bg-[#F4EFEA] md:rounded-[2.85rem] md:shadow-[0_25px_70px_rgba(0,0,0,0.55)] overflow-hidden relative md:border-[7px] md:border-[#332F2A] flex flex-col">
-        <HubView data={{
-          businessName: hubData.businessName,
-          businessType: hubData.businessType,
-          description: hubData.shortDescription || (hubData as any).description,
-          greetingMessage: hubData.greetingMessage,
-          coverUrl: hubData.coverUrl,
-          logoUrl: hubData.logoUrl || (hubData as any).logo || "",
-          links: hubData.links
-        }} />
-      </div>
-    </div>
-  );
+  return <PublicHubClient slug={slug} initialHub={initial} />;
 }

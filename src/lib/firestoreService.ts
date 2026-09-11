@@ -3,7 +3,7 @@ import {
   deleteDoc, onSnapshot, query, where 
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Customer, Hub, AuditLog, Invoice } from "./data";
+import { Customer, Hub, AuditLog, Invoice, mockHubs } from "./data";
 
 const CUSTOMERS_COLLECTION = "customers";
 const HUBS_COLLECTION = "hubs";
@@ -458,15 +458,22 @@ export async function createHub(data: Partial<Hub>): Promise<Hub> {
     createdAt: data.createdAt || now
   };
 
-  // 1. Immediately persist locally
+  // 1. Immediately persist locally & in memory
   const current = getLocalHubs();
   const updated = [hub, ...current.filter(h => h.id !== id)];
   saveLocalHubs(updated);
 
+  const mIdx = mockHubs.findIndex(h => h.id === id || h.slug === slug);
+  if (mIdx !== -1) {
+    mockHubs[mIdx] = hub;
+  } else {
+    mockHubs.unshift(hub);
+  }
+
   // 2. Attempt Firestore sync
   try {
     const docRef = doc(db, HUBS_COLLECTION, id);
-    await setDoc(docRef, hub);
+    await setDoc(docRef, hub, { merge: true });
     notifyPermissionDenied(false);
   } catch (err: any) {
     if (err?.code === "permission-denied") {
@@ -488,28 +495,54 @@ export async function createHub(data: Partial<Hub>): Promise<Hub> {
 }
 
 export async function updateHub(id: string, data: Partial<Hub>): Promise<void> {
+  // 1. Update in local storage
   const current = getLocalHubs();
-  const updated = current.map(h => h.id === id ? { ...h, ...data } : h);
+  const exists = current.some(h => h.id === id || (data.slug && h.slug === data.slug));
+  const updated = exists
+    ? current.map(h => (h.id === id || (data.slug && h.slug === data.slug)) ? { ...h, ...data } : h)
+    : [{ id, ...data } as Hub, ...current];
   saveLocalHubs(updated);
 
+  // 2. Also update in-memory mockHubs so server components or fallbacks have it immediately
+  const mIndex = mockHubs.findIndex(h => h.id === id || (data.slug && h.slug === data.slug));
+  if (mIndex !== -1) {
+    mockHubs[mIndex] = { ...mockHubs[mIndex], ...data };
+  } else if (data.slug) {
+    mockHubs.unshift({ id, ...data } as Hub);
+  }
+
+  // 3. Upsert into Firestore using setDoc with merge: true so it never throws "No document to update"
   try {
     const docRef = doc(db, HUBS_COLLECTION, id);
-    await updateDoc(docRef, { ...data });
+    await setDoc(docRef, { ...data }, { merge: true });
     notifyPermissionDenied(false);
   } catch (err: any) {
     if (err?.code === "permission-denied") {
       notifyPermissionDenied(true);
     }
+    console.warn("Firestore sync warning (updateHub):", err);
   }
 
-  await logAudit({
-    entityType: "HUB",
-    entityId: id,
-    field: "configuration",
-    oldValue: "Updated hub",
-    newValue: JSON.stringify(data),
-    changedBy: "tapsh.support@gmail.com"
-  });
+  // 4. Log audit without bloating localStorage with huge base64 strings
+  try {
+    const sanitizedData = { ...data };
+    if (typeof sanitizedData.coverUrl === "string" && sanitizedData.coverUrl.startsWith("data:")) {
+      sanitizedData.coverUrl = `[Base64 Cover Image ${Math.round(sanitizedData.coverUrl.length / 1024)}KB]`;
+    }
+    if (typeof sanitizedData.logoUrl === "string" && sanitizedData.logoUrl.startsWith("data:")) {
+      sanitizedData.logoUrl = `[Base64 Logo Image ${Math.round(sanitizedData.logoUrl.length / 1024)}KB]`;
+    }
+    await logAudit({
+      entityType: "HUB",
+      entityId: id,
+      field: "configuration",
+      oldValue: "Updated hub",
+      newValue: JSON.stringify(sanitizedData),
+      changedBy: "tapsh.support@gmail.com"
+    });
+  } catch (logErr) {
+    console.warn("Audit log warning:", logErr);
+  }
 }
 
 export async function deleteHub(id: string): Promise<void> {

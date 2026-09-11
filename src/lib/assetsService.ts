@@ -123,9 +123,11 @@ export async function compressImage(file: File, maxDimension = 1400, quality = 0
         // Draw image onto canvas
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Retain PNG transparency if PNG, else use WebP / JPEG
-        const outputType = file.type === "image/png" ? "image/png" : "image/webp";
-        const dataUrl = canvas.toDataURL(outputType, quality);
+        // Retain PNG transparency ONLY for small images (like logos under 400px), otherwise output JPEG for massive size savings
+        const isSmallPng = file.type === "image/png" && maxDimension <= 400;
+        const outputType = isSmallPng ? "image/png" : "image/jpeg";
+        const targetQuality = isSmallPng ? quality : Math.min(quality, 0.78);
+        const dataUrl = canvas.toDataURL(outputType, targetQuality);
         resolve(dataUrl);
       };
       img.src = e.target?.result as string;

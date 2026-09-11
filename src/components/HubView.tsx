@@ -12,7 +12,8 @@ import {
   Utensils, 
   Calendar, 
   MapPin, 
-  Link2 
+  Link2,
+  Globe
 } from "lucide-react";
 import { 
   GoogleIcon, 
@@ -23,6 +24,7 @@ import {
   XTwitterIcon, 
   resolveTouchpointUrl 
 } from "@/components/TouchpointIcons";
+import { useSiteAssets } from "@/context/SiteAssetsContext";
 
 export interface HubViewProps {
   data: {
@@ -48,14 +50,106 @@ export interface HubViewProps {
   };
 }
 
+/**
+ * Extracts the 1st two capital initials from the business name.
+ * Example: "hill top" -> "HT", "The Tamara Coorg" -> "TT", "Subko" -> "SU"
+ */
+export function getBusinessInitials(name?: string): string {
+  if (!name || !name.trim()) return "TP";
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return words[0].slice(0, 2).toUpperCase();
+}
+
+/**
+ * Returns a high-resolution, thematic default backdrop matching the selected business type / title.
+ */
+export function getDefaultBackdrop(businessType?: string, businessName?: string): string {
+  const typeStr = (businessType || "").toLowerCase();
+  const nameStr = (businessName || "").toLowerCase();
+  const combined = `${typeStr} ${nameStr}`;
+
+  // 1. Resort / Hotel / Homestay / Hospitality / Villa
+  if (
+    combined.includes("resort") ||
+    combined.includes("hotel") ||
+    combined.includes("homestay") ||
+    combined.includes("stay") ||
+    combined.includes("villa") ||
+    combined.includes("lodge") ||
+    combined.includes("retreat")
+  ) {
+    return "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200";
+  }
+
+  // 2. Salon / Spa / Barbershop / Wellness / Beauty
+  if (
+    combined.includes("salon") ||
+    combined.includes("spa") ||
+    combined.includes("barber") ||
+    combined.includes("grooming") ||
+    combined.includes("beauty") ||
+    combined.includes("wellness") ||
+    combined.includes("parlour")
+  ) {
+    return "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80&w=1200";
+  }
+
+  // 3. Clinic / Healthcare / Medical / Dental / Hospital
+  if (
+    combined.includes("clinic") ||
+    combined.includes("dental") ||
+    combined.includes("hospital") ||
+    combined.includes("health") ||
+    combined.includes("doctor") ||
+    combined.includes("care")
+  ) {
+    return "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=1200";
+  }
+
+  // 4. Retail / Store / Boutique / Fashion / Jewelry
+  if (
+    combined.includes("retail") ||
+    combined.includes("shop") ||
+    combined.includes("boutique") ||
+    combined.includes("store") ||
+    combined.includes("fashion") ||
+    combined.includes("jewelry")
+  ) {
+    return "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1200";
+  }
+
+  // 5. Office / Corporate / Co-working / Studio / Agency
+  if (
+    combined.includes("office") ||
+    combined.includes("co-working") ||
+    combined.includes("coworking") ||
+    combined.includes("corporate") ||
+    combined.includes("agency") ||
+    combined.includes("studio")
+  ) {
+    return "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200";
+  }
+
+  // 6. Restaurant / Café / Bar / Food / Bakery / Dining (Default hospitality)
+  return "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=1200";
+}
+
 export default function HubView({ data }: HubViewProps) {
   const [activeWifiModal, setActiveWifiModal] = useState<any | null>(null);
   const [copiedWifiPass, setCopiedWifiPass] = useState(false);
 
-  // Fallback Cover Image matching the warm, ambient hospitality reference photo
-  const backdropPhoto = data.coverUrl && data.coverUrl.trim() !== ""
-    ? data.coverUrl
-    : "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=1200";
+  // Retrieve TAPSH black main logo from site assets context (or fallback)
+  let tapshLogoDark = "/images/logo-dark.png";
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { getAsset } = useSiteAssets();
+    tapshLogoDark = getAsset("logo_dark", "/images/logo-dark.png");
+  } catch {
+    // Context fallback
+  }
 
   // Shop Name, Category Subtitle, and Description
   const businessName = data.businessName?.trim() || "The Haven";
@@ -65,6 +159,28 @@ export default function HubView({ data }: HubViewProps) {
     data.shortDescription?.trim() || 
     data.greetingMessage?.trim() || 
     "Good Food Brings People Together";
+
+  // Context-aware Backdrop Photo: uses uploaded cover if provided, otherwise matches the selected category
+  const backdropPhoto = data.coverUrl && data.coverUrl.trim() !== ""
+    ? data.coverUrl
+    : getDefaultBackdrop(businessType, businessName);
+
+  // Helper to identify if a link is a Google Review touchpoint
+  const isGoogleReviewLink = (l: any) => {
+    if (!l) return false;
+    const icon = (l.icon || "").toLowerCase();
+    const cat = (l.category || "").toLowerCase();
+    const title = (l.title || "").toLowerCase();
+    const url = (l.url || "").toLowerCase();
+    return (
+      icon.includes("google") ||
+      title.includes("google") ||
+      (cat === "reviews" && !title.includes("tripadvisor") && !title.includes("makemytrip") && !title.includes("trustpilot")) ||
+      url.includes("g.page") ||
+      url.includes("google.com") ||
+      url.includes("goo.gl")
+    );
+  };
 
   // 1. FILTER LINKS: Only showcase touchpoints that are actually selected / filled with a valid URL or Wi-Fi info
   const rawLinks = data.links || [];
@@ -78,26 +194,35 @@ export default function HubView({ data }: HubViewProps) {
     return Boolean(url && url !== "#" && url !== "https://" && url !== "http://" && url !== "");
   });
 
-  // If no links configured yet (e.g. preview mode or fresh hub), provide fallback demo links matching reference image
-  const displayLinks = validLinks.length > 0 ? validLinks : [
+  // 2. SORT LINKS: Google Review MUST always be #1 priority and list first
+  const sortedValidLinks = [...validLinks].sort((a, b) => {
+    const aIsGoogle = isGoogleReviewLink(a);
+    const bIsGoogle = isGoogleReviewLink(b);
+    if (aIsGoogle && !bIsGoogle) return -1;
+    if (!aIsGoogle && bIsGoogle) return 1;
+    return 0;
+  });
+
+  // Fallback demo links only if zero links exist (e.g. initial setup preview before inputs)
+  const displayLinks = sortedValidLinks.length > 0 ? sortedValidLinks : [
     { id: "demo-rev", category: "reviews", title: "Leave a Review", subtitle: "Share your experience", url: "https://google.com", icon: "google" },
     { id: "demo-wa", category: "contact", title: "Chat on WhatsApp", subtitle: "Get in touch with us", url: "https://wa.me/917977469926", icon: "whatsapp" },
     { id: "demo-ig", category: "social", title: "Follow on Instagram", subtitle: "See what's happening", url: "https://instagram.com", icon: "instagram" },
+    { id: "demo-fb", category: "social", title: "Facebook Page", subtitle: "Connect on Facebook", url: "https://facebook.com", icon: "facebook" },
+    { id: "demo-yt", category: "social", title: "YouTube Channel", subtitle: "Watch our videos", url: "https://youtube.com", icon: "youtube" },
     { id: "demo-wifi", category: "wifi", title: "Connect to Wi-Fi", subtitle: "Stay connected", url: "wifi:Guest_Wi-Fi", icon: "wifi", ssid: "Guest_Wi-Fi", password: "welcomeguest" },
     { id: "demo-menu", category: "website", title: "View Menu", subtitle: "Explore our offerings", url: "https://example.com/menu", icon: "menu" },
-    { id: "demo-book", category: "website", title: "Book a Table", subtitle: "Reserve your spot", url: "https://example.com/book", icon: "calendar" },
-    { id: "demo-map", category: "maps", title: "Get Directions", subtitle: "Find us easily", url: "https://maps.google.com", icon: "map" },
     { id: "demo-web", category: "website", title: "Visit Our Website", subtitle: "Learn more about us", url: "https://example.com", icon: "globe" }
   ];
 
-  // Helper for touchpoint styling matching the soft pastel palette in the reference image
+  // Helper for touchpoint styling with dedicated, accurate platform icons
   const getTouchpointConfig = (link: any) => {
     const icon = (link.icon || "").toLowerCase();
     const cat = (link.category || "").toLowerCase();
     const title = (link.title || "").toLowerCase();
 
-    // 1. Google Review / Reviews
-    if (icon.includes("google") || title.includes("review") || title.includes("google") || cat === "reviews") {
+    // 1. Google Review / Reviews (Always #1 priority)
+    if (isGoogleReviewLink(link)) {
       return {
         title: link.title || "Leave a Review",
         subtitle: link.subtitle || "Share your experience",
@@ -126,8 +251,60 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 3. Instagram
-    if (icon.includes("instagram") || title.includes("instagram") || title.includes("insta") || cat === "social") {
+    // 3. Facebook (Distinct Facebook blue badge & icon)
+    if (icon.includes("facebook") || title.includes("facebook") || cat === "facebook") {
+      return {
+        title: link.title || "Facebook Page",
+        subtitle: link.subtitle || "Connect on Facebook",
+        cardBg: "bg-[#EEF4FC] hover:bg-[#E2ECFA] border-[#D3E2F4] text-[#132A4A]",
+        chevronColor: "text-[#7999C2]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#1877F2] text-white flex items-center justify-center shadow-xs shrink-0">
+            <FacebookIcon className="w-5 h-5 fill-white" />
+          </div>
+        )
+      };
+    }
+
+    // 4. YouTube (Distinct YouTube red badge & icon)
+    if (icon.includes("youtube") || title.includes("youtube") || cat === "youtube") {
+      return {
+        title: link.title || "YouTube Channel",
+        subtitle: link.subtitle || "Watch our videos",
+        cardBg: "bg-[#FDF0F0] hover:bg-[#FAE3E3] border-[#F8D5D5] text-[#4A1515]",
+        chevronColor: "text-[#C27979]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#FF0000] text-white flex items-center justify-center shadow-xs shrink-0">
+            <YouTubeIcon className="w-5 h-5 fill-white" />
+          </div>
+        )
+      };
+    }
+
+    // 5. X / Twitter (Distinct Black badge & white X logo)
+    if (
+      icon.includes("twitter") || 
+      icon.includes("x") || 
+      title.includes("twitter") || 
+      title.includes("x (") || 
+      title === "x" || 
+      title.includes("x profile")
+    ) {
+      return {
+        title: link.title || "Follow on X",
+        subtitle: link.subtitle || "Stay updated",
+        cardBg: "bg-[#F3F3F4] hover:bg-[#E8E8EA] border-[#E0E0E3] text-[#222225]",
+        chevronColor: "text-[#888890]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#111111] text-white flex items-center justify-center shadow-xs shrink-0">
+            <XTwitterIcon className="w-4 h-4 fill-white" />
+          </div>
+        )
+      };
+    }
+
+    // 6. Instagram (Strictly only Instagram!)
+    if (icon.includes("instagram") || title.includes("instagram") || title.includes("insta")) {
       return {
         title: link.title || "Follow on Instagram",
         subtitle: link.subtitle || "See what's happening",
@@ -141,7 +318,7 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 4. Wi-Fi
+    // 7. Wi-Fi
     if (cat === "wifi" || icon.includes("wifi") || title.includes("wi-fi") || title.includes("wifi")) {
       return {
         title: link.title || "Connect to Wi-Fi",
@@ -156,7 +333,7 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 5. Menu / Food / Dining
+    // 8. Menu / Food / Dining
     if (icon.includes("menu") || icon.includes("food") || title.includes("menu") || title.includes("order") || title.includes("food") || title.includes("dining")) {
       return {
         title: link.title || "View Menu",
@@ -171,7 +348,7 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 6. Book Table / Appointment / Calendar
+    // 9. Book Table / Appointment / Calendar
     if (icon.includes("calendar") || icon.includes("book") || title.includes("book") || title.includes("reserve") || title.includes("table") || title.includes("appointment")) {
       return {
         title: link.title || "Book a Table",
@@ -186,7 +363,7 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 7. Maps / Location / Directions
+    // 10. Maps / Location / Directions
     if (cat === "maps" || icon.includes("map") || icon.includes("pin") || title.includes("direction") || title.includes("location") || title.includes("route") || title.includes("find us")) {
       return {
         title: link.title || "Get Directions",
@@ -201,7 +378,7 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 8. Phone / Call
+    // 11. Phone / Call
     if (icon.includes("phone") || title.includes("call") || title.includes("phone") || title.includes("reception")) {
       return {
         title: link.title || "Call Us",
@@ -216,7 +393,7 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 9. Email
+    // 12. Email
     if (icon.includes("mail") || title.includes("email") || title.includes("mail")) {
       return {
         title: link.title || "Email Us",
@@ -231,7 +408,7 @@ export default function HubView({ data }: HubViewProps) {
       };
     }
 
-    // 10. Default Website / Custom link
+    // 13. Default Website / Custom link
     return {
       title: link.title || "Visit Our Website",
       subtitle: link.subtitle || "Learn more about us",
@@ -248,9 +425,9 @@ export default function HubView({ data }: HubViewProps) {
   return (
     <div className="w-full h-full max-h-[100dvh] bg-[#F4EFEA] text-[#1F221B] flex flex-col justify-between relative overflow-hidden select-none font-sans">
       
-      {/* Subtle botanical leaves watermark in bottom left corner matching reference image */}
+      {/* Subtle botanical leaves watermark in bottom left corner */}
       <svg 
-        className="absolute -bottom-2 -left-2 w-28 h-28 text-[#8C765C] opacity-25 pointer-events-none z-0" 
+        className="absolute -bottom-2 -left-2 w-28 h-28 text-[#8C765C] opacity-20 pointer-events-none z-0" 
         viewBox="0 0 100 100" 
         fill="none" 
         stroke="currentColor" 
@@ -263,7 +440,7 @@ export default function HubView({ data }: HubViewProps) {
         <path d="M86,22 Q98,18 94,8 Q84,10 85,20 Z" fill="currentColor" fillOpacity="0.15" />
       </svg>
 
-      {/* TOP SECTION: BACKDROP PHOTO + ARCH + LOGO + SHOP TITLE */}
+      {/* TOP SECTION: BACKDROP PHOTO + CONVEX ARCH + LOGO + SHOP TITLE */}
       <div className="shrink-0 flex flex-col">
         
         {/* 1. BACKDROP PHOTO WITH CURVED ARCH BOTTOM */}
@@ -273,7 +450,7 @@ export default function HubView({ data }: HubViewProps) {
             alt={businessName} 
             className="w-full h-full object-cover" 
           />
-          {/* Ambient overlay for rich lighting */}
+          {/* Ambient overlay for rich contrast */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/10" />
 
           {/* Smooth Convex Architectural Arch SVG (Cream arches upward in the center) */}
@@ -297,15 +474,10 @@ export default function HubView({ data }: HubViewProps) {
                   className="w-full h-full object-cover rounded-full" 
                 />
               ) : (
-                /* Elegant botanical emblem matching reference image */
-                <svg viewBox="0 0 64 64" fill="none" stroke="#D1BA8E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-9 h-9 sm:w-10 sm:h-10">
-                  <path d="M18 48 C24 38, 34 26, 46 16" />
-                  <path d="M23 41 C21 34, 27 30, 31 34 C32 38, 28 41, 23 41 Z" fill="#D1BA8E" fillOpacity="0.2" />
-                  <path d="M29 34 C34 30, 38 34, 35 38 C31 40, 28 37, 29 34 Z" fill="#D1BA8E" fillOpacity="0.2" />
-                  <path d="M33 27 C31 20, 38 18, 41 22 C42 26, 38 28, 33 27 Z" fill="#D1BA8E" fillOpacity="0.2" />
-                  <path d="M39 21 C44 17, 48 21, 45 25 C41 27, 38 24, 39 21 Z" fill="#D1BA8E" fillOpacity="0.2" />
-                  <path d="M43 15 C44 9, 50 11, 49 16 C47 18, 44 18, 43 15 Z" fill="#D1BA8E" fillOpacity="0.2" />
-                </svg>
+                /* Fallback initials: 1st two initials in capital letters (e.g. "hill top" -> "HT") */
+                <span className="font-serif font-bold text-xl sm:text-2xl text-[#EAD8B7] tracking-wider uppercase select-none">
+                  {getBusinessInitials(businessName)}
+                </span>
               )}
             </div>
           </div>
@@ -335,8 +507,7 @@ export default function HubView({ data }: HubViewProps) {
 
       </div>
 
-      {/* 5. TOUCHPOINT ACTION CARDS (REVIEW.. INSTA.. WA.. ETC.) */}
-      {/* Scroll-safe container: Starts from top if many items, centers gracefully if few */}
+      {/* 5. TOUCHPOINT ACTION CARDS (REVIEW #1 PRIORITY, INSTA, WA, FB, YT, ETC.) */}
       <div className="flex-1 min-h-0 px-4 sm:px-5 py-1 overflow-y-auto scrollbar-none flex flex-col justify-start z-10">
         <div className="my-auto flex flex-col gap-1.5 sm:gap-2 w-full py-0.5">
           {displayLinks.map((link: any, idx: number) => {
@@ -391,14 +562,47 @@ export default function HubView({ data }: HubViewProps) {
         </div>
       </div>
 
-      {/* 6. FOOTER BRANDING (Handwritten cursive "Tap. Connect. Grow." + "Powered by TAPSH") */}
-      <div className="relative z-10 text-center pt-1 pb-3 sm:pb-3.5 shrink-0 select-none">
-        <p className="font-[family-name:var(--font-caveat)] text-2xl sm:text-[25px] text-[#846E56] font-normal leading-none">
-          Tap. Connect. Grow.
+      {/* 6. FOOTER BRANDING (POWERED BY + TAPSH BLACK MAIN LOGO + TAGLINE + 2 BUTTONS) */}
+      <div className="relative z-10 text-center pt-2 pb-3.5 sm:pb-4 shrink-0 select-none flex flex-col items-center">
+        <span className="text-[9px] uppercase font-bold tracking-[0.24em] text-[#8C8070] block">
+          POWERED BY
+        </span>
+
+        {/* TAPSH Main Black Logo */}
+        <div className="mt-1 mb-0.5 flex items-center justify-center">
+          <img 
+            src={tapshLogoDark} 
+            alt="TAPSH" 
+            className="h-5 sm:h-6 w-auto object-contain"
+          />
+        </div>
+
+        {/* Tagline */}
+        <p className="text-[10.5px] sm:text-[11px] text-[#786E61] font-medium tracking-tight">
+          Smart NFC & QR Solutions for Businesses
         </p>
-        <p className="text-[10px] text-[#918575] tracking-[0.18em] uppercase mt-0.5 font-medium leading-none">
-          Powered by <span className="font-bold text-[#23201C] tracking-[0.22em]">TAPSH</span>
-        </p>
+
+        {/* Two Small Buttons: [ Explore TAPSH ]   [ WhatsApp Us ] */}
+        <div className="flex items-center justify-center gap-2 mt-2">
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10.5px] font-semibold bg-white hover:bg-[#FAF8F5] text-[#2C2723] border border-[#DDD5CA] shadow-2xs transition-all active:scale-95 cursor-pointer"
+          >
+            <Globe className="w-3 h-3 text-[#786E61]" />
+            <span>Explore TAPSH</span>
+          </a>
+          <a
+            href="https://wa.me/917977469926?text=Hi%20TAPSH%20%F0%9F%91%8B%20I'm%20interested%20in%20TAPSH%20solutions%20for%20my%20business."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10.5px] font-semibold bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#16381C] border border-[#25D366]/30 shadow-2xs transition-all active:scale-95 cursor-pointer"
+          >
+            <WhatsAppIcon className="w-3 h-3 fill-[#25D366]" />
+            <span>WhatsApp Us</span>
+          </a>
+        </div>
       </div>
 
       {/* INTERACTIVE WI-FI CONNECTION MODAL */}

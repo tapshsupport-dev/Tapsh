@@ -43,6 +43,7 @@ export default function CustomerProfilePage() {
   const [uploadingHubCover, setUploadingHubCover] = useState(false);
   const [hubForm, setHubForm] = useState({
     businessName: "",
+    businessType: "Resort / Hotel",
     shortDescription: "",
     greetingMessage: "",
     phone: "",
@@ -134,6 +135,7 @@ export default function CustomerProfilePage() {
     if (!hub) return;
     setHubForm({
       businessName: hub.businessName || customer?.businessName || "",
+      businessType: hub.businessType || customer?.businessType || "Resort / Hotel",
       shortDescription: hub.shortDescription || "",
       greetingMessage: hub.greetingMessage || "Thank you for visiting ♡",
       phone: hub.phone || customer?.phone || "",
@@ -153,17 +155,18 @@ export default function CustomerProfilePage() {
     else setUploadingHubCover(true);
 
     try {
-      // 1. Instant client-side compression (<60ms)
-      const fastDataUrl = await compressImage(file, type === "logo" ? 500 : 1200, 0.82);
+      // 1. Efficient client-side compression (<60ms) to ensure instant display & light storage
+      const maxDim = type === "logo" ? 320 : 1080;
+      const quality = type === "logo" ? 0.8 : 0.76;
+      const fastDataUrl = await compressImage(file, maxDim, quality);
+      
       if (type === "logo") {
         setHubForm(prev => ({ ...prev, logoUrl: fastDataUrl }));
-        setUploadingHubLogo(false);
       } else {
         setHubForm(prev => ({ ...prev, coverUrl: fastDataUrl }));
-        setUploadingHubCover(false);
       }
 
-      // 2. Background attempt to upload to Firebase Storage with a strict 2.5s timeout
+      // 2. Background attempt to upload to Firebase Storage with a strict 3s timeout
       try {
         const uploadTask = async () => {
           const sanitized = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
@@ -173,7 +176,7 @@ export default function CustomerProfilePage() {
         };
 
         const timeout = new Promise<string>((_, reject) =>
-          setTimeout(() => reject(new Error("Storage timeout")), 2500)
+          setTimeout(() => reject(new Error("Storage timeout")), 3000)
         );
 
         const cloudUrl = await Promise.race([uploadTask(), timeout]);
@@ -182,10 +185,11 @@ export default function CustomerProfilePage() {
           else setHubForm(prev => ({ ...prev, coverUrl: cloudUrl }));
         }
       } catch (storageErr) {
-        console.warn("Storage upload timed out or failed; retaining compressed client image.", storageErr);
+        console.warn("Storage upload timed out or offline; retaining compressed client image.", storageErr);
       }
     } catch (err) {
       console.error("Failed to process hub image:", err);
+      alert("Failed to process image file. Please try another image.");
     } finally {
       if (type === "logo") setUploadingHubLogo(false);
       else setUploadingHubCover(false);
@@ -200,6 +204,7 @@ export default function CustomerProfilePage() {
     try {
       const updatedFields: Partial<Hub> = {
         businessName: hubForm.businessName,
+        businessType: hubForm.businessType,
         shortDescription: hubForm.shortDescription,
         greetingMessage: hubForm.greetingMessage,
         phone: hubForm.phone,
@@ -210,12 +215,17 @@ export default function CustomerProfilePage() {
         links: hubForm.links
       };
 
-      await updateHub(hub.id, updatedFields);
+      try {
+        await updateHub(hub.id, updatedFields);
+      } catch (updErr: any) {
+        console.warn("Firestore update warning (continuing with local state):", updErr);
+      }
+
       setHub({ ...hub, ...updatedFields });
-      showNotification("Deployed Hub settings, touchpoints & branding updated in Firestore.");
+      showNotification("Deployed Hub settings, touchpoints & branding updated.");
       setShowEditHubModal(false);
     } catch (err: any) {
-      alert("Failed to update Hub in Firestore: " + err.message);
+      alert("Failed to update Hub: " + err.message);
     } finally {
       setSavingHubEdit(false);
     }
@@ -922,6 +932,26 @@ export default function CustomerProfilePage() {
                       className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
                       placeholder="e.g. The Tamara Coorg"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                      Business Category / Type *
+                    </label>
+                    <select
+                      value={hubForm.businessType}
+                      onChange={(e) => setHubForm({ ...hubForm, businessType: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                    >
+                      <option value="Resort / Hotel">Resort / Hotel</option>
+                      <option value="Restaurant / Café">Restaurant / Café</option>
+                      <option value="Salon / Spa">Salon / Spa</option>
+                      <option value="Clinic">Clinic / Healthcare</option>
+                      <option value="Retail">Retail / Boutique</option>
+                      <option value="Office">Office / Corporate</option>
+                      <option value="Homestay">Homestay / Villa</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
 
                   <div>

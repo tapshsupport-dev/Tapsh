@@ -192,51 +192,77 @@
 
 /* ==================================================== */
 /* COMPREHENSIVE A4 TAX INVOICE PRINT STYLES */
-/* (Optimized for Mobile AirPrint, Android, & Desktop) */
+/* (Strict Single-Page A4 Guarantee for AirPrint & Desktop) */
 /* ==================================================== */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm 12mm;
+    margin: 6mm 8mm;
   }
 
-  /* Hide all non-printable navigation, buttons, and chrome */
+  /* Reset document for clean single-page printing */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide ALL background UI elements, sidebars, drawers, headers, and buttons */
+  body * {
+    visibility: hidden !important;
+  }
+
   aside,
   header,
   nav,
   .no-print,
   button,
-  .print-hidden {
+  .print-hidden,
+  [role="dialog"] {
     display: none !important;
   }
 
-  /* Reset root containers */
-  html, body, #__next, main {
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    min-height: auto !important;
-    box-shadow: none !important;
-  }
-
-  .print-container {
-    padding: 0 !important;
-    margin: 0 auto !important;
-    max-width: 100% !important;
-    box-shadow: none !important;
-    border: none !important;
+  /* Show ONLY .print-card and its descendants */
+  .print-card,
+  .print-card * {
+    visibility: visible !important;
   }
 
   .print-card {
-    box-shadow: none !important;
-    border: 1px solid #E5E7EB !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 6px !important;
     background-color: #FFFFFF !important;
     color: #000000 !important;
-    page-break-inside: avoid;
+    box-shadow: none !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    break-after: avoid !important;
+  }
+
+  /* Force horizontal layout in print regardless of screen viewport width */
+  .print-card .print-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+  }
+
+  .print-card .print-table-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
   }
 
   /* Preserve colors and backgrounds during browser print */

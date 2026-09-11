@@ -254,9 +254,10 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
 
   // Left Column Box 2: Terms & Product Guarantee
   const termsY = y + 28;
+  const termsHeight = 28;
   doc.setFillColor(...cardBg);
   doc.setDrawColor(...lightGray);
-  doc.roundedRect(margin, termsY, leftColWidth, 26, 2, 2, "FD");
+  doc.roundedRect(margin, termsY, leftColWidth, termsHeight, 2, 2, "FD");
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
@@ -266,9 +267,10 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...charcoal);
-  doc.text("1. All hardware includes standard TAPSH digital cloud NFC routing.", margin + 5, termsY + 11.5);
-  doc.text("2. Physical products carry instant replacement guarantee for transit defects.", margin + 5, termsY + 16.5);
-  doc.text("3. For assistance, contact tapsh.support@gmail.com or WhatsApp +91 7977469926.", margin + 5, termsY + 21.5);
+  const termsMaxW = leftColWidth - 10;
+  doc.text("1. All hardware includes standard TAPSH digital cloud NFC routing.", margin + 5, termsY + 11, { maxWidth: termsMaxW });
+  doc.text("2. Physical products carry replacement guarantee for transit defects.", margin + 5, termsY + 16.5, { maxWidth: termsMaxW });
+  doc.text("3. Contact: tapsh.support@gmail.com  |  WhatsApp: +91 7977469926", margin + 5, termsY + 22, { maxWidth: termsMaxW });
 
   // Right Side: Beautiful Financial Breakdown Card
   const rowCount = 3 + (invoice.discount > 0 ? 1 : 0) + (invoice.deliveryCharges > 0 ? 1 : 0);
@@ -324,7 +326,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   // Right Side Item 2: Corporate Executive Authorized Signatory Block
   const sigX = totalsCardX;
   const sigWidth = totalsCardWidth;
-  const sigY = Math.max(y + cardHeight + 8, termsY + 16);
+  const sigY = Math.max(y + cardHeight + 14, termsY + 34);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);

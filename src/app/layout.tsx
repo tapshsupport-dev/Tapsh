@@ -1,10 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display, Caveat } from "next/font/google";
 import "./globals.css";
 import { SiteAssetsProvider } from "@/context/SiteAssetsContext";
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+});
+
+const caveat = Caveat({
+  variable: "--font-caveat",
   subsets: ["latin"],
 });
 
@@ -23,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full w-full max-w-full overflow-x-hidden antialiased`}
+      className={`${inter.variable} ${playfair.variable} ${caveat.variable} h-full w-full max-w-full overflow-x-hidden antialiased`}
     >
       <body className="min-h-full w-full max-w-full overflow-x-hidden flex flex-col font-sans bg-tapsh-pale-blue text-tapsh-black">
         <SiteAssetsProvider>

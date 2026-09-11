@@ -1069,15 +1069,18 @@ export default function HubSetupWizard() {
           {/* Hub View Content */}
           <div className="flex-1 w-full h-full overflow-hidden">
             <HubView data={{
-              businessName: data.businessName || "Business Name",
-              description: data.description || "Welcome to our space. Select an option below.",
+              businessName: data.businessName || "The Haven",
+              businessType: data.businessType || "RESTAURANT • CAFÉ • BAR",
+              description: data.description || "Good Food Brings People Together",
               greetingMessage: data.greetingMessage,
               logoUrl: data.logo,
               coverUrl: data.coverImage,
               links: data.links.length > 0 ? data.links : [
-                { id: 1, category: "reviews", title: "Rate Us on Google", url: "#", icon: "google" },
-                { id: 2, category: "contact", title: "WhatsApp Direct", url: "#", icon: "whatsapp" },
-                { id: 3, category: "website", title: "Official Website", url: "#", icon: "globe" }
+                { id: 1, category: "reviews", title: "Leave a Review", url: "https://google.com", icon: "google" },
+                { id: 2, category: "contact", title: "Chat on WhatsApp", url: "https://wa.me/917977469926", icon: "whatsapp" },
+                { id: 3, category: "social", title: "Follow on Instagram", url: "https://instagram.com", icon: "instagram" },
+                { id: 4, category: "wifi", title: "Connect to Wi-Fi", url: "wifi:Guest_5G", icon: "wifi" },
+                { id: 5, category: "website", title: "View Menu", url: "https://example.com/menu", icon: "menu" }
               ]
             }} />
           </div>

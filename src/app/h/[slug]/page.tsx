@@ -35,12 +35,13 @@ export default async function PublicHubPage({ params }: { params: Promise<{ slug
   }
 
   return (
-    <div className="min-h-screen min-h-[100dvh] bg-tapsh-taupe flex justify-center">
-      {/* We constrain the max-width to simulate the mobile phone experience even on desktop */}
-      <div className="w-full max-w-md bg-tapsh-pale-blue min-h-screen min-h-[100dvh] md:h-screen md:max-h-[920px] overflow-hidden shadow-2xl relative border-x border-tapsh-black">
+    <div className="min-h-screen min-h-[100dvh] bg-[#221F1C] md:py-6 flex items-center justify-center">
+      {/* Mobile container: Edge-to-edge on real phones, elegant device frame on desktop */}
+      <div className="w-full max-w-[420px] h-screen h-[100dvh] md:h-[860px] md:max-h-[94vh] bg-[#F4EFEA] md:rounded-[2.85rem] md:shadow-[0_25px_70px_rgba(0,0,0,0.55)] overflow-hidden relative md:border-[7px] md:border-[#332F2A] flex flex-col">
         <HubView data={{
           businessName: hubData.businessName,
-          description: hubData.shortDescription,
+          businessType: hubData.businessType,
+          description: hubData.shortDescription || (hubData as any).description,
           greetingMessage: hubData.greetingMessage,
           coverUrl: hubData.coverUrl,
           logoUrl: hubData.logoUrl || (hubData as any).logo || "",

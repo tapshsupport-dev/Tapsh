@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Star, X, Check, Copy, Wifi, Phone, Mail, Globe, ArrowUpRight, ChevronRight } from "lucide-react";
-import { useSiteAssets } from "@/context/SiteAssetsContext";
+import { 
+  Wifi, 
+  Phone, 
+  Mail, 
+  ChevronRight, 
+  X, 
+  Check, 
+  Copy, 
+  Utensils, 
+  Calendar, 
+  MapPin, 
+  Link2 
+} from "lucide-react";
 import { 
   GoogleIcon, 
   WhatsAppIcon, 
@@ -13,425 +24,449 @@ import {
   resolveTouchpointUrl 
 } from "@/components/TouchpointIcons";
 
-export default function HubView({ data }: { data: any }) {
-  const { getAsset } = useSiteAssets();
-  const logoIcon = getAsset("logo_icon", "/images/logo-icon.png");
-  const logoDark = getAsset("logo_dark", "/images/logo-dark.png");
+export interface HubViewProps {
+  data: {
+    businessName?: string;
+    businessType?: string;
+    description?: string;
+    shortDescription?: string;
+    greetingMessage?: string;
+    coverUrl?: string;
+    logoUrl?: string;
+    links?: Array<{
+      id?: string | number;
+      category?: string;
+      title?: string;
+      subtitle?: string;
+      url?: string;
+      icon?: string;
+      ssid?: string;
+      password?: string;
+      authType?: string;
+      encryption?: string;
+    }>;
+  };
+}
 
+export default function HubView({ data }: HubViewProps) {
   const [activeWifiModal, setActiveWifiModal] = useState<any | null>(null);
   const [copiedWifiPass, setCopiedWifiPass] = useState(false);
 
-  // Logo fallback
-  const displayLogo = data.logoUrl || logoIcon;
+  // Fallback Cover Image matching the warm, ambient hospitality reference photo
+  const backdropPhoto = data.coverUrl && data.coverUrl.trim() !== ""
+    ? data.coverUrl
+    : "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=1200";
 
-  // Extract link types
-  const reviewLinks = data.links?.filter((l: any) => l.category === "reviews") || [];
-  const actionLinks = data.links?.filter((l: any) => l.category !== "reviews") || [];
+  // Shop Name, Category Subtitle, and Description
+  const businessName = data.businessName?.trim() || "The Haven";
+  const businessType = data.businessType?.trim() || "RESTAURANT • CAFÉ • BAR";
+  const miniDescription = 
+    data.description?.trim() || 
+    data.shortDescription?.trim() || 
+    data.greetingMessage?.trim() || 
+    "Good Food Brings People Together";
 
-  // Helper for branded touchpoint styling
+  // 1. FILTER LINKS: Only showcase touchpoints that are actually selected / filled with a valid URL or Wi-Fi info
+  const rawLinks = data.links || [];
+  const validLinks = rawLinks.filter((l) => {
+    if (!l) return false;
+    const isWifi = l.category === "wifi" || l.icon === "wifi" || l.title?.toLowerCase().includes("wi-fi") || l.title?.toLowerCase().includes("wifi");
+    if (isWifi) {
+      return Boolean(l.ssid?.trim() || l.password?.trim() || (l.url && l.url.trim() !== "#" && l.url.trim() !== ""));
+    }
+    const url = (l.url || "").trim();
+    return Boolean(url && url !== "#" && url !== "https://" && url !== "http://" && url !== "");
+  });
+
+  // If no links configured yet (e.g. preview mode or fresh hub), provide fallback demo links matching reference image
+  const displayLinks = validLinks.length > 0 ? validLinks : [
+    { id: "demo-rev", category: "reviews", title: "Leave a Review", subtitle: "Share your experience", url: "https://google.com", icon: "google" },
+    { id: "demo-wa", category: "contact", title: "Chat on WhatsApp", subtitle: "Get in touch with us", url: "https://wa.me/917977469926", icon: "whatsapp" },
+    { id: "demo-ig", category: "social", title: "Follow on Instagram", subtitle: "See what's happening", url: "https://instagram.com", icon: "instagram" },
+    { id: "demo-wifi", category: "wifi", title: "Connect to Wi-Fi", subtitle: "Stay connected", url: "wifi:Guest_Wi-Fi", icon: "wifi", ssid: "Guest_Wi-Fi", password: "welcomeguest" },
+    { id: "demo-menu", category: "website", title: "View Menu", subtitle: "Explore our offerings", url: "https://example.com/menu", icon: "menu" },
+    { id: "demo-book", category: "website", title: "Book a Table", subtitle: "Reserve your spot", url: "https://example.com/book", icon: "calendar" },
+    { id: "demo-map", category: "maps", title: "Get Directions", subtitle: "Find us easily", url: "https://maps.google.com", icon: "map" },
+    { id: "demo-web", category: "website", title: "Visit Our Website", subtitle: "Learn more about us", url: "https://example.com", icon: "globe" }
+  ];
+
+  // Helper for touchpoint styling matching the soft pastel palette in the reference image
   const getTouchpointConfig = (link: any) => {
     const icon = (link.icon || "").toLowerCase();
     const cat = (link.category || "").toLowerCase();
     const title = (link.title || "").toLowerCase();
 
-    if (icon.includes("whatsapp") || title.includes("whatsapp")) {
+    // 1. Google Review / Reviews
+    if (icon.includes("google") || title.includes("review") || title.includes("google") || cat === "reviews") {
       return {
-        actionText: "Tap to Chat",
-        pillBg: "bg-emerald-50 text-emerald-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-[#25D366] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 group-hover:shadow-emerald-500/35 transition-all duration-300">
-            <WhatsAppIcon className="w-7 h-7 fill-white" />
+        title: link.title || "Leave a Review",
+        subtitle: link.subtitle || "Share your experience",
+        cardBg: "bg-[#FBF8F3] hover:bg-[#F5F0E8] border-[#ECE3D6] text-[#22201D]",
+        chevronColor: "text-[#A89F91]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white shadow-xs border border-neutral-100 flex items-center justify-center shrink-0">
+            <GoogleIcon className="w-5 h-5" />
           </div>
         )
       };
     }
 
-    if (icon.includes("instagram") || title.includes("instagram")) {
+    // 2. WhatsApp
+    if (icon.includes("whatsapp") || title.includes("whatsapp") || title.includes("chat")) {
       return {
-        actionText: "Follow Us",
-        pillBg: "bg-pink-50 text-pink-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center shadow-lg shadow-pink-500/25 group-hover:scale-110 group-hover:shadow-pink-500/35 transition-all duration-300">
-            <InstagramIcon className="w-7 h-7 text-white stroke-[2.2]" />
+        title: link.title || "Chat on WhatsApp",
+        subtitle: link.subtitle || "Get in touch with us",
+        cardBg: "bg-[#EBF7EE] hover:bg-[#DFEFDE] border-[#D0EBD7] text-[#16331C]",
+        chevronColor: "text-[#7EA786]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#25D366] text-white flex items-center justify-center shadow-xs shrink-0">
+            <WhatsAppIcon className="w-5 h-5 fill-white" />
           </div>
         )
       };
     }
 
-    if (icon.includes("google") || title.includes("google") || cat === "reviews") {
+    // 3. Instagram
+    if (icon.includes("instagram") || title.includes("instagram") || title.includes("insta") || cat === "social") {
       return {
-        actionText: "Leave a Review",
-        pillBg: "bg-amber-50 text-amber-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 text-white flex items-center justify-center shadow-lg shadow-black/5 group-hover:scale-110 transition-all duration-300">
-            <GoogleIcon className="w-7 h-7" />
+        title: link.title || "Follow on Instagram",
+        subtitle: link.subtitle || "See what's happening",
+        cardBg: "bg-[#FAF0F4] hover:bg-[#F5E5EC] border-[#F4D7E2] text-[#361B29]",
+        chevronColor: "text-[#B0899C]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center shadow-xs shrink-0">
+            <InstagramIcon className="w-5 h-5 text-white" />
           </div>
         )
       };
     }
 
-    if (icon.includes("wifi") || cat === "wifi") {
+    // 4. Wi-Fi
+    if (cat === "wifi" || icon.includes("wifi") || title.includes("wi-fi") || title.includes("wifi")) {
       return {
-        actionText: "Connect Now",
-        pillBg: "bg-cyan-50 text-cyan-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-all duration-300">
-            <Wifi className="w-7 h-7 text-white stroke-[2.2]" />
+        title: link.title || "Connect to Wi-Fi",
+        subtitle: link.subtitle || "Stay connected",
+        cardBg: "bg-[#EBF2F8] hover:bg-[#DEE9F3] border-[#D1E0EE] text-[#1B2936]",
+        chevronColor: "text-[#7F9EB8]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#283747] text-white flex items-center justify-center shadow-xs shrink-0">
+            <Wifi className="w-5 h-5 text-white stroke-[2.4]" />
           </div>
         )
       };
     }
 
-    if (icon.includes("phone") || title.includes("call") || title.includes("phone")) {
+    // 5. Menu / Food / Dining
+    if (icon.includes("menu") || icon.includes("food") || title.includes("menu") || title.includes("order") || title.includes("food") || title.includes("dining")) {
       return {
-        actionText: "Direct Call",
-        pillBg: "bg-blue-50 text-blue-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-all duration-300">
-            <Phone className="w-7 h-7 text-white stroke-[2.2]" />
+        title: link.title || "View Menu",
+        subtitle: link.subtitle || "Explore our offerings",
+        cardBg: "bg-[#F7EFE8] hover:bg-[#EEE2D7] border-[#E8D9CB] text-[#362719]",
+        chevronColor: "text-[#A9937E]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#D4BA9F] text-[#362719] flex items-center justify-center shadow-xs shrink-0">
+            <Utensils className="w-5 h-5 stroke-[2.2]" />
           </div>
         )
       };
     }
 
+    // 6. Book Table / Appointment / Calendar
+    if (icon.includes("calendar") || icon.includes("book") || title.includes("book") || title.includes("reserve") || title.includes("table") || title.includes("appointment")) {
+      return {
+        title: link.title || "Book a Table",
+        subtitle: link.subtitle || "Reserve your spot",
+        cardBg: "bg-[#FAF0EA] hover:bg-[#F3E3DB] border-[#ECD7CD] text-[#382218]",
+        chevronColor: "text-[#AD8D7F]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#E8C5B5] text-[#382218] flex items-center justify-center shadow-xs shrink-0">
+            <Calendar className="w-5 h-5 stroke-[2.2]" />
+          </div>
+        )
+      };
+    }
+
+    // 7. Maps / Location / Directions
+    if (cat === "maps" || icon.includes("map") || icon.includes("pin") || title.includes("direction") || title.includes("location") || title.includes("route") || title.includes("find us")) {
+      return {
+        title: link.title || "Get Directions",
+        subtitle: link.subtitle || "Find us easily",
+        cardBg: "bg-[#F2EFEA] hover:bg-[#E8E3DB] border-[#DFD8CD] text-[#2D2A26]",
+        chevronColor: "text-[#9A9387]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#D1C9BE] text-[#2D2A26] flex items-center justify-center shadow-xs shrink-0">
+            <MapPin className="w-5 h-5 stroke-[2.2]" />
+          </div>
+        )
+      };
+    }
+
+    // 8. Phone / Call
+    if (icon.includes("phone") || title.includes("call") || title.includes("phone") || title.includes("reception")) {
+      return {
+        title: link.title || "Call Us",
+        subtitle: link.subtitle || "Speak with our team",
+        cardBg: "bg-[#EEF4FA] hover:bg-[#DFEAF5] border-[#D3E2F0] text-[#16273A]",
+        chevronColor: "text-[#7B9BBF]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#2563EB] text-white flex items-center justify-center shadow-xs shrink-0">
+            <Phone className="w-5 h-5 text-white stroke-[2.2]" />
+          </div>
+        )
+      };
+    }
+
+    // 9. Email
     if (icon.includes("mail") || title.includes("email") || title.includes("mail")) {
       return {
-        actionText: "Send Email",
-        pillBg: "bg-amber-50 text-amber-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-all duration-300">
-            <Mail className="w-7 h-7 text-white stroke-[2.2]" />
+        title: link.title || "Email Us",
+        subtitle: link.subtitle || "Send a message",
+        cardBg: "bg-[#FFF8EE] hover:bg-[#FDEED7] border-[#FCE2BE] text-[#38260F]",
+        chevronColor: "text-[#BFA175]",
+        iconBadge: (
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#D97706] text-white flex items-center justify-center shadow-xs shrink-0">
+            <Mail className="w-5 h-5 text-white stroke-[2.2]" />
           </div>
         )
       };
     }
 
-    if (icon.includes("twitter") || icon.includes("x") || title.includes("x") || title.includes("twitter")) {
-      return {
-        actionText: "View Profile",
-        pillBg: "bg-neutral-100 text-neutral-800",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center shadow-lg shadow-black/25 group-hover:scale-110 transition-all duration-300">
-            <XTwitterIcon className="w-6 h-6 fill-white" />
-          </div>
-        )
-      };
-    }
-
-    if (icon.includes("facebook") || title.includes("facebook")) {
-      return {
-        actionText: "Visit Page",
-        pillBg: "bg-blue-50 text-blue-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-[#1877F2] text-white flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-all duration-300">
-            <FacebookIcon className="w-7 h-7 fill-white" />
-          </div>
-        )
-      };
-    }
-
-    if (icon.includes("youtube") || title.includes("youtube")) {
-      return {
-        actionText: "Watch Channel",
-        pillBg: "bg-red-50 text-red-700",
-        iconElement: (
-          <div className="w-14 h-14 rounded-2xl bg-[#FF0000] text-white flex items-center justify-center shadow-lg shadow-red-500/25 group-hover:scale-110 transition-all duration-300">
-            <YouTubeIcon className="w-7 h-7 fill-white" />
-          </div>
-        )
-      };
-    }
-
+    // 10. Default Website / Custom link
     return {
-      actionText: "Open Link",
-      pillBg: "bg-slate-100 text-slate-700",
-      iconElement: (
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-700 to-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-500/25 group-hover:scale-110 transition-all duration-300">
-          <Globe className="w-7 h-7 text-white stroke-[2.2]" />
+      title: link.title || "Visit Our Website",
+      subtitle: link.subtitle || "Learn more about us",
+      cardBg: "bg-[#EEF5EC] hover:bg-[#DFEDE0] border-[#D6E6D3] text-[#1B3019]",
+      chevronColor: "text-[#7E9F7C]",
+      iconBadge: (
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#648F60] text-white flex items-center justify-center shadow-xs shrink-0">
+          <Link2 className="w-5 h-5 text-white stroke-[2.2]" />
         </div>
       )
     };
   };
 
   return (
-    <div className="w-full h-full bg-[#F8F9FA] overflow-y-auto scrollbar-hide text-slate-900 relative">
+    <div className="w-full h-full max-h-[100dvh] bg-[#F4EFEA] text-[#1F221B] flex flex-col justify-between relative overflow-hidden select-none font-sans">
       
-      {/* 1. Sleek Hero Header */}
-      <div className="w-full h-52 sm:h-60 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 relative overflow-hidden">
-        {data.coverUrl ? (
-          <img 
-            src={data.coverUrl} 
-            alt={data.businessName || "Cover"} 
-            className="w-full h-full object-cover opacity-90"
-          />
-        ) : (
-          <div className="w-full h-full relative">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-700/40 via-transparent to-transparent" />
-            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-[#F8F9FA] z-10" />
-      </div>
+      {/* Subtle botanical leaves watermark in bottom left corner matching reference image */}
+      <svg 
+        className="absolute -bottom-2 -left-2 w-28 h-28 text-[#8C765C] opacity-25 pointer-events-none z-0" 
+        viewBox="0 0 100 100" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="1.6"
+      >
+        <path d="M15,95 Q40,65 60,40 Q80,20 95,10" />
+        <path d="M35,68 Q22,58 28,45 Q40,52 38,62 Z" fill="currentColor" fillOpacity="0.15" />
+        <path d="M52,50 Q65,45 60,32 Q48,38 50,48 Z" fill="currentColor" fillOpacity="0.15" />
+        <path d="M70,35 Q83,32 80,20 Q68,22 68,32 Z" fill="currentColor" fillOpacity="0.15" />
+        <path d="M86,22 Q98,18 94,8 Q84,10 85,20 Z" fill="currentColor" fillOpacity="0.15" />
+      </svg>
 
-      <div className="relative z-20 px-5 sm:px-6 pb-14">
+      {/* TOP SECTION: BACKDROP PHOTO + ARCH + LOGO + SHOP TITLE */}
+      <div className="shrink-0 flex flex-col">
         
-        {/* 2. Avatar Profile & Verified Badge */}
-        <div className="relative -mt-16 mb-5 flex flex-col items-center">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-full p-1.5 shadow-2xl shadow-black/20 ring-4 ring-white/95 relative z-20 flex items-center justify-center overflow-hidden">
-            <img 
-              src={displayLogo} 
-              alt={data.businessName || "Business Logo"} 
-              className="w-full h-full object-cover rounded-full" 
-            />
-          </div>
+        {/* 1. BACKDROP PHOTO WITH CURVED ARCH BOTTOM */}
+        <div className="w-full relative h-36 sm:h-40 overflow-hidden shrink-0">
+          <img 
+            src={backdropPhoto} 
+            alt={businessName} 
+            className="w-full h-full object-cover" 
+          />
+          {/* Ambient overlay for rich lighting */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/10" />
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide bg-emerald-500/10 text-emerald-800 border border-emerald-500/25 shadow-xs mt-3.5 backdrop-blur-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Verified TAPSH Hub</span>
+          {/* Smooth Convex Architectural Arch SVG (Cream arches upward in the center) */}
+          <svg 
+            viewBox="0 0 400 48" 
+            preserveAspectRatio="none" 
+            className="w-full h-10 sm:h-12 absolute -bottom-px left-0 text-[#F4EFEA] fill-current z-10 pointer-events-none"
+          >
+            <path d="M 0,48 L 0,36 Q 200,0 400,36 L 400,48 Z" />
+          </svg>
+        </div>
+
+        {/* 2. CIRCULAR LOGO BADGE (Centered on the arch transition apex) */}
+        <div className="relative -mt-9 sm:-mt-10 z-20 flex justify-center shrink-0">
+          <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full p-[3px] bg-[#F4EFEA] shadow-lg ring-1 ring-[#D8CEBF] flex items-center justify-center overflow-hidden">
+            <div className="w-full h-full rounded-full overflow-hidden bg-[#1D2F24] flex items-center justify-center border border-[#A48F6C]/40">
+              {data.logoUrl && data.logoUrl.trim() !== "" ? (
+                <img 
+                  src={data.logoUrl} 
+                  alt={businessName} 
+                  className="w-full h-full object-cover rounded-full" 
+                />
+              ) : (
+                /* Elegant botanical emblem matching reference image */
+                <svg viewBox="0 0 64 64" fill="none" stroke="#D1BA8E" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="w-9 h-9 sm:w-10 sm:h-10">
+                  <path d="M18 48 C24 38, 34 26, 46 16" />
+                  <path d="M23 41 C21 34, 27 30, 31 34 C32 38, 28 41, 23 41 Z" fill="#D1BA8E" fillOpacity="0.2" />
+                  <path d="M29 34 C34 30, 38 34, 35 38 C31 40, 28 37, 29 34 Z" fill="#D1BA8E" fillOpacity="0.2" />
+                  <path d="M33 27 C31 20, 38 18, 41 22 C42 26, 38 28, 33 27 Z" fill="#D1BA8E" fillOpacity="0.2" />
+                  <path d="M39 21 C44 17, 48 21, 45 25 C41 27, 38 24, 39 21 Z" fill="#D1BA8E" fillOpacity="0.2" />
+                  <path d="M43 15 C44 9, 50 11, 49 16 C47 18, 44 18, 43 15 Z" fill="#D1BA8E" fillOpacity="0.2" />
+                </svg>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* 3. Business Title & Headline */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
-            {data.businessName || "Business Name"}
+        {/* 3. SHOP NAME, CATEGORY SUBTITLE & MINI DESCRIPTION */}
+        <div className="text-center px-4 pt-1 pb-1 shrink-0">
+          <h1 className="font-[family-name:var(--font-playfair)] font-serif text-2xl sm:text-[26px] font-semibold tracking-tight text-[#1F221B] leading-tight">
+            {businessName}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-[320px] mx-auto leading-relaxed">
-            {data.description || "Welcome to our space. Select an option below to connect with us."}
-          </p>
-        </div>
 
-        {/* 4. Action Modules */}
-        <div className="space-y-4">
-          
-          {/* Prominent Reviews Section (if active) */}
-          {reviewLinks.length > 0 && (
-            <div className="bg-gradient-to-b from-white to-amber-50/30 rounded-3xl p-6 border border-amber-200/80 shadow-[0_6px_24px_rgba(245,158,11,0.08)] text-center relative overflow-hidden">
-              <div className="flex items-center justify-center gap-1 text-amber-400 mb-2">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-              </div>
-              <h3 className="font-extrabold text-slate-900 text-base mb-1">How was your visit?</h3>
-              <p className="text-xs text-slate-500 mb-4 font-medium">Your review on Google helps us grow.</p>
-              
-              <div className="space-y-2.5">
-                {reviewLinks.map((link: any, i: number) => {
-                  const resolvedUrl = resolveTouchpointUrl(link);
-                  return (
-                    <a 
-                      key={i}
-                      href={resolvedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-3 w-full py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all active:scale-[0.98] shadow-md shadow-slate-900/20 group"
-                    >
-                      <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0">
-                        <GoogleIcon className="w-4 h-4" />
-                      </div>
-                      <span>{link.title || "Rate Us on Google"}</span>
-                      <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Action Grid */}
-          {actionLinks.length > 0 && (
-            <div className={actionLinks.length === 1 ? "flex justify-center" : "grid grid-cols-2 gap-3.5 sm:gap-4"}>
-              {actionLinks.map((link: any, i: number) => {
-                const config = getTouchpointConfig(link);
-                const isWifi = link.category === "wifi" || link.icon === "wifi";
-                const displayTitle = isWifi 
-                  ? (link.title?.startsWith("Connect to Wi-Fi (") ? "Wi-Fi Network" : (link.title || "Wi-Fi Network"))
-                  : link.title;
-
-                const singleCardClass = actionLinks.length === 1 ? "w-full max-w-[220px]" : "";
-                const resolvedUrl = resolveTouchpointUrl(link);
-                const isPhone = link.category === "contact" && (link.icon === "phone" || link.title?.toLowerCase().includes("call"));
-
-                return isWifi ? (
-                  <button 
-                    key={i}
-                    type="button"
-                    onClick={() => setActiveWifiModal(link)}
-                    className={`bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-[0_6px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] hover:border-slate-300 transition-all duration-200 active:scale-[0.98] text-slate-900 group flex flex-col items-center justify-center text-center cursor-pointer relative overflow-hidden ${singleCardClass}`}
-                  >
-                    {config.iconElement}
-                    <span className="font-extrabold text-sm sm:text-base text-slate-900 group-hover:text-tapsh-soft-green transition-colors mt-3.5 tracking-tight line-clamp-1">
-                      {displayTitle}
-                    </span>
-                    <span className="text-[11px] font-semibold text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5">
-                      {config.actionText}
-                    </span>
-                    {link.ssid && (
-                      <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-2.5 py-0.5 rounded-full mt-2 truncate max-w-full font-bold border border-cyan-100">
-                        {link.ssid}
-                      </span>
-                    )}
-                  </button>
-                ) : (
-                  <a 
-                    key={i}
-                    href={resolvedUrl}
-                    target={isPhone ? undefined : "_blank"}
-                    rel="noopener noreferrer"
-                    className={`bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-[0_6px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] hover:border-slate-300 transition-all duration-200 active:scale-[0.98] text-slate-900 group flex flex-col items-center justify-center text-center relative overflow-hidden ${singleCardClass}`}
-                  >
-                    {config.iconElement}
-                    <span className="font-extrabold text-sm sm:text-base text-slate-900 group-hover:text-tapsh-soft-green transition-colors mt-3.5 tracking-tight line-clamp-1">
-                      {link.title}
-                    </span>
-                    <span className="text-[11px] font-semibold text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5">
-                      {config.actionText}
-                    </span>
-                  </a>
-                );
-              })}
-            </div>
-          )}
-
-        </div>
-
-        {/* 5. Refined Closing Sign-off & Official Branding */}
-        <div className="mt-14 mb-6 text-center flex flex-col items-center justify-center">
-          <p className="font-serif italic text-xl sm:text-2xl text-slate-800 tracking-wide mb-1">
-            {data.greetingMessage || "Thank you for visiting"}
-          </p>
-          <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-slate-300 to-transparent mx-auto mt-1 mb-8" />
-
-          {/* Subtle Powered by TAPSH Attribution & Discovery Area */}
-          <footer className="flex flex-col items-center pt-2">
-            <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400 mb-2">
-              POWERED BY
-            </span>
-            
-            <a 
-              href="/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-block transition-opacity hover:opacity-80 active:scale-98"
-              title="TAPSH"
-            >
-              <img src={logoDark} alt="TAPSH" className="h-5 sm:h-5.5 w-auto object-contain opacity-90" />
-            </a>
-
-            <p className="text-[11px] font-medium text-slate-500/90 mt-1">
-              Smart NFC &amp; QR Solutions for Businesses
+          {businessType && (
+            <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.24em] text-[#8C8070] mt-0.5">
+              {businessType}
             </p>
+          )}
 
-            {/* Small Premium Action Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mt-3.5">
-              <a
-                href="/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold bg-white border border-slate-200/90 text-slate-700 hover:text-slate-950 hover:bg-slate-50 hover:border-slate-300 shadow-xs active:scale-95 transition-all"
-              >
-                <Globe className="w-3.5 h-3.5 text-slate-400" />
-                <span>Explore TAPSH</span>
-              </a>
+          {miniDescription && (
+            <p className="text-xs sm:text-[13px] font-medium text-[#7D7060] mt-1 leading-snug px-3 line-clamp-2 max-w-[320px] mx-auto">
+              {miniDescription}
+            </p>
+          )}
 
-              <a
-                href="https://wa.me/917977469926?text=Hi%20TAPSH%20%F0%9F%91%8B%20I'm%20interested%20in%20TAPSH%20solutions%20for%20my%20business."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold bg-[#25D366]/10 border border-[#25D366]/25 text-emerald-800 hover:bg-[#25D366]/20 hover:border-[#25D366]/40 shadow-xs active:scale-95 transition-all"
-              >
-                <WhatsAppIcon className="w-3.5 h-3.5 fill-[#25D366]" />
-                <span>WhatsApp Us</span>
-              </a>
-            </div>
-          </footer>
+          {/* Centered subtle accent line */}
+          <div className="w-8 h-px bg-[#D6CBBF] mx-auto mt-1.5 mb-0.5" />
         </div>
 
       </div>
 
-      {/* Interactive Wi-Fi Connection Modal */}
+      {/* 5. TOUCHPOINT ACTION CARDS (REVIEW.. INSTA.. WA.. ETC.) */}
+      {/* Scroll-safe container: Starts from top if many items, centers gracefully if few */}
+      <div className="flex-1 min-h-0 px-4 sm:px-5 py-1 overflow-y-auto scrollbar-none flex flex-col justify-start z-10">
+        <div className="my-auto flex flex-col gap-1.5 sm:gap-2 w-full py-0.5">
+          {displayLinks.map((link: any, idx: number) => {
+            const config = getTouchpointConfig(link);
+            const isWifi = link.category === "wifi" || link.icon === "wifi" || link.title?.toLowerCase().includes("wi-fi") || link.title?.toLowerCase().includes("wifi");
+            const resolvedUrl = resolveTouchpointUrl(link);
+            const isPhone = link.category === "contact" && (link.icon === "phone" || link.title?.toLowerCase().includes("call"));
+
+            return isWifi ? (
+              <button
+                key={link.id || idx}
+                type="button"
+                onClick={() => setActiveWifiModal(link)}
+                className={`w-full rounded-2xl px-3.5 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 active:scale-[0.985] shadow-[0_1px_4px_rgba(0,0,0,0.02)] border cursor-pointer ${config.cardBg}`}
+              >
+                <div className="flex items-center gap-3 text-left min-w-0">
+                  {config.iconBadge}
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-semibold text-xs sm:text-[13px] leading-tight truncate text-[#1F221B]">
+                      {config.title}
+                    </span>
+                    <span className="block text-[10px] sm:text-[11px] text-[#786E61] leading-tight mt-0.5 truncate">
+                      {config.subtitle}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className={`w-4 h-4 shrink-0 stroke-[2] ${config.chevronColor}`} />
+              </button>
+            ) : (
+              <a
+                key={link.id || idx}
+                href={resolvedUrl}
+                target={isPhone ? "_self" : "_blank"}
+                rel="noopener noreferrer"
+                className={`w-full rounded-2xl px-3.5 py-2 sm:py-2.5 flex items-center justify-between transition-all duration-150 active:scale-[0.985] shadow-[0_1px_4px_rgba(0,0,0,0.02)] border cursor-pointer ${config.cardBg}`}
+              >
+                <div className="flex items-center gap-3 text-left min-w-0">
+                  {config.iconBadge}
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-semibold text-xs sm:text-[13px] leading-tight truncate text-[#1F221B]">
+                      {config.title}
+                    </span>
+                    <span className="block text-[10px] sm:text-[11px] text-[#786E61] leading-tight mt-0.5 truncate">
+                      {config.subtitle}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className={`w-4 h-4 shrink-0 stroke-[2] ${config.chevronColor}`} />
+              </a>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 6. FOOTER BRANDING (Handwritten cursive "Tap. Connect. Grow." + "Powered by TAPSH") */}
+      <div className="relative z-10 text-center pt-1 pb-3 sm:pb-3.5 shrink-0 select-none">
+        <p className="font-[family-name:var(--font-caveat)] text-2xl sm:text-[25px] text-[#846E56] font-normal leading-none">
+          Tap. Connect. Grow.
+        </p>
+        <p className="text-[10px] text-[#918575] tracking-[0.18em] uppercase mt-0.5 font-medium leading-none">
+          Powered by <span className="font-bold text-[#23201C] tracking-[0.22em]">TAPSH</span>
+        </p>
+      </div>
+
+      {/* INTERACTIVE WI-FI CONNECTION MODAL */}
       {activeWifiModal && (
         <div 
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setActiveWifiModal(null)}
         >
           <div 
-            className="bg-white rounded-3xl p-6 max-w-xs w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center border border-slate-100"
+            className="bg-[#FBF9F5] rounded-3xl p-6 max-w-xs w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center border border-[#E8DFC9]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setActiveWifiModal(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+              className="absolute top-4 right-4 w-7 h-7 rounded-full bg-black/5 hover:bg-black/10 text-neutral-500 hover:text-neutral-800 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="w-14 h-14 rounded-2xl bg-cyan-50 text-cyan-600 mx-auto mb-3 flex items-center justify-center border border-cyan-100 shadow-sm">
-              <Wifi className="w-7 h-7" />
+            <div className="w-12 h-12 rounded-2xl bg-[#EBF2F8] text-[#283747] mx-auto mb-3 flex items-center justify-center border border-[#D1E0EE] shadow-xs">
+              <Wifi className="w-6 h-6 stroke-[2.2]" />
             </div>
 
-            <h3 className="text-lg font-extrabold text-slate-900 mb-1">
-              Guest Wi-Fi Network
+            <h3 className="font-serif text-lg font-semibold text-[#1F221B]">
+              Connect to Wi-Fi
             </h3>
-            <p className="text-xs text-slate-500 mb-4 font-medium">
-              Tap below to connect or copy the password.
+            <p className="text-xs text-[#786E61] mt-1 mb-4">
+              Join the guest network while visiting {businessName}
             </p>
 
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-left mb-4 space-y-3 text-xs">
+            <div className="bg-white rounded-2xl p-3 border border-[#E8DFC9] space-y-2 mb-4 text-left shadow-2xs">
               <div>
-                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Network Name (SSID)</span>
-                <span className="text-sm font-bold text-slate-900">{activeWifiModal.ssid || "Guest Wi-Fi"}</span>
+                <span className="text-[10px] uppercase font-bold text-[#8C8070] tracking-wider block">Network (SSID)</span>
+                <span className="text-xs font-semibold text-[#1F221B] break-all">
+                  {activeWifiModal.ssid || "Guest_Wi-Fi"}
+                </span>
               </div>
+              
               {activeWifiModal.password && (
-                <div>
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</span>
-                  <div className="flex items-center justify-between gap-2 mt-1">
-                    <span className="text-xs sm:text-sm font-mono font-bold text-slate-900 bg-white px-3 py-1.5 rounded-xl border border-slate-200 select-all flex-1 truncate shadow-xs">
+                <div className="pt-2 border-t border-neutral-100 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-[#8C8070] tracking-wider block">Password</span>
+                    <span className="text-xs font-mono font-bold text-[#1F221B]">
                       {activeWifiModal.password}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (activeWifiModal.password) {
-                          navigator.clipboard.writeText(activeWifiModal.password);
-                          setCopiedWifiPass(true);
-                          setTimeout(() => setCopiedWifiPass(false), 2000);
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-tapsh-soft-green transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs"
-                    >
-                      {copiedWifiPass ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-300" />}
-                      <span>{copiedWifiPass ? "Copied" : "Copy"}</span>
-                    </button>
                   </div>
-                </div>
-              )}
-
-              {(activeWifiModal.authType || activeWifiModal.encryption) && (
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 text-[11px]">
-                  {activeWifiModal.authType && (
-                    <div>
-                      <span className="text-[10px] text-slate-400 block">Security</span>
-                      <span className="font-semibold text-slate-800">{activeWifiModal.authType}</span>
-                    </div>
-                  )}
-                  {activeWifiModal.encryption && (
-                    <div>
-                      <span className="text-[10px] text-slate-400 block">Encryption</span>
-                      <span className="font-semibold text-slate-800">{activeWifiModal.encryption}</span>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(activeWifiModal.password);
+                      setCopiedWifiPass(true);
+                      setTimeout(() => setCopiedWifiPass(false), 2000);
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-neutral-100 text-[#8C8070] hover:text-[#1F221B] transition-colors cursor-pointer"
+                    title="Copy Password"
+                  >
+                    {copiedWifiPass ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
                 </div>
               )}
             </div>
 
             <a
-              href={activeWifiModal.url || "#"}
-              className="block w-full py-3.5 px-4 bg-slate-950 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 text-center cursor-pointer"
+              href={`WIFI:S:${activeWifiModal.ssid || "Guest_Wi-Fi"};T:${activeWifiModal.authType || "WPA"};P:${activeWifiModal.password || ""};;`}
+              className="w-full py-2.5 rounded-xl bg-[#283747] hover:bg-[#1C2833] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
             >
-              Connect to Wi-Fi
+              <Wifi className="w-3.5 h-3.5" />
+              <span>Connect Automatically</span>
             </a>
           </div>
         </div>

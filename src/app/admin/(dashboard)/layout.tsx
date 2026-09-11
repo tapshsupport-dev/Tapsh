@@ -283,24 +283,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* ---------------------------------------------------- */}
       {/* MOBILE BOTTOM NAVIGATION BAR (Thumb-friendly on phone) */}
       {/* ---------------------------------------------------- */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-tapsh-charcoal/20 px-2 py-1.5 shadow-lg safe-area-bottom">
-        <div className="grid grid-cols-6 items-center">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-tapsh-charcoal/15 px-2 pt-1.5 pb-safe pb-2 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <div className="grid grid-cols-5 items-center max-w-md mx-auto">
           {navItems.map((item) => {
             const active = isActive(item);
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all ${
+                className={`flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all ${
                   active 
-                    ? "text-tapsh-black font-bold" 
+                    ? "text-tapsh-soft-green font-bold" 
                     : "text-tapsh-charcoal hover:text-tapsh-black font-medium"
                 }`}
               >
-                <div className={`p-1 rounded-xl transition-colors ${active ? "bg-tapsh-soft-green/15 text-tapsh-soft-green" : ""}`}>
-                  <item.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className={`p-1.5 rounded-xl transition-all ${active ? "bg-tapsh-soft-green/15 text-tapsh-soft-green scale-105" : "text-tapsh-charcoal"}`}>
+                  <item.icon className="w-5 h-5" />
                 </div>
-                <span className="text-[9px] tracking-tight mt-0.5 leading-none">
+                <span className="text-[10px] tracking-tight mt-1 leading-none font-semibold">
                   {item.name}
                 </span>
               </Link>

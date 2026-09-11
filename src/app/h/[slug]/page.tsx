@@ -43,6 +43,7 @@ export default async function PublicHubPage({ params }: { params: Promise<{ slug
           description: hubData.shortDescription,
           greetingMessage: hubData.greetingMessage,
           coverUrl: hubData.coverUrl,
+          logoUrl: hubData.logoUrl || (hubData as any).logo || "",
           links: hubData.links
         }} />
       </div>

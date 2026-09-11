@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Star, X, Check, Copy, Wifi } from "lucide-react";
-import Image from "next/image";
+import { Star, X, Check, Copy, Wifi, Phone, Mail, Globe, ArrowUpRight, ChevronRight } from "lucide-react";
 import { useSiteAssets } from "@/context/SiteAssetsContext";
-import { getTouchpointIcon, resolveTouchpointUrl } from "@/components/TouchpointIcons";
+import { 
+  GoogleIcon, 
+  WhatsAppIcon, 
+  InstagramIcon, 
+  FacebookIcon, 
+  YouTubeIcon, 
+  XTwitterIcon, 
+  resolveTouchpointUrl 
+} from "@/components/TouchpointIcons";
 
 export default function HubView({ data }: { data: any }) {
   const { getAsset } = useSiteAssets();
@@ -14,54 +21,203 @@ export default function HubView({ data }: { data: any }) {
   const [activeWifiModal, setActiveWifiModal] = useState<any | null>(null);
   const [copiedWifiPass, setCopiedWifiPass] = useState(false);
 
-  // Extract specific link types
+  // Logo fallback
+  const displayLogo = data.logoUrl || logoIcon;
+
+  // Extract link types
   const reviewLinks = data.links?.filter((l: any) => l.category === "reviews") || [];
   const actionLinks = data.links?.filter((l: any) => l.category !== "reviews") || [];
 
+  // Helper for branded touchpoint styling
+  const getTouchpointConfig = (link: any) => {
+    const icon = (link.icon || "").toLowerCase();
+    const cat = (link.category || "").toLowerCase();
+    const title = (link.title || "").toLowerCase();
+
+    if (icon.includes("whatsapp") || title.includes("whatsapp")) {
+      return {
+        actionText: "Tap to Chat",
+        pillBg: "bg-emerald-50 text-emerald-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-[#25D366] text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 group-hover:shadow-emerald-500/35 transition-all duration-300">
+            <WhatsAppIcon className="w-7 h-7 fill-white" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("instagram") || title.includes("instagram")) {
+      return {
+        actionText: "Follow Us",
+        pillBg: "bg-pink-50 text-pink-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white flex items-center justify-center shadow-lg shadow-pink-500/25 group-hover:scale-110 group-hover:shadow-pink-500/35 transition-all duration-300">
+            <InstagramIcon className="w-7 h-7 text-white stroke-[2.2]" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("google") || title.includes("google") || cat === "reviews") {
+      return {
+        actionText: "Leave a Review",
+        pillBg: "bg-amber-50 text-amber-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 text-white flex items-center justify-center shadow-lg shadow-black/5 group-hover:scale-110 transition-all duration-300">
+            <GoogleIcon className="w-7 h-7" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("wifi") || cat === "wifi") {
+      return {
+        actionText: "Connect Now",
+        pillBg: "bg-cyan-50 text-cyan-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-all duration-300">
+            <Wifi className="w-7 h-7 text-white stroke-[2.2]" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("phone") || title.includes("call") || title.includes("phone")) {
+      return {
+        actionText: "Direct Call",
+        pillBg: "bg-blue-50 text-blue-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-all duration-300">
+            <Phone className="w-7 h-7 text-white stroke-[2.2]" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("mail") || title.includes("email") || title.includes("mail")) {
+      return {
+        actionText: "Send Email",
+        pillBg: "bg-amber-50 text-amber-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-all duration-300">
+            <Mail className="w-7 h-7 text-white stroke-[2.2]" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("twitter") || icon.includes("x") || title.includes("x") || title.includes("twitter")) {
+      return {
+        actionText: "View Profile",
+        pillBg: "bg-neutral-100 text-neutral-800",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center shadow-lg shadow-black/25 group-hover:scale-110 transition-all duration-300">
+            <XTwitterIcon className="w-6 h-6 fill-white" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("facebook") || title.includes("facebook")) {
+      return {
+        actionText: "Visit Page",
+        pillBg: "bg-blue-50 text-blue-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-[#1877F2] text-white flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-all duration-300">
+            <FacebookIcon className="w-7 h-7 fill-white" />
+          </div>
+        )
+      };
+    }
+
+    if (icon.includes("youtube") || title.includes("youtube")) {
+      return {
+        actionText: "Watch Channel",
+        pillBg: "bg-red-50 text-red-700",
+        iconElement: (
+          <div className="w-14 h-14 rounded-2xl bg-[#FF0000] text-white flex items-center justify-center shadow-lg shadow-red-500/25 group-hover:scale-110 transition-all duration-300">
+            <YouTubeIcon className="w-7 h-7 fill-white" />
+          </div>
+        )
+      };
+    }
+
+    return {
+      actionText: "Open Link",
+      pillBg: "bg-slate-100 text-slate-700",
+      iconElement: (
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-slate-700 to-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-500/25 group-hover:scale-110 transition-all duration-300">
+          <Globe className="w-7 h-7 text-white stroke-[2.2]" />
+        </div>
+      )
+    };
+  };
 
   return (
-    <div className="w-full h-full bg-[#FAF8F5] overflow-y-auto scrollbar-hide text-tapsh-black relative">
+    <div className="w-full h-full bg-[#F8F9FA] overflow-y-auto scrollbar-hide text-slate-900 relative">
       
-      {/* Dynamic Cover Image or Warm Gradient */}
-      <div className="w-full h-56 sm:h-64 bg-gradient-to-br from-tapsh-taupe to-tapsh-black relative border-b border-tapsh-charcoal/20 overflow-hidden">
+      {/* 1. Sleek Hero Header */}
+      <div className="w-full h-52 sm:h-60 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 relative overflow-hidden">
         {data.coverUrl ? (
           <img 
             src={data.coverUrl} 
             alt={data.businessName || "Cover"} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover opacity-90"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-tapsh-taupe via-[#3d332c] to-tapsh-black opacity-90" />
+          <div className="w-full h-full relative">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-700/40 via-transparent to-transparent" />
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+          </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#FAF8F5] z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-[#F8F9FA] z-10" />
       </div>
 
-      <div className="relative z-20 px-6 pb-12 -mt-16">
+      <div className="relative z-20 px-5 sm:px-6 pb-14">
         
-        {/* Logo */}
-        <div className="w-28 h-28 bg-white rounded-full border-[6px] border-[#FAF8F5] shadow-xl mx-auto flex items-center justify-center mb-6 overflow-hidden relative">
-          <img src={logoIcon} alt="TAPSH Icon" className="w-full h-full object-cover" />
+        {/* 2. Avatar Profile & Verified Badge */}
+        <div className="relative -mt-16 mb-5 flex flex-col items-center">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-full p-1.5 shadow-2xl shadow-black/20 ring-4 ring-white/95 relative z-20 flex items-center justify-center overflow-hidden">
+            <img 
+              src={displayLogo} 
+              alt={data.businessName || "Business Logo"} 
+              className="w-full h-full object-cover rounded-full" 
+            />
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide bg-emerald-500/10 text-emerald-800 border border-emerald-500/25 shadow-xs mt-3.5 backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Verified TAPSH Hub</span>
+          </div>
         </div>
 
-
-        {/* Business Info */}
+        {/* 3. Business Title & Headline */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-tapsh-black tracking-tight mb-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
             {data.businessName || "Business Name"}
           </h1>
-          <p className="text-sm text-tapsh-charcoal font-bold max-w-[280px] mx-auto leading-relaxed">
-            {data.description || "Welcome to our space. Select an option below."}
+          <p className="text-xs sm:text-sm text-slate-500 font-medium max-w-[320px] mx-auto leading-relaxed">
+            {data.description || "Welcome to our space. Select an option below to connect with us."}
           </p>
         </div>
 
-        {/* Action Modules */}
+        {/* 4. Action Modules */}
         <div className="space-y-4">
           
-          {/* Reviews Section - Prominent */}
+          {/* Prominent Reviews Section (if active) */}
           {reviewLinks.length > 0 && (
-            <div className="bg-white rounded-[2rem] p-6 shadow-md border border-tapsh-charcoal/20 text-center">
-              <h3 className="font-bold text-tapsh-charcoal mb-4 text-xs uppercase tracking-widest">How was your experience?</h3>
-              <div className="space-y-3">
+            <div className="bg-gradient-to-b from-white to-amber-50/30 rounded-3xl p-6 border border-amber-200/80 shadow-[0_6px_24px_rgba(245,158,11,0.08)] text-center relative overflow-hidden">
+              <div className="flex items-center justify-center gap-1 text-amber-400 mb-2">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-base mb-1">How was your visit?</h3>
+              <p className="text-xs text-slate-500 mb-4 font-medium">Your review on Google helps us grow.</p>
+              
+              <div className="space-y-2.5">
                 {reviewLinks.map((link: any, i: number) => {
                   const resolvedUrl = resolveTouchpointUrl(link);
                   return (
@@ -70,12 +226,13 @@ export default function HubView({ data }: { data: any }) {
                       href={resolvedUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-3 w-full py-4 bg-tapsh-taupe text-tapsh-beige rounded-2xl font-bold text-base sm:text-lg hover:bg-tapsh-black transition-colors active:scale-95 shadow-lg group"
+                      className="flex items-center justify-center gap-3 w-full py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all active:scale-[0.98] shadow-md shadow-slate-900/20 group"
                     >
-                      <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                        {getTouchpointIcon(link, "md")}
+                      <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shrink-0">
+                        <GoogleIcon className="w-4 h-4" />
                       </div>
                       <span>{link.title || "Rate Us on Google"}</span>
+                      <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
                     </a>
                   );
                 })}
@@ -85,14 +242,15 @@ export default function HubView({ data }: { data: any }) {
 
           {/* Action Grid */}
           {actionLinks.length > 0 && (
-            <div className={actionLinks.length === 1 ? "flex justify-center" : "grid grid-cols-2 gap-3 sm:gap-4"}>
+            <div className={actionLinks.length === 1 ? "flex justify-center" : "grid grid-cols-2 gap-3.5 sm:gap-4"}>
               {actionLinks.map((link: any, i: number) => {
+                const config = getTouchpointConfig(link);
                 const isWifi = link.category === "wifi" || link.icon === "wifi";
                 const displayTitle = isWifi 
                   ? (link.title?.startsWith("Connect to Wi-Fi (") ? "Wi-Fi Network" : (link.title || "Wi-Fi Network"))
                   : link.title;
 
-                const singleCardClass = actionLinks.length === 1 ? "w-full max-w-[200px] sm:max-w-[220px]" : "";
+                const singleCardClass = actionLinks.length === 1 ? "w-full max-w-[220px]" : "";
                 const resolvedUrl = resolveTouchpointUrl(link);
                 const isPhone = link.category === "contact" && (link.icon === "phone" || link.title?.toLowerCase().includes("call"));
 
@@ -101,16 +259,17 @@ export default function HubView({ data }: { data: any }) {
                     key={i}
                     type="button"
                     onClick={() => setActiveWifiModal(link)}
-                    className={`flex flex-col items-center justify-center p-5 sm:p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group cursor-pointer ${singleCardClass}`}
+                    className={`bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-[0_6px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] hover:border-slate-300 transition-all duration-200 active:scale-[0.98] text-slate-900 group flex flex-col items-center justify-center text-center cursor-pointer relative overflow-hidden ${singleCardClass}`}
                   >
-                    <div className="w-14 h-14 rounded-[1.2rem] bg-tapsh-beige/25 flex items-center justify-center mb-3 sm:mb-4 border border-tapsh-charcoal/10 shadow-inner group-hover:scale-110 group-hover:bg-white group-hover:shadow-md transition-all">
-                      {getTouchpointIcon(link, "md")}
-                    </div>
-                    <span className="font-bold text-xs sm:text-sm text-center line-clamp-2">
+                    {config.iconElement}
+                    <span className="font-extrabold text-sm sm:text-base text-slate-900 group-hover:text-tapsh-soft-green transition-colors mt-3.5 tracking-tight line-clamp-1">
                       {displayTitle}
                     </span>
+                    <span className="text-[11px] font-semibold text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5">
+                      {config.actionText}
+                    </span>
                     {link.ssid && (
-                      <span className="text-[10px] text-tapsh-charcoal/80 font-medium truncate max-w-full mt-0.5">
+                      <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-2.5 py-0.5 rounded-full mt-2 truncate max-w-full font-bold border border-cyan-100">
                         {link.ssid}
                       </span>
                     )}
@@ -121,13 +280,14 @@ export default function HubView({ data }: { data: any }) {
                     href={resolvedUrl}
                     target={isPhone ? undefined : "_blank"}
                     rel="noopener noreferrer"
-                    className={`flex flex-col items-center justify-center p-5 sm:p-6 bg-white border border-tapsh-charcoal/20 rounded-[2rem] hover:border-tapsh-soft-green hover:shadow-md transition-all active:scale-95 text-tapsh-black shadow-sm group ${singleCardClass}`}
+                    className={`bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-[0_6px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] hover:border-slate-300 transition-all duration-200 active:scale-[0.98] text-slate-900 group flex flex-col items-center justify-center text-center relative overflow-hidden ${singleCardClass}`}
                   >
-                    <div className="w-14 h-14 rounded-[1.2rem] bg-tapsh-beige/25 flex items-center justify-center mb-3 sm:mb-4 border border-tapsh-charcoal/10 shadow-inner group-hover:scale-110 group-hover:bg-white group-hover:shadow-md transition-all">
-                      {getTouchpointIcon(link, "md")}
-                    </div>
-                    <span className="font-bold text-xs sm:text-sm text-center line-clamp-2">
+                    {config.iconElement}
+                    <span className="font-extrabold text-sm sm:text-base text-slate-900 group-hover:text-tapsh-soft-green transition-colors mt-3.5 tracking-tight line-clamp-1">
                       {link.title}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-400 group-hover:text-slate-600 transition-colors mt-0.5">
+                      {config.actionText}
                     </span>
                   </a>
                 );
@@ -137,14 +297,22 @@ export default function HubView({ data }: { data: any }) {
 
         </div>
 
-        {/* Footer Branding */}
-        <div className="mt-16 text-center flex flex-col items-center justify-center">
-          <p className="font-[signature] italic text-3xl text-tapsh-black mb-8">{data.greetingMessage || "Thank you ♡"}</p>
-          <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-tapsh-charcoal mb-1">Powered By</p>
-          <div className="flex flex-col items-center mt-2">
-            <img src={logoDark} alt="TAPSH" className="w-auto h-5 object-contain opacity-80" />
-          </div>
+        {/* 5. Refined Closing Sign-off & Official Branding */}
+        <div className="mt-14 mb-6 text-center flex flex-col items-center justify-center">
+          <p className="font-serif italic text-xl sm:text-2xl text-slate-800 tracking-wide mb-1">
+            {data.greetingMessage || "Thank you for visiting"}
+          </p>
+          <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-slate-300 to-transparent mx-auto mt-1 mb-8" />
 
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-400 mb-1.5">
+              Powered By
+            </span>
+            <img src={logoDark} alt="TAPSH" className="w-auto h-4 object-contain opacity-75" />
+            <span className="text-[9px] font-medium text-slate-400/80 mt-1">
+              Smart NFC Touchpoint System
+            </span>
+          </div>
         </div>
 
       </div>
@@ -152,41 +320,41 @@ export default function HubView({ data }: { data: any }) {
       {/* Interactive Wi-Fi Connection Modal */}
       {activeWifiModal && (
         <div 
-          className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setActiveWifiModal(null)}
         >
           <div 
-            className="bg-white rounded-3xl p-5 sm:p-6 max-w-xs w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center"
+            className="bg-white rounded-3xl p-6 max-w-xs w-full shadow-2xl relative animate-in zoom-in-95 duration-150 text-center border border-slate-100"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setActiveWifiModal(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#FAF8F5] text-tapsh-charcoal hover:text-tapsh-black flex items-center justify-center transition-colors cursor-pointer"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="w-14 h-14 rounded-2xl bg-tapsh-soft-green/15 text-tapsh-soft-green mx-auto mb-3 flex items-center justify-center border border-tapsh-soft-green/30">
+            <div className="w-14 h-14 rounded-2xl bg-cyan-50 text-cyan-600 mx-auto mb-3 flex items-center justify-center border border-cyan-100 shadow-sm">
               <Wifi className="w-7 h-7" />
             </div>
 
-            <h3 className="text-base sm:text-lg font-bold text-tapsh-black mb-1">
+            <h3 className="text-lg font-extrabold text-slate-900 mb-1">
               Guest Wi-Fi Network
             </h3>
-            <p className="text-[11px] text-tapsh-charcoal mb-4">
-              Tap below to connect or copy the network password.
+            <p className="text-xs text-slate-500 mb-4 font-medium">
+              Tap below to connect or copy the password.
             </p>
 
-            <div className="bg-[#FAF8F5] rounded-2xl p-3.5 border border-tapsh-charcoal/15 text-left mb-4 space-y-2.5 text-xs">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 text-left mb-4 space-y-3 text-xs">
               <div>
-                <span className="block text-[10px] font-bold text-tapsh-charcoal uppercase tracking-wider">Network Name (SSID)</span>
-                <span className="text-sm font-bold text-tapsh-black">{activeWifiModal.ssid || "Guest Wi-Fi"}</span>
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Network Name (SSID)</span>
+                <span className="text-sm font-bold text-slate-900">{activeWifiModal.ssid || "Guest Wi-Fi"}</span>
               </div>
               {activeWifiModal.password && (
                 <div>
-                  <span className="block text-[10px] font-bold text-tapsh-charcoal uppercase tracking-wider">Password</span>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className="text-xs sm:text-sm font-mono font-bold text-tapsh-black bg-white px-2.5 py-1 rounded-lg border border-tapsh-charcoal/20 select-all flex-1 truncate">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</span>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <span className="text-xs sm:text-sm font-mono font-bold text-slate-900 bg-white px-3 py-1.5 rounded-xl border border-slate-200 select-all flex-1 truncate shadow-xs">
                       {activeWifiModal.password}
                     </span>
                     <button
@@ -198,9 +366,9 @@ export default function HubView({ data }: { data: any }) {
                           setTimeout(() => setCopiedWifiPass(false), 2000);
                         }
                       }}
-                      className="px-2.5 py-1 bg-tapsh-black text-white text-[11px] font-bold rounded-lg hover:bg-tapsh-soft-green transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                      className="px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-tapsh-soft-green transition-colors cursor-pointer flex items-center gap-1.5 shrink-0 shadow-xs"
                     >
-                      {copiedWifiPass ? <Check className="w-3 h-3 text-tapsh-soft-green" /> : <Copy className="w-3 h-3 text-tapsh-beige" />}
+                      {copiedWifiPass ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-300" />}
                       <span>{copiedWifiPass ? "Copied" : "Copy"}</span>
                     </button>
                   </div>
@@ -208,17 +376,17 @@ export default function HubView({ data }: { data: any }) {
               )}
 
               {(activeWifiModal.authType || activeWifiModal.encryption) && (
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-tapsh-charcoal/10 text-[11px]">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 text-[11px]">
                   {activeWifiModal.authType && (
                     <div>
-                      <span className="text-[10px] text-tapsh-charcoal block">Security</span>
-                      <span className="font-semibold text-tapsh-black">{activeWifiModal.authType}</span>
+                      <span className="text-[10px] text-slate-400 block">Security</span>
+                      <span className="font-semibold text-slate-800">{activeWifiModal.authType}</span>
                     </div>
                   )}
                   {activeWifiModal.encryption && (
                     <div>
-                      <span className="text-[10px] text-tapsh-charcoal block">Encryption</span>
-                      <span className="font-semibold text-tapsh-black">{activeWifiModal.encryption}</span>
+                      <span className="text-[10px] text-slate-400 block">Encryption</span>
+                      <span className="font-semibold text-slate-800">{activeWifiModal.encryption}</span>
                     </div>
                   )}
                 </div>
@@ -227,7 +395,7 @@ export default function HubView({ data }: { data: any }) {
 
             <a
               href={activeWifiModal.url || "#"}
-              className="block w-full py-3 px-4 bg-tapsh-soft-green hover:bg-tapsh-soft-green/90 text-white rounded-2xl font-bold text-xs shadow-md transition-transform active:scale-95 text-center cursor-pointer"
+              className="block w-full py-3.5 px-4 bg-slate-950 hover:bg-slate-800 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 text-center cursor-pointer"
             >
               Connect to Wi-Fi
             </a>
@@ -235,6 +403,6 @@ export default function HubView({ data }: { data: any }) {
         </div>
       )}
 
-      </div>
+    </div>
   );
 }

@@ -154,28 +154,30 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
     theme: "plain",
     styles: {
       font: "helvetica",
-      fontSize: 9,
+      fontSize: 8.5,
       textColor: black,
-      cellPadding: { top: 4.5, bottom: 4.5, left: 4, right: 4 },
+      valign: "middle",
+      cellPadding: { top: 3.8, bottom: 3.8, left: 3, right: 3 },
       lineWidth: 0.15,
-      lineColor: [230, 230, 230]
+      lineColor: [225, 230, 235]
     },
     headStyles: {
       fillColor: softGreen,
       textColor: [255, 255, 255],
       fontStyle: "bold",
-      fontSize: 9,
-      cellPadding: { top: 4.5, bottom: 4.5, left: 4, right: 4 }
+      fontSize: 8.5,
+      valign: "middle",
+      cellPadding: { top: 4, bottom: 4, left: 3, right: 3 }
     },
     alternateRowStyles: {
-      fillColor: [252, 252, 250]
+      fillColor: [253, 253, 251]
     },
     columnStyles: {
       0: { cellWidth: 12, halign: "center" },
       1: { cellWidth: "auto", halign: "left" },
-      2: { cellWidth: 18, halign: "center" },
-      3: { cellWidth: 34, halign: "right" },
-      4: { cellWidth: 38, halign: "right", fontStyle: "bold" }
+      2: { cellWidth: 16, halign: "center" },
+      3: { cellWidth: 26, halign: "right" },
+      4: { cellWidth: 28, halign: "right", fontStyle: "bold" }
     },
     didParseCell: function (data) {
       // Strictly match header text alignment with row data alignment below it
@@ -193,7 +195,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   });
 
   const finalY = (doc as any).lastAutoTable?.finalY || y + 40;
-  y = finalY + 10;
+  y = finalY + 8;
 
   // Page break check if near bottom
   if (y > pageHeight - 75) {
@@ -202,7 +204,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   }
 
   // 6. Bottom Balanced Split: Payment Info & Terms (Left) vs Financial Summary Card (Right)
-  const totalsCardWidth = 76;
+  const totalsCardWidth = 74;
   const totalsCardX = pageWidth - margin - totalsCardWidth;
   const leftColWidth = totalsCardX - margin - 8;
 
@@ -229,10 +231,12 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...charcoal);
-  doc.text("Payment Mode: ", margin + 5, y + 12);
+  const modeLabel = "Payment Mode: ";
+  doc.text(modeLabel, margin + 5, y + 12);
+  const modeLabelWidth = doc.getTextWidth(modeLabel);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...black);
-  doc.text(pMode, margin + 28, y + 12);
+  doc.text(pMode, margin + 5 + modeLabelWidth, y + 12);
 
   if (cleanNotes) {
     doc.setFont("helvetica", "normal");
@@ -266,42 +270,26 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   doc.text("2. Physical products carry instant replacement guarantee for transit defects.", margin + 5, termsY + 16.5);
   doc.text("3. For assistance, contact tapsh.support@gmail.com or WhatsApp +91 7977469926.", margin + 5, termsY + 21.5);
 
-  // Left Column Item 3: Authorized Signatory Block
-  const sigY = termsY + 34;
-  doc.setDrawColor(...dividerGray);
-  doc.line(margin + 5, sigY + 10, margin + 65, sigY + 10);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(...black);
-  doc.text("Authorized Signatory", margin + 5, sigY + 14.5);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...charcoal);
-  doc.text("TAPSH Technologies Private Limited", margin + 5, sigY + 18.5);
-
   // Right Side: Beautiful Financial Breakdown Card
   const rowCount = 3 + (invoice.discount > 0 ? 1 : 0) + (invoice.deliveryCharges > 0 ? 1 : 0);
-  const cardHeight = rowCount * 7.5 + 14;
+  const cardHeight = rowCount * 7 + 12;
 
   doc.setFillColor(...cardBg);
   doc.setDrawColor(...lightGray);
   doc.roundedRect(totalsCardX, y, totalsCardWidth, cardHeight, 2.5, 2.5, "FD");
 
-  let ty = y + 7;
-  const cardPadding = 6;
-  const labelX = totalsCardX + cardPadding;
-  const valX = totalsCardX + totalsCardWidth - cardPadding;
+  let ty = y + 6.5;
+  const labelX = totalsCardX + 5;
+  const valX = totalsCardX + totalsCardWidth - 4;
 
-  const renderSummaryRow = (label: string, value: string, isBold = false, valColor = black, fontSize = 9) => {
+  const renderSummaryRow = (label: string, value: string, isBold = false, valColor = black, fontSize = 8.5) => {
     doc.setFont("helvetica", isBold ? "bold" : "normal");
     doc.setFontSize(fontSize);
     doc.setTextColor(...charcoal);
     doc.text(label, labelX, ty);
     doc.setTextColor(...valColor);
     doc.text(value, valX, ty, { align: "right" });
-    ty += 7.2;
+    ty += 6.5;
   };
 
   renderSummaryRow("Subtotal:", formatRs(invoice.subtotal));
@@ -314,13 +302,15 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
     renderSummaryRow("Delivery Charges:", formatRs(invoice.deliveryCharges));
   }
 
-  // Inner Divider Line
+  // Centered Inner Divider Line with equal padding
+  ty += 0.5;
   doc.setDrawColor(...lightGray);
-  doc.line(labelX, ty - 1, valX, ty - 1);
-  ty += 3;
+  doc.setLineWidth(0.2);
+  doc.line(labelX, ty, valX, ty);
+  ty += 5;
 
   renderSummaryRow("Total Amount:", formatRs(invoice.total), true, black, 9.5);
-  renderSummaryRow("Amount Paid:", formatRs(invoice.amountPaid), false, deepGreen, 9);
+  renderSummaryRow("Amount Paid:", formatRs(invoice.amountPaid), false, deepGreen, 8.5);
 
   const balanceDue = invoice.total - invoice.amountPaid;
   renderSummaryRow(
@@ -328,8 +318,28 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
     formatRs(Math.max(0, balanceDue)), 
     true, 
     balanceDue > 0 ? [220, 38, 38] : deepGreen,
-    9.5
+    9
   );
+
+  // Right Side Item 2: Corporate Executive Authorized Signatory Block
+  const sigX = totalsCardX;
+  const sigWidth = totalsCardWidth;
+  const sigY = Math.max(y + cardHeight + 8, termsY + 16);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...charcoal);
+  doc.text("For TAPSH Technologies Private Limited", sigX, sigY + 4);
+
+  // Clean, aligned signature line
+  doc.setDrawColor(...dividerGray);
+  doc.setLineWidth(0.3);
+  doc.line(sigX, sigY + 18, sigX + sigWidth, sigY + 18);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...black);
+  doc.text("Authorized Signatory", sigX, sigY + 22.5);
 
   // 7. Clean Balanced Footer Notice at Bottom of A4
   const footerY = pageHeight - 12;

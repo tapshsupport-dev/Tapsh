@@ -153,8 +153,82 @@
   background-color: rgba(255, 255, 255, 0.04) !important;
 }
 
+/* Commercial Sales Analytics Dark Mode Overrides */
+.admin-dark .chart-grid-line {
+  stroke: rgba(255, 255, 255, 0.08) !important;
+}
+
+.admin-dark .chart-axis-text {
+  fill: #9CA3AF !important;
+}
+
+.admin-dark .chart-label {
+  fill: #F3F4F6 !important;
+}
+
+.admin-dark .chart-sublabel {
+  fill: #9CA3AF !important;
+}
+
+.admin-dark .chart-value-tag {
+  fill: #FFFFFF !important;
+}
+
+.admin-dark .chart-value-tag-zero {
+  fill: #6B7280 !important;
+}
+
+.admin-dark .chart-zero-line {
+  stroke: #4B5563 !important;
+}
+
+.admin-dark .chart-hover-slot {
+  fill: rgba(16, 185, 129, 0.08) !important;
+  stroke: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* Metric Strip Dark Cards */
+.admin-dark .sales-card-gross {
+  background-color: #141518 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.admin-dark .sales-card-collected {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+.admin-dark .sales-card-collected .sales-card-label {
+  color: #34D399 !important;
+}
+.admin-dark .sales-card-collected .sales-card-val {
+  color: #6EE7B7 !important;
+}
+
+.admin-dark .sales-card-pending {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+.admin-dark .sales-card-pending .sales-card-label {
+  color: #FBBF24 !important;
+}
+.admin-dark .sales-card-pending .sales-card-val {
+  color: #FCD34D !important;
+}
+
+.admin-dark .sales-card-units {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+.admin-dark .sales-card-units .sales-card-label {
+  color: #60A5FA !important;
+}
+.admin-dark .sales-card-units .sales-card-val {
+  color: #93C5FD !important;
+}
+
 /* ==================================================== */
 /* ISOLATE CLIENT HUB PREVIEW FROM ADMIN DARK MODE */
+
 /* (Hub preview represents the public client landing page) */
 /* ==================================================== */
 .admin-dark .hub-preview-isolated,

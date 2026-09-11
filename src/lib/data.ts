@@ -40,8 +40,9 @@ export type Invoice = {
   items: InvoiceItem[];
   subtotal: number;
   discount: number;
-  taxRate: number; // 0.18 for 18% GST
-  taxAmount: number;
+  deliveryCharges: number;
+  taxRate?: number;
+  taxAmount?: number;
   total: number;
   amountPaid: number;
   status: "PAID" | "PARTIAL" | "PENDING" | "OVERDUE";

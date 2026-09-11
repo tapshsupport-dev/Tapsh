@@ -28,6 +28,7 @@ export default function InvoiceDetailPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editStatus, setEditStatus] = useState<"PAID" | "PARTIAL" | "PENDING">("PAID");
   const [editAmountPaid, setEditAmountPaid] = useState(0);
+  const [editDeliveryCharges, setEditDeliveryCharges] = useState(0);
   const [editTapshHubUsed, setEditTapshHubUsed] = useState(true);
   const [editNotes, setEditNotes] = useState("");
 
@@ -39,6 +40,7 @@ export default function InvoiceDetailPage() {
         setInvoice(inv);
         setEditStatus(inv.status === "OVERDUE" ? "PENDING" : inv.status);
         setEditAmountPaid(inv.amountPaid || 0);
+        setEditDeliveryCharges(inv.deliveryCharges || 0);
         setEditTapshHubUsed(inv.tapshHubUsed ?? true);
         setEditNotes(inv.notes || "");
 
@@ -68,7 +70,7 @@ export default function InvoiceDetailPage() {
 
   const handleDelete = async () => {
     if (!invoice) return;
-    if (!window.confirm(`Are you sure you want to permanently delete Tax Invoice "${invoice.invoiceNumber}"?`)) return;
+    if (!window.confirm(`Are you sure you want to permanently delete Invoice "${invoice.invoiceNumber}"?`)) return;
 
     try {
       await deleteInvoice(invoice.id);
@@ -84,9 +86,12 @@ export default function InvoiceDetailPage() {
     setSavingEdit(true);
 
     try {
+      const newTotal = Math.max(0, invoice.subtotal - (invoice.discount || 0) + editDeliveryCharges);
       const updatedData: Partial<Invoice> = {
         status: editStatus,
-        amountPaid: editStatus === "PAID" ? invoice.total : editAmountPaid,
+        deliveryCharges: editDeliveryCharges,
+        total: newTotal,
+        amountPaid: editStatus === "PAID" ? newTotal : editStatus === "PENDING" ? 0 : editAmountPaid,
         tapshHubUsed: editTapshHubUsed,
         notes: editNotes
       };
@@ -94,7 +99,7 @@ export default function InvoiceDetailPage() {
       await updateInvoice(invoice.id, updatedData);
       setInvoice({ ...invoice, ...updatedData });
       setShowEditModal(false);
-      showNotification("Tax Invoice updated successfully.");
+      showNotification("Invoice updated successfully.");
     } catch {
       alert("Failed to update invoice.");
     } finally {
@@ -108,7 +113,7 @@ export default function InvoiceDetailPage() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-tapsh-soft-green animate-spin" />
           <p className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal">
-            Loading Tax Invoice...
+            Loading Invoice...
           </p>
         </div>
       </div>
@@ -119,7 +124,7 @@ export default function InvoiceDetailPage() {
     return (
       <div className="bg-white p-8 rounded-3xl border border-tapsh-charcoal/20 text-center max-w-md mx-auto my-12">
         <h2 className="text-xl font-bold text-tapsh-black mb-2">Invoice Not Found</h2>
-        <p className="text-sm text-tapsh-charcoal mb-6">The requested tax invoice could not be located in Firestore.</p>
+        <p className="text-sm text-tapsh-charcoal mb-6">The requested invoice could not be located in Firestore.</p>
         <Link href="/admin/invoices" className="px-6 py-3 bg-tapsh-black text-tapsh-beige font-bold text-sm rounded-xl inline-block">
           &larr; Return to Invoices
         </Link>
@@ -191,7 +196,7 @@ export default function InvoiceDetailPage() {
         </div>
       )}
 
-      {/* Main Printable Tax Invoice Receipt Card */}
+      {/* Main Printable Invoice Receipt Card */}
       <div className="bg-white rounded-3xl shadow-xs border border-tapsh-charcoal/15 p-5 sm:p-10 relative overflow-hidden print-card">
         
         {/* Top Accent Strip */}
@@ -206,7 +211,6 @@ export default function InvoiceDetailPage() {
             </p>
             <div className="mt-3 text-xs text-tapsh-charcoal space-y-0.5 font-medium">
               <p className="font-bold text-tapsh-black">TAPSH Technologies Private Limited</p>
-              <p>GSTIN: 29AAACT9812M1Z5</p>
               <p>Email: tapsh.support@gmail.com • WhatsApp: +91 7977469926</p>
               <p>Location: Kanyakumari, Tamil Nadu, India</p>
             </div>
@@ -214,7 +218,7 @@ export default function InvoiceDetailPage() {
 
           <div className="text-left sm:text-right bg-[#FAF8F5] sm:bg-transparent p-4 sm:p-0 rounded-2xl w-full sm:w-auto border sm:border-0 border-tapsh-charcoal/10">
             <h1 className="text-lg font-bold text-tapsh-black uppercase tracking-wider">
-              Tax Invoice
+              Invoice
             </h1>
             <p className="font-mono text-xs sm:text-sm font-bold text-tapsh-black mt-1">
               {invoice.invoiceNumber}
@@ -286,7 +290,7 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
 
-        {/* Totals & Tax Calculation Breakdown */}
+        {/* Totals Breakdown */}
         <div className="flex flex-col sm:flex-row justify-between gap-6">
           
           {/* Left: Payment Instructions */}
@@ -302,7 +306,7 @@ export default function InvoiceDetailPage() {
             )}
           </div>
 
-          {/* Right: Tax Calculation */}
+          {/* Right: Calculation Breakdown */}
           <div className="w-full sm:w-64 space-y-2 p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/10 text-xs">
             <div className="flex justify-between text-tapsh-charcoal">
               <span>Subtotal:</span>
@@ -314,10 +318,12 @@ export default function InvoiceDetailPage() {
                 <span>-₹{invoice.discount.toLocaleString()}</span>
               </div>
             )}
-            <div className="flex justify-between text-tapsh-charcoal">
-              <span>18% GST (9% CGST + 9% SGST):</span>
-              <span className="font-bold text-tapsh-black">₹{invoice.taxAmount.toLocaleString()}</span>
-            </div>
+            {(invoice.deliveryCharges ?? 0) > 0 && (
+              <div className="flex justify-between text-tapsh-charcoal">
+                <span>Delivery Charges:</span>
+                <span className="font-bold text-tapsh-black">₹{(invoice.deliveryCharges ?? 0).toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm font-bold text-tapsh-black border-t border-tapsh-charcoal/15 pt-2">
               <span>Total:</span>
               <span>₹{invoice.total.toLocaleString()}</span>
@@ -335,7 +341,7 @@ export default function InvoiceDetailPage() {
 
         {/* Printable Footer Notice */}
         <div className="mt-8 pt-4 border-t border-tapsh-charcoal/10 text-center text-[10px] text-tapsh-charcoal">
-          Thank you for choosing TAPSH. This is an authenticated computer-generated commercial tax invoice.
+          Thank you for choosing TAPSH. This is an authenticated computer-generated commercial invoice.
         </div>
 
       </div>
@@ -391,6 +397,29 @@ export default function InvoiceDetailPage() {
                 </div>
               </div>
 
+              {/* Delivery Charges */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                  Delivery Charges (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={editDeliveryCharges === 0 ? "" : editDeliveryCharges}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
+                    setEditDeliveryCharges(val);
+                    if (editStatus === "PAID") {
+                      const newTot = Math.max(0, invoice.subtotal - (invoice.discount || 0) + val);
+                      setEditAmountPaid(newTot);
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm font-bold focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                />
+              </div>
+
               {/* Status */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
@@ -401,7 +430,12 @@ export default function InvoiceDetailPage() {
                     <button
                       key={st}
                       type="button"
-                      onClick={() => setEditStatus(st)}
+                      onClick={() => {
+                        setEditStatus(st);
+                        const currTotal = Math.max(0, invoice.subtotal - (invoice.discount || 0) + editDeliveryCharges);
+                        if (st === "PAID") setEditAmountPaid(currTotal);
+                        if (st === "PENDING") setEditAmountPaid(0);
+                      }}
                       className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                         editStatus === st
                           ? st === "PAID" ? "bg-emerald-600 text-white shadow-xs" :
@@ -419,14 +453,15 @@ export default function InvoiceDetailPage() {
               {/* Amount Paid */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
-                  Amount Paid (INR)
+                  Amount Paid (₹)
                 </label>
                 <input
                   type="number"
                   min="0"
-                  max={invoice.total}
-                  value={editAmountPaid}
-                  onChange={(e) => setEditAmountPaid(Number(e.target.value))}
+                  placeholder="0"
+                  value={editAmountPaid === 0 ? "" : editAmountPaid}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setEditAmountPaid(e.target.value === "" ? 0 : Math.max(0, Number(e.target.value)))}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm font-bold focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
                 />
               </div>

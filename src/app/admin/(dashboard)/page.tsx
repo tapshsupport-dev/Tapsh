@@ -304,7 +304,7 @@ export default function AdminDashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-tapsh-black">Recent Invoices</h2>
-            <p className="text-xs text-tapsh-charcoal">GST compliance & payment collection</p>
+            <p className="text-xs text-tapsh-charcoal">Billing & payment collection</p>
           </div>
           <Link 
             href="/admin/invoices" 
@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
         <div className="space-y-2.5">
           {invoices.length === 0 ? (
             <div className="p-6 text-center text-xs text-tapsh-charcoal bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/10">
-              No tax invoices created yet. Go to Billing to issue an invoice.
+              No invoices created yet. Go to Billing to issue an invoice.
             </div>
           ) : (
             invoices.slice(0, 3).map((inv) => {

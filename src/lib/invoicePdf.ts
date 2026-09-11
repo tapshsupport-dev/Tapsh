@@ -38,16 +38,15 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   doc.setFontSize(8.5);
   doc.setTextColor(...charcoal);
   doc.text("TAPSH Technologies Private Limited", margin, y + 10);
-  doc.text("GSTIN: 29AAACT9812M1Z5", margin, y + 14);
-  doc.text("Email: tapsh.support@gmail.com • WhatsApp: +91 7977469926", margin, y + 18);
-  doc.text("Location: Kanyakumari, Tamil Nadu, India", margin, y + 22);
+  doc.text("Email: tapsh.support@gmail.com • WhatsApp: +91 7977469926", margin, y + 14.5);
+  doc.text("Location: Kanyakumari, Tamil Nadu, India", margin, y + 19);
 
   // 3. Invoice Header (Right)
   const rightX = pageWidth - margin;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(...black);
-  doc.text("TAX INVOICE", rightX, y, { align: "right" });
+  doc.text("INVOICE", rightX, y, { align: "right" });
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
@@ -79,7 +78,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
     doc.text("Tapsh Hub Used: NO", rightX, y + 24, { align: "right" });
   }
 
-  y += 30;
+  y += 28;
 
   // 4. Billed To Card
   const clientName = invoice.customerDetails?.businessName || customer?.businessName || invoice.customerName || "Valued Enterprise Client";
@@ -157,7 +156,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   }
 
   // 6. Bottom Split: Payment Instructions (Left) & Totals (Right)
-  const rightColWidth = 70;
+  const rightColWidth = 72;
   const rightColX = pageWidth - margin - rightColWidth;
 
   // Payment Instructions
@@ -178,9 +177,10 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   }
 
   // Totals Box (Right)
+  const boxHeight = (invoice.discount > 0 ? 5.5 : 0) + (invoice.deliveryCharges > 0 ? 5.5 : 0) + 32;
   doc.setFillColor(250, 248, 245);
   doc.setDrawColor(225, 225, 225);
-  doc.roundedRect(rightColX, y - 3, rightColWidth, 42, 2, 2, "FD");
+  doc.roundedRect(rightColX, y - 3, rightColWidth, boxHeight, 2, 2, "FD");
 
   let ty = y + 2;
   const printRow = (label: string, value: string, isBold: boolean = false, textColor = black) => {
@@ -197,17 +197,19 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   if (invoice.discount > 0) {
     printRow("Discount:", `-₹${invoice.discount.toLocaleString()}`, false, [22, 163, 74]);
   }
-  printRow("18% GST:", `₹${invoice.taxAmount.toLocaleString()}`);
+  if (invoice.deliveryCharges && invoice.deliveryCharges > 0) {
+    printRow("Delivery Charges:", `₹${invoice.deliveryCharges.toLocaleString()}`);
+  }
 
   doc.setDrawColor(200, 200, 200);
   doc.line(rightColX + 3, ty - 1, rightColX + rightColWidth - 3, ty - 1);
   ty += 1.5;
 
-  printRow("Total (INR):", `₹${invoice.total.toLocaleString()}`, true, black);
+  printRow("Total Amount:", `₹${invoice.total.toLocaleString()}`, true, black);
   printRow("Amount Paid:", `₹${invoice.amountPaid.toLocaleString()}`, false, [22, 163, 74]);
 
   const balanceDue = invoice.total - invoice.amountPaid;
-  printRow("Balance Due:", `₹${balanceDue.toLocaleString()}`, true, balanceDue > 0 ? [220, 38, 38] : [22, 163, 74]);
+  printRow("Balance Due:", `₹${Math.max(0, balanceDue).toLocaleString()}`, true, balanceDue > 0 ? [220, 38, 38] : [22, 163, 74]);
 
   // 7. Footer
   const footerY = doc.internal.pageSize.getHeight() - 10;
@@ -215,7 +217,7 @@ export function generateInvoicePdf(invoice: Invoice, customer?: Customer | null)
   doc.setFontSize(7.5);
   doc.setTextColor(...charcoal);
   doc.text(
-    "Thank you for your business. This is a computer-generated tax invoice issued by TAPSH Technologies.",
+    "Thank you for your business. This is an official computer-generated invoice issued by TAPSH Technologies.",
     pageWidth / 2,
     footerY,
     { align: "center" }

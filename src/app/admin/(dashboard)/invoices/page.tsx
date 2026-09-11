@@ -5,26 +5,53 @@ import Link from "next/link";
 import { 
   Plus, Search, Receipt, CheckCircle2, Clock, AlertCircle, 
   ArrowRight, Download, Printer, Filter, Trash2, Pencil,
-  X, Save, Building2, User, Phone, Mail, MapPin, Loader2, Sparkles
+  X, Save, Building2, User, Phone, Mail, MapPin, Loader2, Sparkles, Truck
 } from "lucide-react";
 import { Invoice, Customer, InvoiceItem } from "@/lib/data";
 import { 
   subscribeInvoices, subscribeCustomers, createInvoice, 
   updateInvoice, deleteInvoice, createCustomer 
 } from "@/lib/firestoreService";
+import { subscribeToProducts, ProductItem } from "@/lib/productsService";
 import { downloadInvoicePdf } from "@/lib/invoicePdf";
 
-const PRODUCT_PRESETS = [
-  { name: "TAPSH Matte Black NFC Table Stand (Brass Base)", price: 1800 },
-  { name: "TAPSH Walnut Wood NFC Review Disc (Laser-Engraved)", price: 1200 },
-  { name: "TAPSH Smart Matte NFC Stylist Mirror Card", price: 950 },
-  { name: "TAPSH Hub Annual Cloud Routing & Dynamic Hub", price: 6000 },
-  { name: "TAPSH Dental / Reception Review & Wi-Fi Dock", price: 2200 }
-];
+// Helper for sequential invoice numbering: TAPSH/(Year)/0001(+1)
+export function getNextInvoiceNumber(invoices: Invoice[]): string {
+  const currentYear = new Date().getFullYear();
+  const prefix = `TAPSH/${currentYear}/`;
+
+  const validNumbers: number[] = [];
+  for (const inv of invoices) {
+    if (inv.invoiceNumber && inv.invoiceNumber.startsWith(prefix)) {
+      const remainder = inv.invoiceNumber.slice(prefix.length);
+      const parsed = parseInt(remainder, 10);
+      if (!isNaN(parsed)) {
+        validNumbers.push(parsed);
+      }
+    }
+  }
+
+  if (validNumbers.length === 0) {
+    return `${prefix}0001`;
+  }
+
+  // Filter for sequential numbers (under 1000) to ignore previous random 4-digit tests
+  const sequential = validNumbers.filter(n => n < 1000);
+  let nextSeq: number;
+  if (sequential.length > 0) {
+    nextSeq = Math.max(...sequential) + 1;
+  } else {
+    // If only older random test IDs exist (e.g. 7846), start clean from 0001
+    nextSeq = 1;
+  }
+
+  return `${prefix}${String(nextSeq).padStart(4, "0")}`;
+}
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [siteProducts, setSiteProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -53,6 +80,7 @@ export default function InvoicesPage() {
     city: "India",
     status: "PAID" as "PAID" | "PARTIAL" | "PENDING",
     discount: 0,
+    deliveryCharges: 0,
     amountPaid: 0,
     notes: ""
   });
@@ -60,10 +88,10 @@ export default function InvoicesPage() {
   const [items, setItems] = useState<InvoiceItem[]>([
     {
       productId: "item_1",
-      productName: "TAPSH Matte Black NFC Table Stand (Brass Base)",
+      productName: "TAPSH Review",
       quantity: 1,
-      unitPrice: 1800,
-      total: 1800
+      unitPrice: 0,
+      total: 0
     }
   ]);
 
@@ -77,9 +105,14 @@ export default function InvoicesPage() {
       setCustomers(data);
     });
 
+    const unsubProducts = subscribeToProducts((prods) => {
+      setSiteProducts(prods.filter(p => p.status !== "DRAFT"));
+    });
+
     return () => {
       unsubInvoices();
       unsubCustomers();
+      unsubProducts();
     };
   }, []);
 
@@ -88,10 +121,9 @@ export default function InvoicesPage() {
     setTimeout(() => setFeedbackMessage(null), 3500);
   };
 
-  // Calculations
+  // Calculations (No GST, pure Subtotal - Discount + Delivery Charges)
   const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const taxAmount = Math.round((subtotal - formData.discount) * 0.18);
-  const grandTotal = Math.max(0, subtotal - formData.discount + taxAmount);
+  const grandTotal = Math.max(0, subtotal - formData.discount + formData.deliveryCharges);
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -102,8 +134,11 @@ export default function InvoicesPage() {
     setTapshHubUsed(true);
 
     const firstCust = customers[0];
+    const nextInvNum = getNextInvoiceNumber(invoices);
+    const initialProduct = siteProducts[0]?.name || "TAPSH Review";
+
     setFormData({
-      invoiceNumber: `TAPSH/2026/${Math.floor(1000 + Math.random() * 9000)}`,
+      invoiceNumber: nextInvNum,
       date: new Date().toISOString().split("T")[0],
       dueDate: new Date(Date.now() + 14 * 86400000).toISOString().split("T")[0],
       customerName: firstCust?.businessName || "",
@@ -114,17 +149,18 @@ export default function InvoicesPage() {
       city: firstCust?.city || "India",
       status: "PAID",
       discount: 0,
-      amountPaid: 2124, // 1800 + 18% GST
-      notes: "Compliant with Indian 18% GST taxation regulations."
+      deliveryCharges: 0,
+      amountPaid: 0,
+      notes: ""
     });
 
     setItems([
       {
-        productId: "item_1",
-        productName: "TAPSH Matte Black NFC Table Stand (Brass Base)",
+        productId: `item_${Date.now()}`,
+        productName: initialProduct,
         quantity: 1,
-        unitPrice: 1800,
-        total: 1800
+        unitPrice: 0,
+        total: 0
       }
     ]);
 
@@ -152,6 +188,7 @@ export default function InvoicesPage() {
       city: inv.customerDetails?.city || cust?.city || "India",
       status: inv.status === "OVERDUE" ? "PENDING" : inv.status,
       discount: inv.discount || 0,
+      deliveryCharges: inv.deliveryCharges || 0,
       amountPaid: inv.amountPaid || 0,
       notes: inv.notes || ""
     });
@@ -159,10 +196,10 @@ export default function InvoicesPage() {
     setItems(inv.items && inv.items.length > 0 ? inv.items : [
       {
         productId: "item_1",
-        productName: "TAPSH NFC Product",
+        productName: "TAPSH Product",
         quantity: 1,
-        unitPrice: inv.subtotal || 1000,
-        total: inv.subtotal || 1000
+        unitPrice: inv.subtotal || 0,
+        total: inv.subtotal || 0
       }
     ]);
 
@@ -199,25 +236,40 @@ export default function InvoicesPage() {
       updated[index].total = q * p;
     }
     setItems(updated);
+
+    // If status is PAID, automatically keep amountPaid in sync with the new total
+    if (formData.status === "PAID") {
+      const newSub = updated.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+      const newTot = Math.max(0, newSub - formData.discount + formData.deliveryCharges);
+      setFormData(prev => ({ ...prev, amountPaid: newTot }));
+    }
   };
 
-  const handleAddItem = (preset?: { name: string; price: number }) => {
+  // Quick Add: adds product with website name, NO price mentioned
+  const handleAddProductChip = (productName: string) => {
     const newItem: InvoiceItem = {
-      productId: `item_${Date.now()}`,
-      productName: preset ? preset.name : "New Product / NFC Hardware",
+      productId: `item_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+      productName: productName,
       quantity: 1,
-      unitPrice: preset ? preset.price : 1000,
-      total: preset ? preset.price : 1000
+      unitPrice: 0,
+      total: 0
     };
     setItems([...items, newItem]);
   };
 
   const handleRemoveItem = (index: number) => {
     if (items.length <= 1) return;
-    setItems(items.filter((_, i) => i !== index));
+    const updated = items.filter((_, i) => i !== index);
+    setItems(updated);
+
+    if (formData.status === "PAID") {
+      const newSub = updated.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+      const newTot = Math.max(0, newSub - formData.discount + formData.deliveryCharges);
+      setFormData(prev => ({ ...prev, amountPaid: newTot }));
+    }
   };
 
-  // Save Invoice (Create or Update)
+  // Save Invoice
   const handleSaveInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.customerName.trim()) {
@@ -239,17 +291,16 @@ export default function InvoicesPage() {
           address: formData.address || "Commercial Premises",
           city: formData.city || "India",
           businessType: "Other",
-          notes: "Auto-saved from Tax Invoice creation."
+          notes: "Auto-saved from Invoice creation."
         });
         finalCustomerId = createdCus.id;
       }
 
       const calculatedSubtotal = items.reduce((sum, i) => sum + (i.quantity * i.unitPrice), 0);
-      const calculatedTax = Math.round((calculatedSubtotal - formData.discount) * 0.18);
-      const calculatedTotal = Math.max(0, calculatedSubtotal - formData.discount + calculatedTax);
+      const calculatedTotal = Math.max(0, calculatedSubtotal - formData.discount + formData.deliveryCharges);
 
       const invoicePayload: Omit<Invoice, "id"> = {
-        invoiceNumber: formData.invoiceNumber || `TAPSH/2026/${Math.floor(1000 + Math.random() * 9000)}`,
+        invoiceNumber: formData.invoiceNumber || getNextInvoiceNumber(invoices),
         customerId: finalCustomerId,
         customerName: formData.customerName,
         customerDetails: {
@@ -266,8 +317,7 @@ export default function InvoicesPage() {
         items: items,
         subtotal: calculatedSubtotal,
         discount: Number(formData.discount) || 0,
-        taxRate: 0.18,
-        taxAmount: calculatedTax,
+        deliveryCharges: Number(formData.deliveryCharges) || 0,
         total: calculatedTotal,
         amountPaid: formData.status === "PAID" ? calculatedTotal : Number(formData.amountPaid) || 0,
         status: formData.status,
@@ -277,10 +327,10 @@ export default function InvoicesPage() {
 
       if (editingInvoice) {
         await updateInvoice(editingInvoice.id, invoicePayload);
-        showNotification(`Tax Invoice ${invoicePayload.invoiceNumber} updated successfully.`);
+        showNotification(`Invoice ${invoicePayload.invoiceNumber} updated successfully.`);
       } else {
         await createInvoice(invoicePayload);
-        showNotification(`Tax Invoice ${invoicePayload.invoiceNumber} created successfully.`);
+        showNotification(`Invoice ${invoicePayload.invoiceNumber} created successfully.`);
       }
 
       setShowModal(false);
@@ -293,13 +343,13 @@ export default function InvoicesPage() {
 
   // Delete Invoice
   const handleDeleteInvoice = async (inv: Invoice) => {
-    if (!window.confirm(`Are you sure you want to permanently delete Tax Invoice "${inv.invoiceNumber}"?`)) return;
+    if (!window.confirm(`Are you sure you want to permanently delete Invoice "${inv.invoiceNumber}"?`)) return;
 
     try {
       await deleteInvoice(inv.id);
-      showNotification(`Tax Invoice "${inv.invoiceNumber}" removed.`);
+      showNotification(`Invoice "${inv.invoiceNumber}" removed.`);
     } catch (err) {
-      showNotification(`Tax Invoice "${inv.invoiceNumber}" removed.`);
+      showNotification(`Invoice "${inv.invoiceNumber}" removed.`);
     }
   };
 
@@ -326,10 +376,10 @@ export default function InvoicesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-tapsh-black">
-            Tax Invoices & Billing
+            Invoices & Billing
           </h1>
           <p className="text-xs sm:text-sm text-tapsh-charcoal mt-1">
-            Compliant 18% GST enterprise invoices & receipts.
+            Create, manage, download, and print commercial invoices & receipts.
           </p>
         </div>
 
@@ -341,7 +391,7 @@ export default function InvoicesPage() {
         </button>
       </div>
 
-      {/* Notification */}
+      {/* Notification Alert */}
       {feedbackMessage && (
         <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 animate-in fade-in">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -401,7 +451,7 @@ export default function InvoicesPage() {
         <div className="bg-white p-12 rounded-3xl border border-tapsh-charcoal/15 flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-8 h-8 text-tapsh-soft-green animate-spin" />
           <p className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal">
-            Syncing Tax Invoices from Firestore...
+            Syncing Invoices from Firestore...
           </p>
         </div>
       ) : invoices.length === 0 ? (
@@ -412,7 +462,7 @@ export default function InvoicesPage() {
           <div>
             <h3 className="text-lg font-bold text-tapsh-black">No Invoices Created Yet</h3>
             <p className="text-xs sm:text-sm text-tapsh-charcoal max-w-sm mx-auto mt-1">
-              Create your first official 18% GST invoice. You can select an existing registered client or enter custom client details.
+              Create your first official invoice for a registered customer or custom client.
             </p>
           </div>
           <button
@@ -454,8 +504,13 @@ export default function InvoicesPage() {
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
                             : "bg-gray-100 text-gray-600 border-gray-200"
                         }`}>
-                          Hub Used: {inv.tapshHubUsed ? "Yes" : "No"}
+                          Hub: {inv.tapshHubUsed ? "Yes" : "No"}
                         </span>
+                        {inv.deliveryCharges > 0 && (
+                          <span className="text-[10px] text-tapsh-charcoal font-medium">
+                            Delivery: ₹{inv.deliveryCharges}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
@@ -475,7 +530,7 @@ export default function InvoicesPage() {
                     <div className="text-right">
                       <span className="text-[10px] font-bold uppercase text-tapsh-charcoal block">Balance Due</span>
                       <span className={`font-bold text-sm ${balance > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                        ₹{balance.toLocaleString()}
+                        ₹{Math.max(0, balance).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -528,6 +583,7 @@ export default function InvoicesPage() {
                     <th className="px-6 py-4">Client Business</th>
                     <th className="px-6 py-4">Tapsh Hub</th>
                     <th className="px-6 py-4">Issue Date</th>
+                    <th className="px-6 py-4">Delivery</th>
                     <th className="px-6 py-4">Total Amount</th>
                     <th className="px-6 py-4">Amount Paid</th>
                     <th className="px-6 py-4">Status</th>
@@ -558,6 +614,9 @@ export default function InvoicesPage() {
                         </td>
                         <td className="px-6 py-4 text-xs text-tapsh-charcoal font-medium">
                           {new Date(inv.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-xs text-tapsh-charcoal font-medium">
+                          {inv.deliveryCharges > 0 ? `₹${inv.deliveryCharges.toLocaleString()}` : "—"}
                         </td>
                         <td className="px-6 py-4 font-bold text-tapsh-black">
                           ₹{inv.total.toLocaleString()}
@@ -625,10 +684,10 @@ export default function InvoicesPage() {
               <div>
                 <h3 className="font-bold text-base sm:text-lg text-tapsh-black flex items-center gap-2">
                   <Receipt className="w-5 h-5 text-tapsh-soft-green" />
-                  {editingInvoice ? `Edit Tax Invoice (${formData.invoiceNumber})` : "Create New Tax Invoice"}
+                  {editingInvoice ? `Edit Invoice (${formData.invoiceNumber})` : "Create New Invoice"}
                 </h3>
                 <p className="text-[11px] sm:text-xs text-tapsh-charcoal mt-0.5">
-                  Official 18% GST tax invoice compliant with Indian commercial regulations.
+                  Generate an official invoice bill with custom products, delivery, and payment records.
                 </p>
               </div>
               <button 
@@ -640,13 +699,13 @@ export default function InvoicesPage() {
             </div>
 
             {/* Modal Body Form */}
-            <form onSubmit={handleSaveInvoice} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <form onSubmit={handleSaveInvoice} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
               
               {/* SECTION 1: Client Selection */}
-              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-4">
+              <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-tapsh-charcoal/10 pb-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-tapsh-charcoal flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-tapsh-soft-green" /> Client Information
+                    <Building2 className="w-4 h-4 text-tapsh-soft-green" /> Client Details
                   </label>
 
                   {/* Mode Switcher */}
@@ -692,7 +751,7 @@ export default function InvoicesPage() {
                         </option>
                       ))}
                       {customers.length === 0 && (
-                        <option value="">No registered customers found. Use Custom Client.</option>
+                        <option value="">No registered customers found. Switch to Custom Client.</option>
                       )}
                     </select>
                   </div>
@@ -714,7 +773,7 @@ export default function InvoicesPage() {
                         <label className="block text-xs font-bold text-tapsh-charcoal mb-1">Contact Person</label>
                         <input
                           type="text"
-                          placeholder="e.g. General Manager"
+                          placeholder="e.g. Manager Name"
                           value={formData.contactPerson}
                           onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
                           className="w-full px-3.5 py-2 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
@@ -775,23 +834,23 @@ export default function InvoicesPage() {
                         onChange={(e) => setSaveAsCustomer(e.target.checked)}
                         className="rounded text-tapsh-soft-green focus:ring-tapsh-soft-green"
                       />
-                      <span className="font-medium text-tapsh-black">Also add this business to the Customer Directory</span>
+                      <span className="font-medium text-tapsh-black">Also add this business to Customer Directory</span>
                     </label>
                   </div>
                 )}
               </div>
 
-              {/* SECTION 2: TAPSH HUB USED TOGGLE & INVOICE META */}
+              {/* SECTION 2: TAPSH HUB USED TOGGLE & INVOICE NUMBER */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* User Requested: "Tapsh Hub used : Yes/ No" */}
+                {/* Tapsh Hub used : Yes/ No */}
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-tapsh-soft-green" />
                     Tapsh Hub Used : Yes / No *
                   </label>
                   <p className="text-[11px] text-tapsh-charcoal">
-                    Specify whether the client utilizes the physical/cloud TAPSH NFC Hub platform.
+                    Specify whether the client uses the TAPSH digital Hub touchpoint.
                   </p>
                   
                   <div className="flex items-center gap-2 pt-1">
@@ -820,7 +879,7 @@ export default function InvoicesPage() {
                   </div>
                 </div>
 
-                {/* Status & Invoice Number */}
+                {/* Invoice Number & Dates */}
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-3">
                   <div>
                     <label className="block text-xs font-bold text-tapsh-charcoal mb-1">Invoice Number *</label>
@@ -859,37 +918,63 @@ export default function InvoicesPage() {
 
               </div>
 
-              {/* SECTION 3: LINE ITEMS & PRODUCT PRESETS */}
+              {/* SECTION 3: LINE ITEMS & WEBSITE PRODUCTS QUICK ADD */}
               <div className="p-4 rounded-2xl bg-white border border-tapsh-charcoal/15 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-tapsh-black">
-                    Billable Line Items & Products
+                    Products & Line Items
                   </label>
                   <button
                     type="button"
-                    onClick={() => handleAddItem()}
+                    onClick={() => handleAddProductChip("Custom Product")}
                     className="text-xs font-bold text-tapsh-soft-green hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Blank Item
                   </button>
                 </div>
 
-                {/* Quick Add Presets */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide text-[11px]">
-                  <span className="text-tapsh-charcoal font-bold shrink-0">Quick Add:</span>
-                  {PRODUCT_PRESETS.map((preset, idx) => (
+                {/* Quick Add Chips (Website Product Titles Only - No Price Mentioned) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide text-xs">
+                  <span className="text-tapsh-charcoal font-bold shrink-0 text-[11px]">Quick Add:</span>
+                  {siteProducts.map((prod) => (
                     <button
-                      key={idx}
+                      key={prod.id}
                       type="button"
-                      onClick={() => handleAddItem(preset)}
-                      className="px-2.5 py-1 bg-[#FAF8F5] hover:bg-tapsh-soft-green hover:text-white border border-tapsh-charcoal/20 rounded-lg shrink-0 transition-colors font-medium cursor-pointer"
+                      onClick={() => handleAddProductChip(prod.name)}
+                      className="px-3 py-1 bg-[#FAF8F5] hover:bg-tapsh-soft-green hover:text-white border border-tapsh-charcoal/20 rounded-xl shrink-0 transition-colors font-medium cursor-pointer text-xs"
+                      title={`Add ${prod.name}`}
                     >
-                      + {preset.name.split(" ")[1]} (₹{preset.price})
+                      + {prod.name}
                     </button>
                   ))}
+                  {siteProducts.length === 0 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleAddProductChip("TAPSH Review")}
+                        className="px-2.5 py-1 bg-[#FAF8F5] border border-tapsh-charcoal/20 rounded-xl shrink-0 text-xs font-medium cursor-pointer"
+                      >
+                        + TAPSH Review
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddProductChip("TAPSH Wi-Fi")}
+                        className="px-2.5 py-1 bg-[#FAF8F5] border border-tapsh-charcoal/20 rounded-xl shrink-0 text-xs font-medium cursor-pointer"
+                      >
+                        + TAPSH Wi-Fi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAddProductChip("TAPSH WhatsApp")}
+                        className="px-2.5 py-1 bg-[#FAF8F5] border border-tapsh-charcoal/20 rounded-xl shrink-0 text-xs font-medium cursor-pointer"
+                      >
+                        + TAPSH WhatsApp
+                      </button>
+                    </>
+                  )}
                 </div>
 
-                {/* Items Table */}
+                {/* Line Items Rows */}
                 <div className="space-y-2">
                   {items.map((item, index) => (
                     <div key={item.productId || index} className="p-3 bg-[#FAF8F5] rounded-xl border border-tapsh-charcoal/10 flex flex-col sm:flex-row items-start sm:items-center gap-2">
@@ -897,7 +982,7 @@ export default function InvoicesPage() {
                         <input
                           type="text"
                           required
-                          placeholder="Item description"
+                          placeholder="Product description / title"
                           value={item.productName}
                           onChange={(e) => handleItemChange(index, "productName", e.target.value)}
                           className="w-full px-3 py-1.5 rounded-lg border border-tapsh-charcoal/20 bg-white text-xs text-tapsh-black font-medium focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
@@ -910,8 +995,9 @@ export default function InvoicesPage() {
                             min="1"
                             required
                             placeholder="Qty"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
+                            value={item.quantity === 0 ? "" : item.quantity}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleItemChange(index, "quantity", e.target.value === "" ? 1 : Number(e.target.value))}
                             className="w-full px-2 py-1.5 rounded-lg border border-tapsh-charcoal/20 bg-white text-xs text-center text-tapsh-black focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
                           />
                         </div>
@@ -920,9 +1006,10 @@ export default function InvoicesPage() {
                             type="number"
                             min="0"
                             required
-                            placeholder="Unit Price"
-                            value={item.unitPrice}
-                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value)}
+                            placeholder="Unit Price ₹"
+                            value={item.unitPrice === 0 ? "" : item.unitPrice}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value === "" ? 0 : Number(e.target.value))}
                             className="w-full px-2 py-1.5 rounded-lg border border-tapsh-charcoal/20 bg-white text-xs text-right text-tapsh-black focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
                           />
                         </div>
@@ -943,11 +1030,37 @@ export default function InvoicesPage() {
                 </div>
               </div>
 
-              {/* SECTION 4: PAYMENT STATUS & TAX CALCULATIONS */}
+              {/* SECTION 4: DELIVERY CHARGES, DISCOUNT & PAYMENT */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
-                {/* Status & Amount Paid */}
+                {/* Status, Delivery & Amount Paid */}
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-3">
+                  
+                  {/* Delivery Charges (Manually entered by admin) */}
+                  <div>
+                    <label className="block text-xs font-bold text-tapsh-black mb-1 flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-tapsh-soft-green" /> Delivery Charges (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={formData.deliveryCharges === 0 ? "" : formData.deliveryCharges}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
+                        setFormData(prev => {
+                          const updated = { ...prev, deliveryCharges: val };
+                          if (prev.status === "PAID") {
+                            updated.amountPaid = Math.max(0, subtotal - prev.discount + val);
+                          }
+                          return updated;
+                        });
+                      }}
+                      className="w-full px-3.5 py-2 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm font-bold focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-tapsh-charcoal mb-1">Payment Status</label>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -976,27 +1089,32 @@ export default function InvoicesPage() {
                     </div>
                   </div>
 
+                  {/* Amount Paid - Clean input without 0-prefix bug */}
                   <div>
                     <label className="block text-xs font-bold text-tapsh-charcoal mb-1">
-                      Amount Paid (INR)
+                      Amount Paid (₹)
                     </label>
                     <input
                       type="number"
                       min="0"
-                      max={grandTotal}
-                      value={formData.amountPaid}
-                      onChange={(e) => setFormData({...formData, amountPaid: Number(e.target.value)})}
+                      placeholder="0"
+                      value={formData.amountPaid === 0 ? "" : formData.amountPaid}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
+                        setFormData({ ...formData, amountPaid: val });
+                      }}
                       className="w-full px-3.5 py-2 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm font-bold focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-tapsh-charcoal mb-1">
-                      Internal Notes / Terms
+                      Internal Notes / Remarks
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Received via UPI advance payment."
+                      placeholder="e.g. Paid via UPI / Bank transfer"
                       value={formData.notes}
                       onChange={(e) => setFormData({...formData, notes: e.target.value})}
                       className="w-full px-3.5 py-2 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-xs focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
@@ -1004,31 +1122,45 @@ export default function InvoicesPage() {
                   </div>
                 </div>
 
-                {/* Final Calculation Summary */}
+                {/* Calculation Breakdown (No GST) */}
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-2 text-xs">
                   <div className="flex justify-between text-tapsh-charcoal">
-                    <span>Subtotal:</span>
+                    <span>Items Subtotal:</span>
                     <span className="font-bold text-tapsh-black">₹{subtotal.toLocaleString()}</span>
                   </div>
 
+                  {/* Discount input without 0-prefix bug */}
                   <div className="flex items-center justify-between">
-                    <span className="text-tapsh-charcoal">Discount (INR):</span>
+                    <span className="text-tapsh-charcoal">Discount (₹):</span>
                     <input
                       type="number"
                       min="0"
-                      value={formData.discount}
-                      onChange={(e) => setFormData({...formData, discount: Number(e.target.value)})}
+                      placeholder="0"
+                      value={formData.discount === 0 ? "" : formData.discount}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : Math.max(0, Number(e.target.value));
+                        setFormData(prev => {
+                          const updated = { ...prev, discount: val };
+                          if (prev.status === "PAID") {
+                            updated.amountPaid = Math.max(0, subtotal - val + prev.deliveryCharges);
+                          }
+                          return updated;
+                        });
+                      }}
                       className="w-24 px-2 py-1 rounded-lg border border-tapsh-charcoal/20 bg-white text-right text-xs text-tapsh-black font-bold focus:outline-none"
                     />
                   </div>
 
                   <div className="flex justify-between text-tapsh-charcoal">
-                    <span>18% GST (CGST 9% + SGST 9%):</span>
-                    <span className="font-bold text-tapsh-black">₹{taxAmount.toLocaleString()}</span>
+                    <span>Delivery Charges:</span>
+                    <span className="font-bold text-tapsh-black">
+                      {formData.deliveryCharges > 0 ? `₹${formData.deliveryCharges.toLocaleString()}` : "₹0"}
+                    </span>
                   </div>
 
                   <div className="flex justify-between text-sm font-bold text-tapsh-black border-t border-tapsh-charcoal/15 pt-2">
-                    <span>Grand Total:</span>
+                    <span>Total Amount:</span>
                     <span>₹{grandTotal.toLocaleString()}</span>
                   </div>
 
@@ -1064,7 +1196,7 @@ export default function InvoicesPage() {
                   className="px-6 py-2.5 rounded-xl text-sm font-bold bg-tapsh-soft-green text-white hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {savingInvoice ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {editingInvoice ? "Save Changes" : "Create Tax Invoice"}
+                  {editingInvoice ? "Save Changes" : "Create Invoice"}
                 </button>
               </div>
 

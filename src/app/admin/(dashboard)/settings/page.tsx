@@ -27,6 +27,7 @@ import {
   DEFAULT_PRODUCTS 
 } from "@/lib/productsService";
 import ProductSlideshow from "@/components/products/ProductSlideshow";
+import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 export default function AdminSettingsPage() {
   const { assets, isLoaded, getAsset, isCustom, updateAsset, resetAsset, resetAll } = useSiteAssets();
@@ -230,15 +231,22 @@ export default function AdminSettingsPage() {
     setIsProductModalOpen(true);
   };
 
-  const handleDeleteProduct = async (prod: ProductItem) => {
-    if (confirm(`Are you sure you want to delete "${prod.name}"? It will be removed from the public website immediately.`)) {
-      try {
-        await deleteProduct(prod.id);
-        showFeedback(`Product "${prod.name}" deleted from Firebase.`);
-      } catch (err) {
-        console.error(err);
-        showFeedback("Failed to delete product.", "error");
-      }
+  // Product Delete Confirmation State
+  const [productToDelete, setProductToDelete] = useState<ProductItem | null>(null);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsDeletingProduct(true);
+    try {
+      await deleteProduct(productToDelete.id);
+      showFeedback(`Product "${productToDelete.name}" deleted from Firebase.`);
+      setProductToDelete(null);
+    } catch (err) {
+      console.error(err);
+      showFeedback("Failed to delete product.", "error");
+    } finally {
+      setIsDeletingProduct(false);
     }
   };
 
@@ -638,121 +646,176 @@ export default function AdminSettingsPage() {
                           {asset.description}
                         </p>
 
-                        {/* Image Preview Container */}
-                        <div className="relative w-full aspect-video bg-[#1F2022] rounded-2xl overflow-hidden border border-tapsh-charcoal/15 flex items-center justify-center p-3 mb-4 group/preview">
-                          {asset.type === "text" ? (
-                            <div className="text-center p-4">
-                              <span className="text-xs uppercase text-tapsh-gray tracking-wider">Current Text Value</span>
-                              <p className="text-lg font-bold text-white mt-1">{liveValue || "TAPSH Operations"}</p>
+                        {/* Asset Preview Container */}
+                        {asset.type === "text" ? (
+                          <div className="space-y-3 mb-4">
+                            <div className="p-5 bg-[#1F2022] rounded-2xl border border-tapsh-charcoal/15 text-center">
+                              <span className="text-[10px] uppercase font-bold text-tapsh-gray tracking-wider">
+                                Current Display Name
+                              </span>
+                              <p className="text-xl font-extrabold text-white mt-1">
+                                {liveValue || "TAPSH Operations"}
+                              </p>
                             </div>
-                          ) : liveValue ? (
-                            <div className="relative w-full h-full flex items-center justify-center">
-                              <img
-                                src={liveValue}
-                                alt={asset.label}
-                                className="max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-300 group-hover/preview:scale-105"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center text-tapsh-gray text-xs">
-                              <div className="w-12 h-12 rounded-full bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold text-sm mb-1">
-                                TS
-                              </div>
-                              <span>No custom avatar set</span>
-                            </div>
-                          )}
-
-                          {liveValue && asset.type === "image" && (
-                            <button
-                              onClick={() => setPreviewModalImage({ title: asset.label, url: liveValue })}
-                              className="absolute inset-0 bg-tapsh-black/60 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-bold backdrop-blur-xs cursor-pointer"
-                            >
-                              <Eye className="w-4 h-4 text-tapsh-soft-green" /> Click to Inspect
-                            </button>
-                          )}
-
-                          {isUpdating && (
-                            <div className="absolute inset-0 bg-tapsh-black/80 flex flex-col items-center justify-center text-white text-xs gap-2 z-20 backdrop-blur-xs">
-                              <RefreshCw className="w-6 h-6 animate-spin text-tapsh-soft-green" />
-                              <span className="font-semibold">Syncing to Firebase...</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="text-[11px] text-tapsh-charcoal/80 mb-4 bg-tapsh-pale-blue/30 p-2.5 rounded-xl border border-tapsh-charcoal/10">
-                          <strong>Recommended:</strong> {asset.recommendedSize}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 pt-2 border-t border-tapsh-charcoal/15">
-                        <input
-                          type="file"
-                          ref={(el) => {
-                            fileInputRefs.current[asset.key] = el;
-                          }}
-                          accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                          onChange={(e) => handleFileUpload(asset, e)}
-                          className="hidden"
-                        />
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={() => fileInputRefs.current[asset.key]?.click()}
-                            disabled={isUpdating}
-                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>Choose File</span>
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setUrlInputOpenKey(isUrlOpen ? null : asset.key);
-                              setCustomUrlValue(customActive ? liveValue : "");
-                            }}
-                            disabled={isUpdating}
-                            className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-pale-blue hover:bg-tapsh-pale-blue/80 text-tapsh-black rounded-xl text-xs font-bold transition-all border border-tapsh-charcoal/20 active:scale-95 disabled:opacity-50 cursor-pointer"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            <span>URL Link</span>
-                          </button>
-                        </div>
-
-                        {isUrlOpen && (
-                          <div className="p-3 bg-tapsh-pale-blue/50 rounded-2xl border border-tapsh-charcoal/20 space-y-2 animate-in slide-in-from-top-2">
-                            <label className="text-[10px] uppercase font-bold text-tapsh-charcoal">
-                              Paste Direct Image / CDN URL:
-                            </label>
-                            <div className="flex gap-2">
-                              <input
-                                type="url"
-                                placeholder="https://example.com/image.png"
-                                value={customUrlValue}
-                                onChange={(e) => setCustomUrlValue(e.target.value)}
-                                className="flex-1 px-3 py-1.5 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
-                              />
-                              <button
-                                onClick={() => handleCustomUrlSubmit(asset.key)}
-                                disabled={isUpdating || !customUrlValue.trim()}
-                                className="px-3 py-1.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold shadow-xs hover:brightness-105 disabled:opacity-50 cursor-pointer"
-                              >
-                                Save
-                              </button>
+                            <div className="text-[11px] text-tapsh-charcoal/80 bg-tapsh-pale-blue/30 p-2.5 rounded-xl border border-tapsh-charcoal/10">
+                              <strong>Recommended:</strong> {asset.recommendedSize}
                             </div>
                           </div>
-                        )}
+                        ) : (
+                          <>
+                            <div className="relative w-full aspect-video bg-[#1F2022] rounded-2xl overflow-hidden border border-tapsh-charcoal/15 flex items-center justify-center p-3 mb-4 group/preview">
+                              {liveValue ? (
+                                <div className="relative w-full h-full flex items-center justify-center">
+                                  <img
+                                    src={liveValue}
+                                    alt={asset.label}
+                                    className="max-h-full max-w-full object-contain drop-shadow-md transition-transform duration-300 group-hover/preview:scale-105"
+                                  />
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center text-tapsh-gray text-xs">
+                                  <div className="w-12 h-12 rounded-full bg-tapsh-pale-blue text-tapsh-black flex items-center justify-center font-bold text-sm mb-1">
+                                    TS
+                                  </div>
+                                  <span>No custom avatar set</span>
+                                </div>
+                              )}
 
-                        {customActive && (
-                          <button
-                            onClick={() => handleResetSingle(asset)}
-                            disabled={isUpdating}
-                            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-tapsh-charcoal hover:text-red-500 text-[11px] font-semibold transition-colors cursor-pointer"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            <span>Revert to original default</span>
-                          </button>
+                              {liveValue && (
+                                <button
+                                  onClick={() => setPreviewModalImage({ title: asset.label, url: liveValue })}
+                                  className="absolute inset-0 bg-tapsh-black/60 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white text-xs font-bold backdrop-blur-xs cursor-pointer"
+                                >
+                                  <Eye className="w-4 h-4 text-tapsh-soft-green" /> Click to Inspect
+                                </button>
+                              )}
+
+                              {isUpdating && (
+                                <div className="absolute inset-0 bg-tapsh-black/80 flex flex-col items-center justify-center text-white text-xs gap-2 z-20 backdrop-blur-xs">
+                                  <RefreshCw className="w-6 h-6 animate-spin text-tapsh-soft-green" />
+                                  <span className="font-semibold">Syncing to Firebase...</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="text-[11px] text-tapsh-charcoal/80 mb-4 bg-tapsh-pale-blue/30 p-2.5 rounded-xl border border-tapsh-charcoal/10">
+                              <strong>Recommended:</strong> {asset.recommendedSize}
+                            </div>
+                          </>
                         )}
                       </div>
+
+                      {/* Controls Area */}
+                      {asset.type === "text" ? (
+                        <div className="space-y-3 pt-2 border-t border-tapsh-charcoal/15">
+                          <label className="text-[10px] uppercase font-bold text-tapsh-charcoal block">
+                            Edit Display Name:
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              defaultValue={liveValue || "TAPSH Operations"}
+                              id={`input-name-${asset.key}`}
+                              className="flex-1 px-3.5 py-2.5 bg-white text-tapsh-black border border-tapsh-charcoal/20 rounded-xl text-xs font-bold focus:outline-none focus:border-tapsh-soft-green"
+                              placeholder="e.g. TAPSH Operations"
+                            />
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById(`input-name-${asset.key}`) as HTMLInputElement;
+                                if (input && input.value.trim()) {
+                                  updateAsset(asset.key, input.value.trim());
+                                  showFeedback("Admin display name updated successfully.");
+                                }
+                              }}
+                              disabled={isUpdating}
+                              className="px-4 py-2.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold shadow-xs hover:brightness-105 active:scale-95 transition-all cursor-pointer"
+                            >
+                              Save Name
+                            </button>
+                          </div>
+
+                          {customActive && (
+                            <button
+                              onClick={() => handleResetSingle(asset)}
+                              disabled={isUpdating}
+                              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-tapsh-charcoal hover:text-red-500 text-[11px] font-semibold transition-colors cursor-pointer"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Revert to original default</span>
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2 pt-2 border-t border-tapsh-charcoal/15">
+                          <input
+                            type="file"
+                            ref={(el) => {
+                              fileInputRefs.current[asset.key] = el;
+                            }}
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            onChange={(e) => handleFileUpload(asset, e)}
+                            className="hidden"
+                          />
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => fileInputRefs.current[asset.key]?.click()}
+                              disabled={isUpdating}
+                              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-black hover:bg-tapsh-soft-green text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
+                            >
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Choose File</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setUrlInputOpenKey(isUrlOpen ? null : asset.key);
+                                setCustomUrlValue(customActive ? liveValue : "");
+                              }}
+                              disabled={isUpdating}
+                              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-tapsh-pale-blue hover:bg-tapsh-pale-blue/80 text-tapsh-black rounded-xl text-xs font-bold transition-all border border-tapsh-charcoal/20 active:scale-95 disabled:opacity-50 cursor-pointer"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>URL Link</span>
+                            </button>
+                          </div>
+
+                          {isUrlOpen && (
+                            <div className="p-3 bg-tapsh-pale-blue/50 rounded-2xl border border-tapsh-charcoal/20 space-y-2 animate-in slide-in-from-top-2">
+                              <label className="text-[10px] uppercase font-bold text-tapsh-charcoal">
+                                Paste Direct Image / CDN URL:
+                              </label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="url"
+                                  placeholder="https://example.com/image.png"
+                                  value={customUrlValue}
+                                  onChange={(e) => setCustomUrlValue(e.target.value)}
+                                  className="flex-1 px-3 py-1.5 bg-white border border-tapsh-charcoal/20 rounded-xl text-xs focus:outline-none focus:border-tapsh-soft-green"
+                                />
+                                <button
+                                  onClick={() => handleCustomUrlSubmit(asset.key)}
+                                  disabled={isUpdating || !customUrlValue.trim()}
+                                  className="px-3 py-1.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold shadow-xs hover:brightness-105 disabled:opacity-50 cursor-pointer"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {customActive && (
+                            <button
+                              onClick={() => handleResetSingle(asset)}
+                              disabled={isUpdating}
+                              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-tapsh-charcoal hover:text-red-500 text-[11px] font-semibold transition-colors cursor-pointer"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Revert to original default</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -878,7 +941,7 @@ export default function AdminSettingsPage() {
                             <Edit2 className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
-                            onClick={() => handleDeleteProduct(product)}
+                            onClick={() => setProductToDelete(product)}
                             className="p-2 text-tapsh-charcoal hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                             title="Delete product"
                           >
@@ -1390,6 +1453,19 @@ export default function AdminSettingsPage() {
           </div>
         </div>
       )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL: CONFIRM PRODUCT DELETE */}
+      {/* ---------------------------------------------------- */}
+      <ConfirmDeleteModal
+        isOpen={!!productToDelete}
+        recordName={productToDelete?.name || ""}
+        recordType="Product"
+        warningMessage="This product and its photos will be removed from your catalog and store."
+        isDeleting={isDeletingProduct}
+        onConfirm={confirmDeleteProduct}
+        onCancel={() => setProductToDelete(null)}
+      />
 
     </div>
   );

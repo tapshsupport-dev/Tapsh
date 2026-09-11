@@ -12,6 +12,7 @@ import {
   subscribeCustomers, subscribeHubs, updateCustomer, 
   deleteCustomer, onFirestorePermissionChange 
 } from "@/lib/firestoreService";
+import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -35,6 +36,10 @@ export default function CustomersPage() {
     notes: ""
   });
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Delete Customer State
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState(false);
 
 
   // Real-time Firestore Subscriptions
@@ -113,15 +118,18 @@ export default function CustomersPage() {
   };
 
   // Delete Customer
-  const handleDeleteClick = async (customer: Customer) => {
-    const confirmMsg = `Are you sure you want to permanently delete "${customer.businessName}"?\n\nThis will simultaneously delete this customer and their associated digital hub.`;
-    if (!window.confirm(confirmMsg)) return;
-
+  const confirmDeleteCustomer = async () => {
+    if (!customerToDelete) return;
+    setIsDeletingCustomer(true);
     try {
-      await deleteCustomer(customer.id);
-      showNotification(`Customer "${customer.businessName}" removed.`);
+      await deleteCustomer(customerToDelete.id);
+      showNotification(`Customer "${customerToDelete.businessName}" permanently deleted.`);
+      setCustomerToDelete(null);
     } catch (err: any) {
-      showNotification(`Customer "${customer.businessName}" removed.`);
+      console.error(err);
+      alert("Failed to delete customer. Please try again.");
+    } finally {
+      setIsDeletingCustomer(false);
     }
   };
 
@@ -280,8 +288,8 @@ export default function CustomersPage() {
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteClick(customer)}
-                      className="p-2.5 bg-red-50 border border-red-200 text-red-600 rounded-xl hover:bg-red-100 active:scale-95 transition-all text-xs font-bold flex items-center justify-center"
+                      onClick={() => setCustomerToDelete(customer)}
+                      className="p-2.5 bg-red-50 border border-red-200 text-red-600 rounded-xl hover:bg-red-100 active:scale-95 transition-all text-xs font-bold flex items-center justify-center cursor-pointer"
                       title="Delete Customer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -362,8 +370,8 @@ export default function CustomersPage() {
                             <Pencil className="w-3.5 h-3.5" /> Edit
                           </button>
                           <button
-                            onClick={() => handleDeleteClick(customer)}
-                            className="p-1.5 px-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors inline-flex items-center gap-1"
+                            onClick={() => setCustomerToDelete(customer)}
+                            className="p-1.5 px-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
                             title="Delete Customer"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -539,6 +547,18 @@ export default function CustomersPage() {
         </div>
       )}
 
+      {/* ---------------------------------------------------- */}
+      {/* MODAL: CONFIRM CUSTOMER DELETE */}
+      {/* ---------------------------------------------------- */}
+      <ConfirmDeleteModal
+        isOpen={!!customerToDelete}
+        recordName={customerToDelete ? customerToDelete.businessName : ""}
+        recordType="Customer"
+        warningMessage="This will permanently delete this client profile, its associated digital hub, and connection settings."
+        isDeleting={isDeletingCustomer}
+        onConfirm={confirmDeleteCustomer}
+        onCancel={() => setCustomerToDelete(null)}
+      />
 
     </div>
   );

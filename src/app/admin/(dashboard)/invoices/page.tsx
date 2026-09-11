@@ -14,6 +14,7 @@ import {
 } from "@/lib/firestoreService";
 import { subscribeToProducts, ProductItem } from "@/lib/productsService";
 import { downloadInvoicePdf } from "@/lib/invoicePdf";
+import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 // Helper for sequential invoice numbering: TAPSH/(Year)/0001(+1)
 export function getNextInvoiceNumber(invoices: Invoice[]): string {
@@ -61,6 +62,10 @@ export default function InvoicesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [savingInvoice, setSavingInvoice] = useState(false);
+
+  // Delete Confirmation State
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
 
   // Form State
   const [clientMode, setClientMode] = useState<"EXISTING" | "MANUAL">("EXISTING");
@@ -342,15 +347,19 @@ export default function InvoicesPage() {
     }
   };
 
-  // Delete Invoice
-  const handleDeleteInvoice = async (inv: Invoice) => {
-    if (!window.confirm(`Are you sure you want to permanently delete Invoice "${inv.invoiceNumber}"?`)) return;
-
+  // Delete Invoice Handler
+  const confirmDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
+    setIsDeletingInvoice(true);
     try {
-      await deleteInvoice(inv.id);
-      showNotification(`Invoice "${inv.invoiceNumber}" removed.`);
+      await deleteInvoice(invoiceToDelete.id);
+      showNotification(`Invoice "${invoiceToDelete.invoiceNumber}" deleted successfully.`);
+      setInvoiceToDelete(null);
     } catch (err) {
-      showNotification(`Invoice "${inv.invoiceNumber}" removed.`);
+      console.error(err);
+      alert("Error deleting invoice. Please try again.");
+    } finally {
+      setIsDeletingInvoice(false);
     }
   };
 
@@ -557,7 +566,7 @@ export default function InvoicesPage() {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDeleteInvoice(inv)}
+                        onClick={() => setInvoiceToDelete(inv)}
                         className="p-2 bg-red-50 border border-red-200 text-red-600 rounded-xl hover:bg-red-100 active:scale-95 transition-all cursor-pointer"
                         title="Delete Invoice"
                       >
@@ -659,7 +668,7 @@ export default function InvoicesPage() {
                             <Pencil className="w-3 h-3" /> Edit
                           </button>
                           <button
-                            onClick={() => handleDeleteInvoice(inv)}
+                            onClick={() => setInvoiceToDelete(inv)}
                             className="p-1.5 px-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
                             title="Delete Invoice"
                           >
@@ -1223,6 +1232,19 @@ export default function InvoicesPage() {
           </div>
         </div>
       )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL: CONFIRM INVOICE DELETE */}
+      {/* ---------------------------------------------------- */}
+      <ConfirmDeleteModal
+        isOpen={!!invoiceToDelete}
+        recordName={invoiceToDelete?.invoiceNumber ? `Invoice ${invoiceToDelete.invoiceNumber} (${invoiceToDelete.customerName || "Customer"})` : ""}
+        recordType="Invoice"
+        warningMessage="This invoice and its payment records will be permanently erased from Firestore."
+        isDeleting={isDeletingInvoice}
+        onConfirm={confirmDeleteInvoice}
+        onCancel={() => setInvoiceToDelete(null)}
+      />
 
     </div>
   );

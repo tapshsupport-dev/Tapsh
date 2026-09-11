@@ -13,6 +13,7 @@ import { Customer, Hub, mockAuditLogs, Invoice } from "@/lib/data";
 import { 
   getCustomerById, getHubByCustomerId, updateCustomer, deleteCustomer, subscribeInvoices 
 } from "@/lib/firestoreService";
+import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 export default function CustomerProfilePage() {
   const params = useParams();
@@ -28,6 +29,10 @@ export default function CustomerProfilePage() {
 
   // Edit Modal State
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Delete Confirmation State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editForm, setEditForm] = useState({
     businessName: "",
     contactPerson: "",
@@ -95,16 +100,15 @@ export default function CustomerProfilePage() {
     }
   };
 
-  const handleDeleteClient = async () => {
+  const handleConfirmDelete = async () => {
     if (!customer) return;
-    const confirmMsg = `Are you sure you want to permanently delete "${customer.businessName}" from Firestore?\n\nThis will remove the customer record and associated digital hub.`;
-    if (!window.confirm(confirmMsg)) return;
-
+    setIsDeleting(true);
     try {
       await deleteCustomer(customer.id);
       router.push("/admin/customers");
     } catch (err: any) {
       alert("Failed to delete customer: " + err.message);
+      setIsDeleting(false);
     }
   };
 
@@ -155,7 +159,7 @@ export default function CustomerProfilePage() {
             <Pencil className="w-3.5 h-3.5" /> Edit Record
           </button>
           <button
-            onClick={handleDeleteClient}
+            onClick={() => setShowDeleteConfirm(true)}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -581,6 +585,19 @@ export default function CustomerProfilePage() {
           </div>
         </div>
       )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL: CONFIRM CUSTOMER DELETE */}
+      {/* ---------------------------------------------------- */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteConfirm}
+        recordName={customer ? customer.businessName : ""}
+        recordType="Customer"
+        warningMessage="This will permanently delete this client profile, its associated digital hub, and connection settings from Firestore."
+        isDeleting={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
 
     </div>
   );

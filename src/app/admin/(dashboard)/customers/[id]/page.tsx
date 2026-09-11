@@ -6,13 +6,18 @@ import Link from "next/link";
 import { 
   ArrowLeft, Phone, Mail, MapPin, ExternalLink, 
   Pencil, Trash2, X, Save, CheckCircle2, Receipt, Clock, Sparkles, Building2,
-  Loader2, User, FileText, Download, Copy, Check
+  Loader2, User, FileText, Download, Copy, Check, Plus, Image as ImageIcon,
+  Globe, Wifi, AlertCircle, RefreshCw
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Customer, Hub, mockAuditLogs, Invoice } from "@/lib/data";
 import { 
-  getCustomerById, getHubByCustomerId, updateCustomer, deleteCustomer, subscribeInvoices 
+  getCustomerById, getHubByCustomerId, updateCustomer, deleteCustomer, subscribeInvoices, updateHub 
 } from "@/lib/firestoreService";
+import { compressImage } from "@/lib/assetsService";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getTouchpointIcon } from "@/components/TouchpointIcons";
 import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 export default function CustomerProfilePage() {
@@ -27,8 +32,33 @@ export default function CustomerProfilePage() {
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // Edit Modal State
+  // Edit Customer Modal State
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Edit Deployed Hub Modal State
+  const [showEditHubModal, setShowEditHubModal] = useState(false);
+  const [hubTab, setHubTab] = useState<"info" | "branding" | "links">("info");
+  const [savingHubEdit, setSavingHubEdit] = useState(false);
+  const [uploadingHubLogo, setUploadingHubLogo] = useState(false);
+  const [uploadingHubCover, setUploadingHubCover] = useState(false);
+  const [hubForm, setHubForm] = useState({
+    businessName: "",
+    shortDescription: "",
+    greetingMessage: "",
+    phone: "",
+    whatsapp: "",
+    status: "ACTIVE" as "ACTIVE" | "SUSPENDED",
+    logoUrl: "",
+    coverUrl: "",
+    links: [] as any[]
+  });
+  const [newLink, setNewLink] = useState({
+    category: "reviews",
+    title: "",
+    url: "",
+    icon: "google"
+  });
+  const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null);
 
   // Delete Confirmation State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -100,6 +130,129 @@ export default function CustomerProfilePage() {
     }
   };
 
+  const openEditHubModal = () => {
+    if (!hub) return;
+    setHubForm({
+      businessName: hub.businessName || customer?.businessName || "",
+      shortDescription: hub.shortDescription || "",
+      greetingMessage: hub.greetingMessage || "Thank you for visiting ♡",
+      phone: hub.phone || customer?.phone || "",
+      whatsapp: hub.whatsapp || "",
+      status: (hub.status as "ACTIVE" | "SUSPENDED") || "ACTIVE",
+      logoUrl: hub.logoUrl || "",
+      coverUrl: hub.coverUrl || "",
+      links: hub.links ? JSON.parse(JSON.stringify(hub.links)) : []
+    });
+    setHubTab("info");
+    setEditingLinkIndex(null);
+    setShowEditHubModal(true);
+  };
+
+  const handleHubImageUpload = async (file: File, type: "logo" | "cover") => {
+    if (type === "logo") setUploadingHubLogo(true);
+    else setUploadingHubCover(true);
+
+    try {
+      // 1. Instant client-side compression (<60ms)
+      const fastDataUrl = await compressImage(file, type === "logo" ? 500 : 1200, 0.82);
+      if (type === "logo") {
+        setHubForm(prev => ({ ...prev, logoUrl: fastDataUrl }));
+        setUploadingHubLogo(false);
+      } else {
+        setHubForm(prev => ({ ...prev, coverUrl: fastDataUrl }));
+        setUploadingHubCover(false);
+      }
+
+      // 2. Background attempt to upload to Firebase Storage with a strict 2.5s timeout
+      try {
+        const uploadTask = async () => {
+          const sanitized = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+          const storageRef = ref(storage, `hubs/${type}_${Date.now()}_${sanitized}`);
+          const snap = await uploadBytes(storageRef, file);
+          return await getDownloadURL(snap.ref);
+        };
+
+        const timeout = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error("Storage timeout")), 2500)
+        );
+
+        const cloudUrl = await Promise.race([uploadTask(), timeout]);
+        if (cloudUrl) {
+          if (type === "logo") setHubForm(prev => ({ ...prev, logoUrl: cloudUrl }));
+          else setHubForm(prev => ({ ...prev, coverUrl: cloudUrl }));
+        }
+      } catch (storageErr) {
+        console.warn("Storage upload timed out or failed; retaining compressed client image.", storageErr);
+      }
+    } catch (err) {
+      console.error("Failed to process hub image:", err);
+    } finally {
+      if (type === "logo") setUploadingHubLogo(false);
+      else setUploadingHubCover(false);
+    }
+  };
+
+  const handleSaveHubEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hub) return;
+    setSavingHubEdit(true);
+
+    try {
+      const updatedFields: Partial<Hub> = {
+        businessName: hubForm.businessName,
+        shortDescription: hubForm.shortDescription,
+        greetingMessage: hubForm.greetingMessage,
+        phone: hubForm.phone,
+        whatsapp: hubForm.whatsapp.replace(/[^0-9]/g, ""),
+        status: hubForm.status,
+        logoUrl: hubForm.logoUrl,
+        coverUrl: hubForm.coverUrl,
+        links: hubForm.links
+      };
+
+      await updateHub(hub.id, updatedFields);
+      setHub({ ...hub, ...updatedFields });
+      showNotification("Deployed Hub settings, touchpoints & branding updated in Firestore.");
+      setShowEditHubModal(false);
+    } catch (err: any) {
+      alert("Failed to update Hub in Firestore: " + err.message);
+    } finally {
+      setSavingHubEdit(false);
+    }
+  };
+
+  const handleAddLink = () => {
+    if (!newLink.title.trim() || !newLink.url.trim()) {
+      alert("Please provide both a link title and URL.");
+      return;
+    }
+    const linkItem = {
+      id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      category: newLink.category,
+      title: newLink.title.trim(),
+      url: newLink.url.trim(),
+      icon: newLink.icon || newLink.category
+    };
+    setHubForm(prev => ({ ...prev, links: [...prev.links, linkItem] }));
+    setNewLink({ category: "reviews", title: "", url: "", icon: "google" });
+  };
+
+  const handleDeleteLink = (index: number) => {
+    setHubForm(prev => ({
+      ...prev,
+      links: prev.links.filter((_, i) => i !== index)
+    }));
+    if (editingLinkIndex === index) setEditingLinkIndex(null);
+  };
+
+  const handleUpdateLinkItem = (index: number, field: "title" | "url", value: string) => {
+    setHubForm(prev => {
+      const updated = [...prev.links];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, links: updated };
+    });
+  };
+
   const handleConfirmDelete = async () => {
     if (!customer) return;
     setIsDeleting(true);
@@ -154,13 +307,21 @@ export default function CustomerProfilePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowEditModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-tapsh-pale-blue text-tapsh-black border border-tapsh-charcoal/20 rounded-xl text-xs font-bold hover:bg-tapsh-charcoal/10 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-tapsh-pale-blue text-tapsh-black border border-tapsh-charcoal/20 rounded-xl text-xs font-bold hover:bg-tapsh-charcoal/10 transition-colors cursor-pointer"
           >
-            <Pencil className="w-3.5 h-3.5" /> Edit Record
+            <Pencil className="w-3.5 h-3.5 text-tapsh-charcoal" /> Edit Profile
           </button>
+          {hub && (
+            <button
+              onClick={openEditHubModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-white" /> Edit Deployed Hub
+            </button>
+          )}
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" /> Delete
           </button>
@@ -244,7 +405,7 @@ export default function CustomerProfilePage() {
 
       {/* Permanent Hub Status Card */}
       <div className="bg-white rounded-3xl border border-tapsh-charcoal/15 shadow-xs p-5 sm:p-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-tapsh-soft-green" />
             <h2 className="text-base sm:text-lg font-bold text-tapsh-black">
@@ -252,9 +413,23 @@ export default function CustomerProfilePage() {
             </h2>
           </div>
           {hub ? (
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-tapsh-soft-green/10 text-tapsh-soft-green border border-tapsh-soft-green/30">
-              ACTIVE ROUTING
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                hub.status === "ACTIVE" 
+                  ? "bg-tapsh-soft-green/10 text-tapsh-soft-green border-tapsh-soft-green/30"
+                  : "bg-red-100 text-red-700 border-red-200"
+              }`}>
+                {hub.status === "ACTIVE" ? "ACTIVE ROUTING" : "SUSPENDED"}
+              </span>
+              <button
+                type="button"
+                onClick={openEditHubModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-tapsh-soft-green text-white rounded-xl text-xs font-bold hover:brightness-110 active:scale-95 transition-all shadow-xs cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5 text-white" />
+                Edit Hub Content
+              </button>
+            </div>
           ) : (
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">
               NO HUB DEPLOYED
@@ -264,6 +439,40 @@ export default function CustomerProfilePage() {
 
         {hub ? (
           <div className="space-y-5">
+            {/* Visual Branding Display (Shop Logo & Backdrop) */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-white border border-tapsh-charcoal/20 shadow-xs shrink-0 flex items-center justify-center">
+                  {hub.logoUrl ? (
+                    <img src={hub.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-bold text-tapsh-soft-green text-lg">{hub.businessName?.charAt(0) || "T"}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs sm:text-sm font-bold text-tapsh-black truncate">{hub.businessName}</h4>
+                  <p className="text-xs text-tapsh-charcoal truncate">
+                    {hub.shortDescription || hub.greetingMessage || "No description set"}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-tapsh-charcoal/70">
+                    <span>Logo: <strong className="text-tapsh-black">{hub.logoUrl ? "✓ Custom" : "Default"}</strong></span>
+                    <span>•</span>
+                    <span>Backdrop: <strong className="text-tapsh-black">{hub.coverUrl ? "✓ Custom" : "Default"}</strong></span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  openEditHubModal();
+                  setHubTab("branding");
+                }}
+                className="px-3 py-1.5 bg-white border border-tapsh-charcoal/20 text-tapsh-black hover:border-tapsh-soft-green text-xs font-bold rounded-xl active:scale-95 transition-all self-start sm:self-auto cursor-pointer shadow-2xs shrink-0"
+              >
+                Change Branding
+              </button>
+            </div>
+
             {/* Live Web URL Copy Card */}
             {(() => {
               const liveUrl = typeof window !== "undefined" && hub.slug
@@ -361,21 +570,54 @@ export default function CustomerProfilePage() {
               );
             })()}
 
-            {hub.links && hub.links.length > 0 && (
-              <div>
-                <span className="text-[11px] font-bold text-tapsh-charcoal uppercase tracking-wider block mb-2">
-                  Configured Touchpoint Links ({hub.links.length})
+            {/* Touchpoints Section */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-tapsh-charcoal uppercase tracking-wider block">
+                  Configured Touchpoint Links ({hub.links?.length || 0})
                 </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    openEditHubModal();
+                    setHubTab("links");
+                  }}
+                  className="text-xs font-bold text-tapsh-soft-green hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <Pencil className="w-3 h-3" /> Manage Links
+                </button>
+              </div>
+
+              {hub.links && hub.links.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {hub.links.map((l) => (
-                    <div key={l.id} className="p-2.5 rounded-xl bg-[#FAF8F5] border border-tapsh-charcoal/10 text-xs">
-                      <span className="font-bold text-tapsh-black block truncate">{l.title}</span>
-                      <span className="text-[10px] text-tapsh-soft-green uppercase font-bold">{l.category}</span>
+                    <div key={l.id} className="p-2.5 rounded-xl bg-[#FAF8F5] border border-tapsh-charcoal/10 text-xs flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-white shadow-2xs flex items-center justify-center shrink-0">
+                        {getTouchpointIcon(l, "sm")}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-tapsh-black block truncate">{l.title}</span>
+                        <span className="text-[10px] text-tapsh-soft-green uppercase font-bold">{l.category}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="p-3 bg-[#FAF8F5] rounded-xl border border-dashed border-tapsh-charcoal/20 text-center">
+                  <p className="text-xs text-tapsh-charcoal mb-1">No touchpoint links added yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      openEditHubModal();
+                      setHubTab("links");
+                    }}
+                    className="text-xs font-bold text-tapsh-soft-green hover:underline cursor-pointer"
+                  >
+                    + Add Touchpoints Now
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="p-6 text-center bg-[#FAF8F5] rounded-2xl border border-dashed border-tapsh-charcoal/30">
@@ -564,6 +806,26 @@ export default function CustomerProfilePage() {
                 />
               </div>
 
+              {/* Shortcut to Hub Editor */}
+              {hub && (
+                <div className="p-3 bg-tapsh-pale-blue/50 border border-tapsh-charcoal/15 rounded-xl flex items-center justify-between text-xs">
+                  <div>
+                    <strong className="text-tapsh-black block">Need to edit the deployed Hub?</strong>
+                    <span className="text-tapsh-charcoal text-[11px]">Logo, backdrop, review links &amp; touchpoints.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      openEditHubModal();
+                    }}
+                    className="px-3 py-1.5 bg-tapsh-soft-green text-white font-bold rounded-lg text-xs hover:brightness-110 cursor-pointer shrink-0 shadow-2xs"
+                  >
+                    Edit Hub Content &rarr;
+                  </button>
+                </div>
+              )}
+
               <div className="pt-3 border-t border-tapsh-charcoal/10 flex justify-end gap-3">
                 <button 
                   type="button"
@@ -581,6 +843,539 @@ export default function CustomerProfilePage() {
                   Save to Firestore
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL: EDIT DEPLOYED HUB CONTENT & TOUCHPOINTS       */}
+      {/* ---------------------------------------------------- */}
+      {showEditHubModal && hub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] border border-tapsh-charcoal/15">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-tapsh-charcoal/10 flex items-center justify-between bg-[#FAF8F5]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-tapsh-soft-green/10 text-tapsh-soft-green flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg text-tapsh-black flex items-center gap-2">
+                    Edit Deployed Hub
+                  </h3>
+                  <a 
+                    href={`/h/${hub.slug}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-tapsh-charcoal hover:text-tapsh-soft-green inline-flex items-center gap-1 font-mono"
+                  >
+                    /h/{hub.slug} <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowEditHubModal(false)}
+                className="p-1.5 rounded-full hover:bg-tapsh-charcoal/10 text-tapsh-charcoal transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex border-b border-tapsh-charcoal/10 bg-[#FAF8F5]/50 px-4 sm:px-6">
+              {[
+                { id: "info", label: "1. Info & Settings" },
+                { id: "branding", label: "2. Branding & Images" },
+                { id: "links", label: `3. Touchpoints (${hubForm.links.length})` }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setHubTab(t.id as any)}
+                  className={`py-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+                    hubTab === t.id
+                      ? "border-tapsh-soft-green text-tapsh-black"
+                      : "border-transparent text-tapsh-charcoal/70 hover:text-tapsh-black"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <form onSubmit={handleSaveHubEdit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              
+              {/* TAB 1: GENERAL INFO */}
+              {hubTab === "info" && (
+                <div className="space-y-4 animate-in fade-in">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                      Hub Business Name *
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      value={hubForm.businessName}
+                      onChange={(e) => setHubForm({ ...hubForm, businessName: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                      placeholder="e.g. The Tamara Coorg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                      Tagline / Short Description
+                    </label>
+                    <textarea 
+                      rows={2}
+                      value={hubForm.shortDescription}
+                      onChange={(e) => setHubForm({ ...hubForm, shortDescription: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green resize-none"
+                      placeholder="Welcome to our space. Select an option below to connect with us."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                      Guest Welcome Greeting
+                    </label>
+                    <input 
+                      type="text"
+                      value={hubForm.greetingMessage}
+                      onChange={(e) => setHubForm({ ...hubForm, greetingMessage: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                      placeholder="Thank you for visiting ♡"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                        Reception Phone
+                      </label>
+                      <input 
+                        type="tel"
+                        value={hubForm.phone}
+                        onChange={(e) => setHubForm({ ...hubForm, phone: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                        placeholder="+91 82722 80000"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                        WhatsApp Business No
+                      </label>
+                      <input 
+                        type="tel"
+                        value={hubForm.whatsapp}
+                        onChange={(e) => setHubForm({ ...hubForm, whatsapp: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-tapsh-charcoal/30 bg-white text-tapsh-black text-sm focus:outline-none focus:ring-2 focus:ring-tapsh-soft-green"
+                        placeholder="918272280000"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Routing Status */}
+                  <div className="pt-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-1.5">
+                      Hub Routing Status
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setHubForm({ ...hubForm, status: "ACTIVE" })}
+                        className={`p-3 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer ${
+                          hubForm.status === "ACTIVE"
+                            ? "bg-emerald-50 border-emerald-400 text-emerald-800 ring-2 ring-emerald-300/40"
+                            : "bg-white border-tapsh-charcoal/20 text-tapsh-charcoal hover:border-emerald-300"
+                        }`}
+                      >
+                        ✓ Active (Online)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHubForm({ ...hubForm, status: "SUSPENDED" })}
+                        className={`p-3 rounded-xl border text-xs font-bold text-center transition-all cursor-pointer ${
+                          hubForm.status === "SUSPENDED"
+                            ? "bg-red-50 border-red-400 text-red-800 ring-2 ring-red-300/40"
+                            : "bg-white border-tapsh-charcoal/20 text-tapsh-charcoal hover:border-red-300"
+                        }`}
+                      >
+                        ✕ Suspended (Offline)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: BRANDING & MEDIA */}
+              {hubTab === "branding" && (
+                <div className="space-y-5 animate-in fade-in">
+                  <p className="text-xs text-tapsh-charcoal">
+                    Update the shop logo and hero cover backdrop displayed to visitors on the live Hub.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Shop Logo */}
+                    <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-tapsh-black uppercase tracking-wider">
+                          Shop Logo
+                        </label>
+                        <span className="text-[10px] text-tapsh-charcoal font-medium">Optional</span>
+                      </div>
+
+                      {hubForm.logoUrl ? (
+                        <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-tapsh-charcoal/10 shadow-xs">
+                          <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-tapsh-soft-green/40 shadow-xs shrink-0 bg-neutral-100 flex items-center justify-center">
+                            <img src={hubForm.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <p className="text-xs font-bold text-tapsh-black truncate">Logo Attached</p>
+                            <div className="flex items-center gap-2">
+                              <label className="text-[11px] font-bold text-tapsh-soft-green hover:underline cursor-pointer">
+                                Change
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden"
+                                  disabled={uploadingHubLogo}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleHubImageUpload(file, "logo");
+                                  }}
+                                />
+                              </label>
+                              <span className="text-tapsh-charcoal/30">•</span>
+                              <button
+                                type="button"
+                                onClick={() => setHubForm({ ...hubForm, logoUrl: "" })}
+                                className="text-[11px] font-bold text-red-500 hover:underline cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className={`w-full flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                            uploadingHubLogo ? "border-tapsh-soft-green bg-tapsh-soft-green/5" : "border-tapsh-charcoal/20 hover:border-tapsh-soft-green/60 bg-white"
+                          }`}>
+                            {uploadingHubLogo ? (
+                              <div className="flex items-center gap-2 text-tapsh-soft-green text-xs font-bold">
+                                <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
+                              </div>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-5 h-5 text-tapsh-soft-green mb-1" />
+                                <span className="text-xs font-bold text-tapsh-black">Upload Logo</span>
+                                <span className="text-[10px] text-tapsh-charcoal">PNG / JPG</span>
+                              </>
+                            )}
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              disabled={uploadingHubLogo}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleHubImageUpload(file, "logo");
+                              }} 
+                            />
+                          </label>
+                          <input 
+                            type="url"
+                            placeholder="Or paste image URL"
+                            value={hubForm.logoUrl}
+                            onChange={(e) => setHubForm({ ...hubForm, logoUrl: e.target.value })}
+                            className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Shop Backdrop */}
+                    <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-tapsh-charcoal/15 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-tapsh-black uppercase tracking-wider">
+                          Shop Backdrop
+                        </label>
+                        <span className="text-[10px] text-tapsh-charcoal font-medium">Optional</span>
+                      </div>
+
+                      {hubForm.coverUrl ? (
+                        <div className="space-y-1.5">
+                          <div className="w-full h-20 rounded-xl overflow-hidden border border-tapsh-charcoal/20 shadow-xs relative bg-neutral-900 group">
+                            <img src={hubForm.coverUrl} alt="Backdrop" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <label className="px-2.5 py-1 bg-white text-tapsh-black rounded-lg text-xs font-bold cursor-pointer">
+                                Change
+                                <input 
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden"
+                                  disabled={uploadingHubCover}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleHubImageUpload(file, "cover");
+                                  }}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setHubForm({ ...hubForm, coverUrl: "" })}
+                                className="px-2.5 py-1 bg-red-600 text-white rounded-lg text-xs font-bold cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-tapsh-charcoal">
+                            <span>Backdrop Active</span>
+                            <button
+                              type="button"
+                              onClick={() => setHubForm({ ...hubForm, coverUrl: "" })}
+                              className="font-bold text-red-500 hover:underline cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className={`w-full flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                            uploadingHubCover ? "border-tapsh-soft-green bg-tapsh-soft-green/5" : "border-tapsh-charcoal/20 hover:border-tapsh-soft-green/60 bg-white"
+                          }`}>
+                            {uploadingHubCover ? (
+                              <div className="flex items-center gap-2 text-tapsh-soft-green text-xs font-bold">
+                                <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
+                              </div>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-5 h-5 text-tapsh-soft-green mb-1" />
+                                <span className="text-xs font-bold text-tapsh-black">Upload Backdrop</span>
+                                <span className="text-[10px] text-tapsh-charcoal">16:9 Banner</span>
+                              </>
+                            )}
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              disabled={uploadingHubCover}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleHubImageUpload(file, "cover");
+                              }} 
+                            />
+                          </label>
+                          <input 
+                            type="url"
+                            placeholder="Or paste backdrop image URL"
+                            value={hubForm.coverUrl}
+                            onChange={(e) => setHubForm({ ...hubForm, coverUrl: e.target.value })}
+                            className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: TOUCHPOINTS & LINKS */}
+              {hubTab === "links" && (
+                <div className="space-y-5 animate-in fade-in">
+                  
+                  {/* Current Links List */}
+                  <div>
+                    <span className="block text-xs font-bold uppercase tracking-wider text-tapsh-charcoal mb-2">
+                      Active Touchpoints ({hubForm.links.length})
+                    </span>
+
+                    {hubForm.links.length === 0 ? (
+                      <p className="text-xs text-tapsh-charcoal/70 p-3 bg-[#FAF8F5] rounded-xl border border-dashed border-tapsh-charcoal/20 text-center">
+                        No touchpoints configured. Use the form below to add Google reviews, social links, or phone actions.
+                      </p>
+                    ) : (
+                      <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                        {hubForm.links.map((link, idx) => (
+                          <div 
+                            key={link.id || idx}
+                            className="p-3 bg-[#FAF8F5] border border-tapsh-charcoal/15 rounded-xl flex items-start gap-2.5"
+                          >
+                            <div className="w-7 h-7 rounded-lg bg-white border border-tapsh-charcoal/10 flex items-center justify-center shrink-0 mt-1 shadow-2xs">
+                              {getTouchpointIcon(link, "sm")}
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <input 
+                                  type="text"
+                                  value={link.title}
+                                  onChange={(e) => handleUpdateLinkItem(idx, "title", e.target.value)}
+                                  className="text-xs font-bold text-tapsh-black bg-white px-2 py-1 rounded-lg border border-tapsh-charcoal/20 flex-1 focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
+                                  placeholder="Link Title"
+                                />
+                                <span className="text-[10px] font-bold uppercase text-tapsh-soft-green px-2 py-0.5 rounded-full bg-tapsh-soft-green/10 shrink-0">
+                                  {link.category}
+                                </span>
+                              </div>
+                              <input 
+                                type="text"
+                                value={link.url}
+                                onChange={(e) => handleUpdateLinkItem(idx, "url", e.target.value)}
+                                className="text-xs font-mono text-tapsh-charcoal bg-white px-2 py-1 rounded-lg border border-tapsh-charcoal/20 w-full focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
+                                placeholder="Destination URL"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLink(idx)}
+                              className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0 mt-1"
+                              title="Delete Link"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add New Link Section */}
+                  <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-tapsh-charcoal/20 space-y-3">
+                    <span className="block text-xs font-bold text-tapsh-black uppercase tracking-wider">
+                      + Add New Touchpoint Link
+                    </span>
+
+                    {/* Presets */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: "Google Review", cat: "reviews", icon: "google", defaultTitle: "Rate Us on Google" },
+                        { label: "WhatsApp Direct", cat: "contact", icon: "whatsapp", defaultTitle: "WhatsApp Direct" },
+                        { label: "Phone Call", cat: "contact", icon: "phone", defaultTitle: "Call Reception" },
+                        { label: "Email", cat: "contact", icon: "mail", defaultTitle: "Official Email" },
+                        { label: "Instagram", cat: "social", icon: "instagram", defaultTitle: "Follow on Instagram" },
+                        { label: "Website", cat: "website", icon: "globe", defaultTitle: "Official Website" },
+                        { label: "Menu / Booking", cat: "website", icon: "calendar", defaultTitle: "Online Menu / Booking" },
+                        { label: "Guest Wi-Fi", cat: "wifi", icon: "wifi", defaultTitle: "Guest Wi-Fi Network" }
+                      ].map(preset => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setNewLink({
+                            category: preset.cat,
+                            title: preset.defaultTitle,
+                            url: "",
+                            icon: preset.icon
+                          })}
+                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                            newLink.icon === preset.icon
+                              ? "bg-tapsh-soft-green text-white border-tapsh-soft-green shadow-xs"
+                              : "bg-white text-tapsh-charcoal border-tapsh-charcoal/20 hover:border-tapsh-soft-green/60"
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-charcoal mb-1">
+                          Touchpoint Title
+                        </label>
+                        <input 
+                          type="text"
+                          value={newLink.title}
+                          onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
+                          placeholder="e.g. Leave a Google Review"
+                          className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green font-bold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-charcoal mb-1">
+                          Category
+                        </label>
+                        <select
+                          value={newLink.category}
+                          onChange={(e) => setNewLink({ ...newLink, category: e.target.value, icon: e.target.value })}
+                          className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green"
+                        >
+                          <option value="reviews">🌟 Customer Reviews</option>
+                          <option value="contact">📞 Phone &amp; Contact</option>
+                          <option value="social">📸 Social Media</option>
+                          <option value="website">🌐 Web &amp; Online Booking</option>
+                          <option value="wifi">📶 Guest Wi-Fi</option>
+                          <option value="other">🔗 Other Custom</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-tapsh-charcoal mb-1">
+                        Touchpoint URL / Action Link
+                      </label>
+                      <input 
+                        type="text"
+                        value={newLink.url}
+                        onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                        placeholder={
+                          newLink.category === "contact" && newLink.icon === "whatsapp" 
+                            ? "e.g. 919876543210 (or full https://wa.me/91...)"
+                            : newLink.category === "wifi"
+                            ? "wifi:SSID_NAME or WIFI:S:SSID;T:WPA;P:Password;;"
+                            : "https://..."
+                        }
+                        className="w-full text-xs px-3 py-2 rounded-xl bg-white border border-tapsh-charcoal/20 text-tapsh-black focus:outline-none focus:ring-1 focus:ring-tapsh-soft-green font-mono"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddLink}
+                      className="w-full py-2 bg-tapsh-black text-tapsh-beige rounded-xl text-xs font-bold hover:bg-tapsh-taupe active:scale-95 transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-tapsh-soft-green" /> Add Link to Hub
+                    </button>
+                  </div>
+
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="pt-4 border-t border-tapsh-charcoal/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                <a 
+                  href={`/h/${hub.slug}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-tapsh-charcoal hover:text-tapsh-black flex items-center gap-1.5 self-center sm:self-auto py-1"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-tapsh-soft-green" />
+                  View Live Hub
+                </a>
+
+                <div className="flex items-center justify-end gap-2.5">
+                  <button 
+                    type="button"
+                    onClick={() => setShowEditHubModal(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-tapsh-charcoal hover:bg-tapsh-charcoal/10 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={savingHubEdit}
+                    className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-tapsh-soft-green text-white hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    {savingHubEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Hub to Firestore
+                  </button>
+                </div>
+              </div>
+
             </form>
           </div>
         </div>

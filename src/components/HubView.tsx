@@ -315,16 +315,12 @@ export default function HubView({ data }: { data: any }) {
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-block transition-opacity hover:opacity-80 active:scale-98"
-              title="TAPSH - Tap. Connect. Grow."
+              title="TAPSH"
             >
               <img src={logoDark} alt="TAPSH" className="h-5 sm:h-5.5 w-auto object-contain opacity-90" />
             </a>
 
-            <p className="text-[11px] italic font-medium text-slate-500 tracking-wide mt-1.5">
-              Tap. Connect. Grow.
-            </p>
-
-            <p className="text-[11px] font-medium text-slate-500/90 mt-0.5">
+            <p className="text-[11px] font-medium text-slate-500/90 mt-1">
               Smart NFC &amp; QR Solutions for Businesses
             </p>
 
